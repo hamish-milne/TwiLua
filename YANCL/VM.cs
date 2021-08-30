@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System;
 using static YANCL.Instruction;
 using System.Runtime.CompilerServices;
