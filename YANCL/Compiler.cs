@@ -309,17 +309,6 @@ namespace YANCL
             return tokens.Peek().Item1;
         }
 
-        bool PeekHasSuffix() {
-            switch (Peek()) {
-                case TokenType.Dot:
-                case TokenType.OpenBracket:
-                case TokenType.OpenParen:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
         
         readonly List<string?> stack = new List<string?>();
         int maxStack;
@@ -390,6 +379,8 @@ namespace YANCL
                 case TokenType.Dot:
                 case TokenType.OpenBracket:
                 case TokenType.OpenParen:
+                case TokenType.SingleQuote:
+                case TokenType.DoubleQuote:
                     return true;
                 default:
                     return false;
@@ -426,7 +417,47 @@ namespace YANCL
             }
         }
 
+        int PreCall(ParseState state, int src) {
+            var func = src;
+            if (!state.IsTemporary(src)) {
+                func = state.Push();
+                code.Add(Build2(MOVE, func, src));
+            }
+            return func;
+        }
+
+        int ParseArgs(ParseState state, int func) {
+            var nArgs = 0;
+            while (Peek() != TokenType.CloseParen) {
+                nArgs++;
+                var arg = ParseExpression(state);
+                state.SetTop(func + 1 + nArgs);
+                AdjustDestination(state, arg, func + nArgs);
+                if (Peek() == TokenType.Comma) {
+                    Next();
+                } else if (Peek() != TokenType.CloseParen) {
+                    throw new Exception("Expected ',' or ')' but got " + Peek());
+                }
+            }
+            Next();
+            return nArgs;
+        }
+
         void ParseVarSuffix(ParseState state, int src) {
+
+            void PostCall(int func, int nArgs) {
+                if (PeekSuffix()) {
+                    code.Add(Build3(CALL, func, nArgs + 1, 2));
+                    state.SetTop(func + 2);
+                    ParseVarSuffix(state, src);
+                } else if (PeekAssignment() || PeekComma() || state.slots.Count > 1) {
+                    throw new Exception("Cannot assign to function call");
+                } else {
+                    code.Add(Build3(CALL, func, nArgs + 1, 1));
+                    state.SetTop(func);
+                }
+            }
+
             var token = Next();
             switch (token.type) {
                 case TokenType.Dot: {
@@ -478,34 +509,18 @@ namespace YANCL
                     break;
                 }
                 case TokenType.OpenParen: {
-                    var func = src;
-                    if (!state.IsTemporary(src)) {
-                        func = state.Push();
-                        code.Add(Build2(MOVE, func, src));
-                    }
-                    var nArgs = 0;
-                    while (Peek() != TokenType.CloseParen) {
-                        nArgs++;
-                        var argSlot = state.Push();
-                        var argResult = ParseExpression(state);
-                        AdjustDestination(state, argResult, argSlot);
-                        if (Peek() == TokenType.Comma) {
-                            Next();
-                        } else if (Peek() != TokenType.CloseParen) {
-                            throw new Exception("Expected ',' or ')', but got " + Peek());
-                        }
-                    }
-                    Next();
-                    if (PeekSuffix()) {
-                        code.Add(Build3(CALL, func, nArgs + 1, 2));
-                        state.SetTop(func + 1);
-                        ParseVarSuffix(state, src);
-                    } else if (PeekAssignment() || PeekComma() || state.slots.Count > 1) {
-                        throw new Exception("Cannot assign to function call");
-                    } else {
-                        code.Add(Build3(CALL, func, nArgs + 1, 1));
-                        state.SetTop(func);
-                    }
+                    var func = PreCall(state, src);
+                    var nArgs = ParseArgs(state, func);
+                    PostCall(func, nArgs);
+                    break;
+                }
+                case TokenType.SingleQuote:
+                case TokenType.DoubleQuote: {
+                    var func = PreCall(state, src);
+                    var arg = Constant(ParseString(token.type == TokenType.SingleQuote ? '\'' : '"'));
+                    state.SetTop(func + 2);
+                    AdjustDestination(state, arg, func + 1);
+                    PostCall(func, 1);
                     break;
                 }
                 default:
@@ -515,6 +530,21 @@ namespace YANCL
         }
 
         int ParseExpressionSuffix(ParseState state, int src) {
+
+            int PostCall(int func, int nArgs) {
+                int ret;
+                if (PeekSuffix()) {
+                    code.Add(Build3(CALL, func, nArgs + 1, 2));
+                    state.SetTop(func + 2);
+                    ret = ParseExpressionSuffix(state, func);
+                } else {
+                    code.Add(Build3(CALL, func, nArgs + 1, 2));
+                    state.SetTop(func + 2);
+                    ret = func;
+                }
+                return ret;
+            }
+
             switch (Peek()) {
                 case TokenType.Dot: {
                     Next();
@@ -534,35 +564,18 @@ namespace YANCL
                 }
                 case TokenType.OpenParen: {
                     Next();
-                    var func = src;
-                    if (!state.IsTemporary(src)) {
-                        func = state.Push();
-                        code.Add(Build2(MOVE, func, src));
-                    }
-                    var nArgs = 0;
-                    while (Peek() != TokenType.CloseParen) {
-                        nArgs++;
-                        var arg = ParseExpression(state);
-                        state.SetTop(func + nArgs);
-                        AdjustDestination(state, arg, func + nArgs);
-                        if (Peek() == TokenType.Comma) {
-                            Next();
-                        } else if (Peek() != TokenType.CloseParen) {
-                            throw new Exception("Expected ',' or ')' but got " + Peek());
-                        }
-                    }
+                    var func = PreCall(state, src);
+                    var nArgs = ParseArgs(state, func);
+                    return PostCall(func, nArgs);
+                }
+                case TokenType.SingleQuote:
+                case TokenType.DoubleQuote: {
                     Next();
-                    int ret;
-                    if (PeekSuffix()) {
-                        code.Add(Build3(CALL, func, nArgs + 1, 2));
-                        state.SetTop(func + 1);
-                        ret = ParseExpressionSuffix(state, func);
-                    } else {
-                        code.Add(Build3(CALL, func, nArgs + 1, 2));
-                        state.SetTop(func + 1);
-                        ret = func;
-                    }
-                    return ret;
+                    var func = PreCall(state, src);
+                    var arg = Constant(ParseString(Peek() == TokenType.SingleQuote ? '\'' : '"'));
+                    state.SetTop(func + 2);
+                    AdjustDestination(state, arg, func + 1);
+                    return PostCall(func, 1);
                 }
                 default:
                     return src;

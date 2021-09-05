@@ -9,9 +9,9 @@ Assignment:
 Function call:
     ✔ Statement @done(21-09-05 19:13)
     ✔ Assignment prefix @done(21-09-05 21:42)
-    ☐ Expression
+    ✔ Expression @done(21-09-05 21:58)
     ☐ Table syntax
-    ☐ String syntax
+    ✔ String syntax @done(21-09-05 22:26)
     ☐ Self call
     ☐ C functions
 Expressions:
@@ -25,7 +25,7 @@ Expressions:
     ✔ Call suffix @done(21-09-05 21:55)
     ☐ Table constructor
     ☐ Function expression
-    ☐ Parenthesized
+    ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:
     ☐ Local variable
     ☐ Local function
