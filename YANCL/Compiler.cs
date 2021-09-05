@@ -248,21 +248,19 @@ namespace YANCL
         public readonly List<LuaValue> constants = new List<LuaValue>();
 
         int Constant(string str) {
-            var cValue = new LuaValue(str);
-            var constIdx = constants.IndexOf(cValue);
+            var constIdx = constants.IndexOf(str);
             if (constIdx < 0) {
                 constIdx = constants.Count;
-                constants.Add(cValue);
+                constants.Add(str);
             }
             return constIdx | KFlag;
         }
 
         int Constant(double num) {
-            var cValue = new LuaValue(num);
-            var constIdx = constants.IndexOf(cValue);
+            var constIdx = constants.IndexOf(num);
             if (constIdx < 0) {
                 constIdx = constants.Count;
-                constants.Add(cValue);
+                constants.Add(num);
             }
             return constIdx | KFlag;
         }

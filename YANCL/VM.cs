@@ -2,13 +2,9 @@
 using System;
 using static YANCL.Instruction;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Linq;
 
 namespace YANCL
 {
-
-
 
     public struct LuaUpValue {
         public bool InStack;
@@ -70,7 +66,7 @@ namespace YANCL
         public LuaValue[] Execute(LuaFunction function, params LuaValue[] args) {
             func = 0;
             pc = function.entry;
-            stack[0] = new LuaValue(new LuaClosure(function, null));
+            stack[0] = new LuaClosure(function, null);
             for (int i = 0; i < args.Length; i++) {
                 stack[i + 1] = args[i];
             }
@@ -157,7 +153,7 @@ namespace YANCL
                         R(GetA(op)) = closure.Function.constants[GetBx(op)];
                         break;
                     case OpCode.LOADBOOL:
-                        R(GetA(op)) = new LuaValue(GetB(op) != 0);
+                        R(GetA(op)) = (GetB(op) != 0);
                         if (GetC(op) != 0) {
                             pc++;
                         }
@@ -193,52 +189,52 @@ namespace YANCL
                         R(GetA(op) + 1) = R(GetB(op));
                         break;
                     case OpCode.ADD:
-                        R(GetA(op)) = new LuaValue(RK(GetB(op)).Number + RK(GetC(op)).Number);
+                        R(GetA(op)) = (RK(GetB(op)).Number + RK(GetC(op)).Number);
                         break;
                     case OpCode.SUB:
-                        R(GetA(op)) = new LuaValue(RK(GetB(op)).Number - RK(GetC(op)).Number);
+                        R(GetA(op)) = (RK(GetB(op)).Number - RK(GetC(op)).Number);
                         break;
                     case OpCode.MUL:
-                        R(GetA(op)) = new LuaValue(RK(GetB(op)).Number * RK(GetC(op)).Number);
+                        R(GetA(op)) = (RK(GetB(op)).Number * RK(GetC(op)).Number);
                         break;
                     case OpCode.MOD:
-                        R(GetA(op)) = new LuaValue(RK(GetB(op)).Number % RK(GetC(op)).Number);
+                        R(GetA(op)) = (RK(GetB(op)).Number % RK(GetC(op)).Number);
                         break;
                     case OpCode.POW:
-                        R(GetA(op)) = new LuaValue(Math.Pow(RK(GetB(op)).Number, RK(GetC(op)).Number));
+                        R(GetA(op)) = (Math.Pow(RK(GetB(op)).Number, RK(GetC(op)).Number));
                         break;
                     case OpCode.DIV:
-                        R(GetA(op)) = new LuaValue(RK(GetB(op)).Number / RK(GetC(op)).Number);
+                        R(GetA(op)) = (RK(GetB(op)).Number / RK(GetC(op)).Number);
                         break;
                     case OpCode.IDIV:
-                        R(GetA(op)) = new LuaValue(Math.Floor(RK(GetB(op)).Number / RK(GetC(op)).Number));
+                        R(GetA(op)) = (Math.Floor(RK(GetB(op)).Number / RK(GetC(op)).Number));
                         break;
                     case OpCode.BAND:
-                        R(GetA(op)) = new LuaValue((long)RK(GetB(op)).Number & (long)RK(GetC(op)).Number);
+                        R(GetA(op)) = ((long)RK(GetB(op)).Number & (long)RK(GetC(op)).Number);
                         break;
                     case OpCode.BOR:
-                        R(GetA(op)) = new LuaValue((long)RK(GetB(op)).Number | (long)RK(GetC(op)).Number);
+                        R(GetA(op)) = ((long)RK(GetB(op)).Number | (long)RK(GetC(op)).Number);
                         break;
                     case OpCode.BXOR:
-                        R(GetA(op)) = new LuaValue((long)RK(GetB(op)).Number ^ (long)RK(GetC(op)).Number);
+                        R(GetA(op)) = ((long)RK(GetB(op)).Number ^ (long)RK(GetC(op)).Number);
                         break;
                     case OpCode.SHL:
-                        R(GetA(op)) = new LuaValue((long)RK(GetB(op)).Number << (int)RK(GetC(op)).Number);
+                        R(GetA(op)) = ((long)RK(GetB(op)).Number << (int)RK(GetC(op)).Number);
                         break;
                     case OpCode.SHR:
-                        R(GetA(op)) = new LuaValue((long)RK(GetB(op)).Number >> (int)RK(GetC(op)).Number);
+                        R(GetA(op)) = ((long)RK(GetB(op)).Number >> (int)RK(GetC(op)).Number);
                         break;
                     case OpCode.UNM:
-                        R(GetA(op)) = new LuaValue(-R(GetB(op)).Number);
+                        R(GetA(op)) = -R(GetB(op)).Number;
                         break;
                     case OpCode.BNOT:
-                        R(GetA(op)) = new LuaValue(~(long)RK(GetB(op)).Number);
+                        R(GetA(op)) = ~(long)RK(GetB(op)).Number;
                         break;
                     case OpCode.NOT:
-                        R(GetA(op)) = new LuaValue(!R(GetB(op)).Boolean);
+                        R(GetA(op)) = !R(GetB(op)).Boolean;
                         break;
                     case OpCode.LEN:
-                        R(GetA(op)) = new LuaValue(R(GetB(op)).Length);
+                        R(GetA(op)) = R(GetB(op)).Length;
                         break;
                     case OpCode.CONCAT: {
                         var b = GetB(op);
@@ -246,7 +242,7 @@ namespace YANCL
                         for (int i = 0; i < sb.Length; i++) {
                             sb[i] = R(b + i).String!;
                         }
-                        R(GetA(op)) = new LuaValue(string.Concat(sb));
+                        R(GetA(op)) = string.Concat(sb);
                         break;
                     }
                     case OpCode.JMP:
@@ -327,17 +323,17 @@ namespace YANCL
                     }
                     case OpCode.FORLOOP: {
                         var i = R(GetA(op)).Number + R(GetA(op) + 2).Number;
-                        R(GetA(op)) = new LuaValue(i);
+                        R(GetA(op)) = i;
                         var step = R(GetA(op) + 2).Number;
                         var limit = R(GetA(op) + 1).Number;
                         if ( (step > 0 && i <= limit) || (step < 0 && i >= limit) ) {
                             pc += GetSbx(op);
-                            R(GetA(op) + 3) = new LuaValue(i);
+                            R(GetA(op) + 3) = i;
                         }
                         break;
                     }
                     case OpCode.FORPREP:
-                        R(GetA(op)) = new LuaValue(R(GetA(op)).Number - R(GetA(op) + 2).Number);
+                        R(GetA(op)) = (R(GetA(op)).Number - R(GetA(op) + 2).Number);
                         pc += GetSbx(op);
                         break;
                     case OpCode.SETLIST: {
@@ -359,7 +355,7 @@ namespace YANCL
                         var newClosure = new LuaClosure(proto, closure);
                         closures.Push(newClosure);
                         closureCount++;
-                        R(GetA(op)) = new LuaValue(newClosure);
+                        R(GetA(op)) = newClosure;
                         break;
                     }
                     case OpCode.VARARG: {

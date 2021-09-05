@@ -202,5 +202,29 @@ namespace YANCL
         public static bool operator !=(LuaValue left, LuaValue right) {
             return !left.Equals(right);
         }
+
+        public static implicit operator LuaValue(bool value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(double value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(int value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(long value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(string value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(LuaClosure value) {
+            return new LuaValue(value);
+        }
     }
 }
