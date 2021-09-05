@@ -55,5 +55,16 @@ namespace YANCL
         public static int Build3(OpCode opCode, int a, int b, int c) {
             return (int)opCode | (a << 6) | (c << 6+8) | (b << 6+8+9);
         }
+
+        public static string ToString(int instruction) {
+            var opCode = GetOpCode(instruction);
+            var a = GetA(instruction);
+            var b = GetB(instruction);
+            var c = GetC(instruction);
+            var bx = GetBx(instruction);
+            var sbx = GetSbx(instruction);
+            var ax = GetAx(instruction);
+            return $"{opCode}\n    A: {a}\n    B: {b}\n    C: {c}\n    Bx: {bx}\n    Sbx: {sbx}\n    Ax: {ax}";
+        }
     }
 }

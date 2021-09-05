@@ -139,12 +139,10 @@ namespace YANCL
             }
 
             (TokenType, string?) CharToken(TokenType token) {
-                position++;
                 return (token, null);
             }
 
             (TokenType, string?) TwoCharToken(TokenType token, char c, TokenType token2) {
-                position++;
                 if (position < str.Length && str[position] == c) {
                     position++;
                     return (token2, null);
@@ -164,7 +162,6 @@ namespace YANCL
                 case '}': return CharToken(TokenType.CloseBrace);
                 case ',': return CharToken(TokenType.Comma);
                 case '.':
-                    position++;
                     if (position < str.Length && str[position] == '.') {
                         position++;
                         if (position < str.Length && str[position] == '.') {
@@ -224,6 +221,7 @@ namespace YANCL
                     });
                     break;
                 case TokenType.Do:
+                    Next();
                     ParseBlock();
                     break;
                 case TokenType.If:
@@ -239,6 +237,7 @@ namespace YANCL
                 case TokenType.Return:
                     throw new NotImplementedException();
                 case TokenType.Semicolon:
+                    Next();
                     break;
                 default:
                     throw new Exception($"Unexpected token {Peek()}");
@@ -330,9 +329,22 @@ namespace YANCL
                 return stack.Count - 1;
             }
 
-            public int Pop() {
-                stack.RemoveAt(stack.Count - 1);
-                return stack.Count;
+            public struct Marker : IDisposable {
+                public List<string?> stack;
+                public int sp;
+
+                public Marker(List<string?> stack, int sp) {
+                    this.stack = stack;
+                    this.sp = sp;
+                }
+
+                public void Dispose() {
+                    stack.RemoveRange(sp, stack.Count - sp);
+                }
+            }
+
+            public Marker Mark() {
+                return new Marker(stack, stack.Count);
             }
 
             public int? GetLocal(string name) {
@@ -354,14 +366,14 @@ namespace YANCL
                 }
             }
 
-            public void SetTop(int baseR, int count) {
-                while (stack.Count > baseR + count) {
-                    stack.RemoveAt(stack.Count - 1);
-                }
-                while (stack.Count < baseR + count) {
-                    stack.Add(null);
-                }
-            }
+            // public void SetTop(int baseR, int count) {
+            //     while (stack.Count > baseR + count) {
+            //         stack.RemoveAt(stack.Count - 1);
+            //     }
+            //     while (stack.Count < baseR + count) {
+            //         stack.Add(null);
+            //     }
+            // }
 
             public int EnvUp() {
                 return 0;
@@ -396,10 +408,19 @@ namespace YANCL
         }
 
         void AdjustDestination(ParseState state, int old, int newIdx) {
-            throw new NotImplementedException();
+            if (old == newIdx) {
+                return;
+            }
+            if ((old & KFlag) != 0) {
+                var constIdx = old & ~KFlag;
+                code.Add(Build2x(LOADK, newIdx, constIdx));
+            } else {
+                code.Add(Build2(MOVE, newIdx, old));
+            }
         }
 
         void ParseVarSuffix(ParseState state, int src) {
+            using var marker = state.Mark();
             var token = Next();
             switch (token.type) {
                 case TokenType.Dot: {
@@ -413,7 +434,6 @@ namespace YANCL
                             var dst = state.Push();
                             code.Add(Build3(GETTABLE, dst, src, constIdx));
                             ParseVarSuffix(state, dst);
-                            state.Pop();
                         }
                     } else if (PeekAssignment()) {
                         var result = ParseExpression(state);
@@ -436,7 +456,6 @@ namespace YANCL
                             var dst = state.Push();
                             code.Add(Build3(GETTABLE, dst, src, indexer));
                             ParseVarSuffix(state, dst);
-                            state.Pop();
                         }
                     } else if (PeekAssignment()) {
                         var result = ParseExpression(state);
@@ -463,24 +482,17 @@ namespace YANCL
                         if (Peek() == TokenType.Comma) {
                             Next();
                         } else if (Peek() != TokenType.CloseParen) {
-                            throw new Exception("Expected ',' or ')'");
+                            throw new Exception("Expected ',' or ')', but got " + Peek());
                         }
                     }
                     Next();
                     if (PeekSuffix()) {
                         code.Add(Build3(CALL, func, nArgs, 2));
                         ParseVarSuffix(state, src);
-                        if (!state.IsTemporary(src)) {
-                            state.Pop();
-                        }
                     } else if (PeekAssignment() || PeekComma() || state.slots.Count > 1) {
                         throw new Exception("Cannot assign to function call");
                     } else {
-                        // state.isStatement = true;
-                        code.Add(Build3(CALL, func, nArgs, 1));
-                        if (!state.IsTemporary(src)) {
-                            state.Pop();
-                        }
+                        code.Add(Build3(CALL, func, nArgs + 1, 1));
                     }
                     break;
                 }
@@ -491,17 +503,76 @@ namespace YANCL
         }
 
         int ParseExpressionSuffix(ParseState state, int src) {
-            throw new NotImplementedException();
+
+            switch (Peek()) {
+                case TokenType.Dot: {
+                    Next();
+                    var name = Expect(TokenType.Identifier, "dot")!;
+                    var indexer = Constant(name);
+                    var dst = state.IsTemporary(src) ? src : state.Push();
+                    code.Add(Build3(GETTABLE, dst, src, indexer));
+                    return ParseExpressionSuffix(state, dst);
+                }
+                case TokenType.OpenBracket: {
+                    Next();
+                    var indexer = ParseExpression(state);
+                    Expect(TokenType.CloseBracket, "index expression");
+                    var dst = state.IsTemporary(src) ? src : state.Push();
+                    code.Add(Build3(GETTABLE, dst, src, indexer));
+                    return ParseExpressionSuffix(state, dst);
+                }
+                case TokenType.OpenParen: {
+                    Next();
+                    var func = src;
+                    if (!state.IsTemporary(src)) {
+                        func = state.Push();
+                        code.Add(Build2(MOVE, func, src));
+                    }
+                    var nArgs = 0;
+                    while (Peek() != TokenType.CloseParen) {
+                        nArgs++;
+                        var argSlot = state.Push();
+                        var argResult = ParseExpression(state);
+                        AdjustDestination(state, argResult, argSlot);
+                        if (Peek() == TokenType.Comma) {
+                            Next();
+                        } else if (Peek() != TokenType.CloseParen) {
+                            throw new Exception("Expected ',' or ')' but got " + Peek());
+                        }
+                    }
+                    Next();
+                    int ret;
+                    if (PeekSuffix()) {
+                        code.Add(Build3(CALL, func, nArgs, 2));
+                        ret = ParseExpressionSuffix(state, func);
+                    } else {
+                        code.Add(Build3(CALL, func, nArgs, 1));
+                        ret = func;
+                    }
+                    return ret;
+                }
+                default:
+                    return src;
+            }
         }
 
         int ParseExpression(ParseState state) {
+            return ParseTerm(state);
+        }
 
-            int TryParseSuffix(int idx) {
-                if (PeekSuffix()) {
-                    return ParseExpressionSuffix(state, idx);
-                } else {
-                    return idx;
-                }
+        int ParseTerm(ParseState state) {
+            
+            int Unary(OpCode op) {
+                var expr = ParseTerm(state);
+                var idx = state.Push();
+                code.Add(Build2(op, idx, expr));
+                return idx;
+            }
+
+            int Literal(OpCode op, int arg) {
+                var idx = state.Push();
+                code.Add(Build2(op, idx, arg));
+                return idx;
             }
 
             var token = Next();
@@ -510,60 +581,28 @@ namespace YANCL
                     var name = token.text!;
                     var localIdx = state.GetLocal(name);
                     if (localIdx != null) {
-                        return TryParseSuffix(localIdx.Value);
+                        return ParseExpressionSuffix(state, localIdx.Value);
                     } else {
                         var globalIdx = Constant(name);
                         var idx = state.Push();
                         code.Add(Build3(GETTABUP, idx, state.EnvUp(), globalIdx));
-                        return TryParseSuffix(idx);
+                        return ParseExpressionSuffix(state, idx);
                     }
                 }
-                case TokenType.Number: {
-                    var num = double.Parse(token.text!);
-                    return TryParseSuffix(Constant(num));
-                }
-                case TokenType.DoubleQuote:
-                    return TryParseSuffix(Constant(ParseString('"')));
-                case TokenType.SingleQuote:
-                    return TryParseSuffix(Constant(ParseString('\'')));
+                case TokenType.Number: return Constant(double.Parse(token.text!));
+                case TokenType.DoubleQuote: return Constant(ParseString('"'));
+                case TokenType.SingleQuote: return Constant(ParseString('\''));
                 case TokenType.OpenParen: {
                     var expr = ParseExpression(state);
                     Expect(TokenType.CloseParen, "parenthesized expression");
-                    return TryParseSuffix(expr);
+                    return expr;
                 }
-                case TokenType.Hash: {
-                    var expr = ParseExpression(state);
-                    var idx = state.Push();
-                    code.Add(Build2(LEN, idx, expr));
-                    return TryParseSuffix(idx);
-                }
-                case TokenType.Not: {
-                    var expr = ParseExpression(state);
-                    var idx = state.Push();
-                    code.Add(Build2(NOT, idx, expr));
-                    return TryParseSuffix(idx);
-                }
-                case TokenType.Minus: {
-                    var expr = ParseExpression(state);
-                    var idx = state.Push();
-                    code.Add(Build2(UNM, idx, expr));
-                    return TryParseSuffix(idx);
-                }
-                case TokenType.True: {
-                    var idx = state.Push();
-                    code.Add(Build2(LOADBOOL, idx, 1));
-                    return TryParseSuffix(idx);
-                }
-                case TokenType.False: {
-                    var idx = state.Push();
-                    code.Add(Build2(LOADBOOL, idx, 0));
-                    return TryParseSuffix(idx);
-                }
-                case TokenType.Nil: {
-                    var idx = state.Push();
-                    code.Add(Build2(LOADNIL, idx, 1));
-                    return TryParseSuffix(idx);
-                }
+                case TokenType.Hash: return Unary(LEN);
+                case TokenType.Not: return Unary(NOT);
+                case TokenType.Minus: return Unary(UNM);
+                case TokenType.True: return Literal(LOADBOOL, 1);
+                case TokenType.False: return Literal(LOADBOOL, 0);
+                case TokenType.Nil: return Literal(LOADNIL, 1);
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }
@@ -581,7 +620,6 @@ namespace YANCL
                             var dst = state.Push();
                             code.Add(Build3(GETTABUP, dst, state.EnvUp(), constIdx));
                             ParseVarSuffix(state, dst);
-                            state.Pop();
                         } else if (PeekAssignment()) {
                             var result = ParseExpression(state);
                             code.Add(Build3(SETTABUP, state.EnvUp(), constIdx, result));
