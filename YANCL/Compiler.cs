@@ -339,22 +339,25 @@ namespace YANCL
                 return compiler.stack.Count - 1;
             }
 
-            public struct Marker : IDisposable {
-                public List<string?> stack;
-                public int sp;
-
-                public Marker(List<string?> stack, int sp) {
-                    this.stack = stack;
-                    this.sp = sp;
+            public void Pop(int idx) {
+                if ((idx & KFlag) != 0) {
+                    return;
                 }
-
-                public void Dispose() {
-                    stack.RemoveRange(sp, stack.Count - sp);
+                Debug.Assert(idx == compiler.stack.Count - 1);
+                if (compiler.stack[idx] != null) {
+                    return;
                 }
+                compiler.stack.RemoveAt(idx);
             }
 
-            public Marker Mark() {
-                return new Marker(compiler.stack, compiler.stack.Count);
+            public void SetTop(int top) {
+                while (compiler.stack.Count < top) {
+                    compiler.stack.Add(null);
+                }
+                compiler.maxStack = Math.Max(compiler.maxStack, compiler.stack.Count);
+                while (compiler.stack.Count > top) {
+                    compiler.stack.RemoveAt(compiler.stack.Count - 1);
+                }
             }
 
             public int? GetLocal(string name) {
@@ -369,6 +372,7 @@ namespace YANCL
             public int PushLocal(string name) {
                 var index = compiler.stack.IndexOf(name);
                 if (index == -1) {
+                    Debug.Assert(compiler.stack.Count == 0 || compiler.stack[compiler.stack.Count - 1] != null);
                     compiler.stack.Add(name);
                     return compiler.stack.Count - 1;
                 } else {
@@ -417,11 +421,12 @@ namespace YANCL
                 code.Add(Build2x(LOADK, newIdx, constIdx));
             } else {
                 code.Add(Build2(MOVE, newIdx, old));
+                state.Pop(old);
+                state.Pop(newIdx);
             }
         }
 
         void ParseVarSuffix(ParseState state, int src) {
-            using var marker = state.Mark();
             var token = Next();
             switch (token.type) {
                 case TokenType.Dot: {
@@ -439,6 +444,8 @@ namespace YANCL
                     } else if (PeekAssignment()) {
                         var result = ParseExpression(state);
                         code.Add(Build3(SETTABLE, src, constIdx, result));
+                        state.Pop(result);
+                        state.Pop(src);
                     } else if (PeekComma()) {
                         ParseVar(state);
                     } else {
@@ -461,6 +468,8 @@ namespace YANCL
                     } else if (PeekAssignment()) {
                         var result = ParseExpression(state);
                         code.Add(Build3(SETTABLE, src, indexer, result));
+                        state.Pop(indexer);
+                        state.Pop(src);
                     } else if (PeekComma()) {
                         ParseVar(state);
                     } else {
@@ -488,12 +497,14 @@ namespace YANCL
                     }
                     Next();
                     if (PeekSuffix()) {
-                        code.Add(Build3(CALL, func, nArgs, 2));
+                        code.Add(Build3(CALL, func, nArgs + 1, 2));
+                        state.SetTop(func + 1);
                         ParseVarSuffix(state, src);
                     } else if (PeekAssignment() || PeekComma() || state.slots.Count > 1) {
                         throw new Exception("Cannot assign to function call");
                     } else {
                         code.Add(Build3(CALL, func, nArgs + 1, 1));
+                        state.SetTop(func);
                     }
                     break;
                 }
@@ -504,7 +515,6 @@ namespace YANCL
         }
 
         int ParseExpressionSuffix(ParseState state, int src) {
-            using var marker = state.Mark();
             switch (Peek()) {
                 case TokenType.Dot: {
                     Next();
@@ -532,9 +542,9 @@ namespace YANCL
                     var nArgs = 0;
                     while (Peek() != TokenType.CloseParen) {
                         nArgs++;
-                        var argSlot = state.Push();
-                        var argResult = ParseExpression(state);
-                        AdjustDestination(state, argResult, argSlot);
+                        var arg = ParseExpression(state);
+                        state.SetTop(func + nArgs);
+                        AdjustDestination(state, arg, func + nArgs);
                         if (Peek() == TokenType.Comma) {
                             Next();
                         } else if (Peek() != TokenType.CloseParen) {
@@ -544,10 +554,12 @@ namespace YANCL
                     Next();
                     int ret;
                     if (PeekSuffix()) {
-                        code.Add(Build3(CALL, func, nArgs, 2));
+                        code.Add(Build3(CALL, func, nArgs + 1, 2));
+                        state.SetTop(func + 1);
                         ret = ParseExpressionSuffix(state, func);
                     } else {
-                        code.Add(Build3(CALL, func, nArgs, 1));
+                        code.Add(Build3(CALL, func, nArgs + 1, 2));
+                        state.SetTop(func + 1);
                         ret = func;
                     }
                     return ret;
@@ -562,7 +574,6 @@ namespace YANCL
         }
 
         int ParseTerm(ParseState state) {
-            using var marker = state.Mark();
             int Unary(OpCode op) {
                 var expr = ParseTerm(state);
                 var idx = state.Push();
@@ -596,7 +607,7 @@ namespace YANCL
                 case TokenType.OpenParen: {
                     var expr = ParseExpression(state);
                     Expect(TokenType.CloseParen, "parenthesized expression");
-                    return expr;
+                    return ParseExpressionSuffix(state, expr);
                 }
                 case TokenType.Hash: return Unary(LEN);
                 case TokenType.Not: return Unary(NOT);
@@ -610,7 +621,6 @@ namespace YANCL
         }
 
         void ParseVar(ParseState state) {
-            using var marker = state.Mark();
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {
@@ -625,6 +635,7 @@ namespace YANCL
                         } else if (PeekAssignment()) {
                             var result = ParseExpression(state);
                             code.Add(Build3(SETTABUP, state.EnvUp(), constIdx, result));
+                            state.Pop(result);
                         } else if (PeekComma()) {
                             ParseVar(state);
                         } else {

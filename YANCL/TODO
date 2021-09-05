@@ -1,14 +1,14 @@
 Assignment:
     ✔ Local prefix @done(21-09-05 19:13)
     ✔ Global prefix @done(21-09-05 19:13)
-    ☐ Parenthesized prefix
+    ✔ Parenthesized prefix @done(21-09-05 21:41)
     ✔ Dot suffix @done(21-09-05 19:13)
-    ☐ Index suffix
-    ☐ Call suffix
+    ✔ Index suffix @done(21-09-05 20:49)
+    ✔ Call suffix @done(21-09-05 21:55)
     ☐ Multiple assignment
 Function call:
     ✔ Statement @done(21-09-05 19:13)
-    ☐ Assignment prefix
+    ✔ Assignment prefix @done(21-09-05 21:42)
     ☐ Expression
     ☐ Table syntax
     ☐ String syntax
@@ -21,8 +21,8 @@ Expressions:
     ✔ Local @done(21-09-05 19:13)
     ✔ Global @done(21-09-05 19:13)
     ✔ Dot suffix @done(21-09-05 19:13)
-    ☐ Index suffix
-    ☐ Call suffix
+    ✔ Index suffix @done(21-09-05 21:55)
+    ✔ Call suffix @done(21-09-05 21:55)
     ☐ Table constructor
     ☐ Function expression
     ☐ Parenthesized

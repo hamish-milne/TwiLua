@@ -55,7 +55,7 @@ namespace YANCL
             return (int)opCode | (a << 6) | (c << 6+8) | (b << 6+8+9);
         }
 
-        public static string ToString(int instruction) {
+        public static string Stringify(int instruction) {
             var opCode = GetOpCode(instruction);
             var a = GetA(instruction);
             var b = GetB(instruction);
@@ -63,6 +63,12 @@ namespace YANCL
             var bx = GetBx(instruction);
             var sbx = GetSbx(instruction);
             var ax = GetAx(instruction);
+            if ((b & KFlag) != 0) {
+                b = - (1 + (b & ~KFlag));
+            }
+            if ((c & KFlag) != 0) {
+                c = - (1 + (c & ~KFlag));
+            }
             return $"{opCode}\n    A: {a}\n    B: {b}\n    C: {c}\n    Bx: {bx}\n    Sbx: {sbx}\n    Ax: {ax}";
         }
     }
