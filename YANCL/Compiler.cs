@@ -70,15 +70,22 @@ namespace YANCL
         int position;
         string str;
 
-        public static Compiler Compile(string str) {
+        public static LuaFunction Compile(string str) {
             var c = new Compiler {
                 str = str,
             };
             c.ParseChunk();
-            return c;
+            return new LuaFunction {
+                code = c.code.ToArray(),
+                constants = c.constants.ToArray(),
+                upvalues = Array.Empty<LuaUpValue>(),
+                prototypes = Array.Empty<LuaFunction>(),
+                nLocals = c.stack.Count,
+                nSlots = c.maxStack - c.stack.Count,
+            };
         }
 
-        public readonly List<int> code = new List<int>(1024);
+        readonly List<int> code = new List<int>(1024);
 
         Stack<(TokenType, string?)> tokens = new Stack<(TokenType, string?)>();
 
@@ -216,7 +223,7 @@ namespace YANCL
                 case TokenType.OpenBrace:
                 case TokenType.Minus:
                     ParseVar(new ParseState {
-                        stack = new List<string?>(),
+                        compiler = this,
                         slots = new List<int>()
                     });
                     break;
@@ -313,18 +320,23 @@ namespace YANCL
             }
         }
 
+        
+        readonly List<string?> stack = new List<string?>();
+        int maxStack;
+
         struct ParseState {
-            public List<string?> stack;
+            public Compiler compiler;
 
             public List<int> slots;
 
             public bool IsTemporary(int idx) {
-                return stack[idx] == null;
+                return compiler.stack[idx] == null;
             }
 
             public int Push() {
-                stack.Add(null);
-                return stack.Count - 1;
+                compiler.stack.Add(null);
+                compiler.maxStack = Math.Max(compiler.maxStack, compiler.stack.Count);
+                return compiler.stack.Count - 1;
             }
 
             public struct Marker : IDisposable {
@@ -342,11 +354,11 @@ namespace YANCL
             }
 
             public Marker Mark() {
-                return new Marker(stack, stack.Count);
+                return new Marker(compiler.stack, compiler.stack.Count);
             }
 
             public int? GetLocal(string name) {
-                var index = stack.IndexOf(name);
+                var index = compiler.stack.IndexOf(name);
                 if (index == -1) {
                     return null;
                 } else {
@@ -355,23 +367,14 @@ namespace YANCL
             }
 
             public int PushLocal(string name) {
-                var index = stack.IndexOf(name);
+                var index = compiler.stack.IndexOf(name);
                 if (index == -1) {
-                    stack.Add(name);
-                    return stack.Count - 1;
+                    compiler.stack.Add(name);
+                    return compiler.stack.Count - 1;
                 } else {
                     throw new Exception($"Local {name} already defined");
                 }
             }
-
-            // public void SetTop(int baseR, int count) {
-            //     while (stack.Count > baseR + count) {
-            //         stack.RemoveAt(stack.Count - 1);
-            //     }
-            //     while (stack.Count < baseR + count) {
-            //         stack.Add(null);
-            //     }
-            // }
 
             public int EnvUp() {
                 return 0;
@@ -501,7 +504,7 @@ namespace YANCL
         }
 
         int ParseExpressionSuffix(ParseState state, int src) {
-
+            using var marker = state.Mark();
             switch (Peek()) {
                 case TokenType.Dot: {
                     Next();
@@ -559,7 +562,7 @@ namespace YANCL
         }
 
         int ParseTerm(ParseState state) {
-            
+            using var marker = state.Mark();
             int Unary(OpCode op) {
                 var expr = ParseTerm(state);
                 var idx = state.Push();
@@ -607,6 +610,7 @@ namespace YANCL
         }
 
         void ParseVar(ParseState state) {
+            using var marker = state.Mark();
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {

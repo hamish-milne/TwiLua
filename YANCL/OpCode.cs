@@ -1,5 +1,3 @@
-#nullable enable
-
 namespace YANCL
 {
     public enum OpCode {

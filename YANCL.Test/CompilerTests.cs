@@ -10,11 +10,14 @@ namespace YANCL.Test
         void DoCompilerTest(
             string source,
             LuaValue[] expectedConstants,
-            int[] expectedInstructions
+            int[] expectedInstructions,
+            int nLocals, int nSlots
         ) {
             var result = Compiler.Compile(source);
             Assert.Equal(expectedConstants, result.constants);
             Assert.Equal(expectedInstructions, result.code);
+            Assert.Equal(nLocals, result.nLocals);
+            Assert.Equal(nSlots, result.nSlots);
         }
 
         [Fact]
@@ -25,7 +28,8 @@ namespace YANCL.Test
                 new LuaValue[] { "x", 10 },
                 new [] {
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
-                }
+                },
+                0, 0
             );
         }
 
@@ -38,7 +42,8 @@ namespace YANCL.Test
                 new [] {
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
                     Build3(SETTABUP, 0, 2 | KFlag, 3 | KFlag),
-                }
+                },
+                0, 0
             );
         }
 
@@ -51,7 +56,8 @@ namespace YANCL.Test
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(CALL, 0, 1, 1),
-                }
+                },
+                0, 1
             );
         }
 
@@ -66,7 +72,8 @@ namespace YANCL.Test
                     Build2x(LOADK, 1, 1),
                     Build2x(LOADK, 2, 2),
                     Build3(CALL, 0, 3, 1),
-                }
+                },
+                0, 3
             );
         }
 
@@ -80,7 +87,8 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(GETTABLE, 0, 0, 2 | KFlag),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
-                }
+                },
+                0, 1
             );
         }
 
@@ -94,7 +102,8 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(GETTABUP, 1, 0, 2 | KFlag),
                     Build3(SETTABLE, 0, 1 | KFlag, 1),
-                }
+                },
+                0, 2
             );
         }
     }

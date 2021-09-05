@@ -1,0 +1,223 @@
+Assignment:
+    ✔ Local prefix @done(21-09-05 19:13)
+    ✔ Global prefix @done(21-09-05 19:13)
+    ☐ Parenthesized prefix
+    ✔ Dot suffix @done(21-09-05 19:13)
+    ☐ Index suffix
+    ☐ Call suffix
+    ☐ Multiple assignment
+Function call:
+    ✔ Statement @done(21-09-05 19:13)
+    ☐ Assignment prefix
+    ☐ Expression
+    ☐ Table syntax
+    ☐ String syntax
+    ☐ Self call
+    ☐ C functions
+Expressions:
+    ☐ True, false, nil
+    ☐ Number literals
+    ☐ String literals
+    ✔ Local @done(21-09-05 19:13)
+    ✔ Global @done(21-09-05 19:13)
+    ✔ Dot suffix @done(21-09-05 19:13)
+    ☐ Index suffix
+    ☐ Call suffix
+    ☐ Table constructor
+    ☐ Function expression
+    ☐ Parenthesized
+Declarations:
+    ☐ Local variable
+    ☐ Local function
+    ☐ Global function
+    ☐ Member function
+    ☐ Self function
+Upvalues:
+    ☐ _ENV
+    ☐ In-stack
+    ☐ Out-of-stack
+    ☐ Closure
+Unary operators:
+    ☐ Length
+    ☐ Negation
+    ☐ Bitwise not
+    ☐ Logical not
+Binary operators:
+    ☐ Arithmetic
+    ☐ Concatenation
+    ☐ Comparison
+    ☐ Bitwise
+    ☐ Logical
+    ☐ Precedence
+Varargs:
+    ☐ Parameter
+    ☐ Call
+    ☐ Table constructor
+    ☐ Assignment
+Blocks:
+    ☐ Do/end
+    ☐ If
+    ☐ Else
+    ☐ Elseif
+    ☐ While
+    ☐ Repeat
+    ☐ Numeric for
+    ☐ Generic for
+Metafunctions:
+    ☐ Metatable
+    ☐ Index
+    ☐ Binary operators
+    ☐ Length
+Basic functions library:
+    ☐ assert
+    ☐ collectgarbage
+    ☐ dofile
+    ☐ error
+    ☐ _G
+    ☐ getmetatable
+    ☐ ipairs
+    ☐ load
+    ☐ loadfile
+    ☐ next
+    ☐ pairs
+    ☐ pcall
+    ☐ print
+    ☐ rawequal
+    ☐ rawget
+    ☐ rawset
+    ☐ select
+    ☐ setmetatable
+    ☐ tonumber
+    ☐ tostring
+    ☐ type
+    ☐ _VERSION
+    ☐ xpcall
+Coroutines:
+    ☐ coroutine.create
+    ☐ coroutine.isyieldable
+    ☐ coroutine.resume
+    ☐ coroutine.running
+    ☐ coroutine.status
+    ☐ coroutine.wrap
+    ☐ coroutine.yield
+Modules:
+    ☐ require
+    ☐ package.config
+    ☐ package.cpath
+    ☐ package.loaded
+    ☐ package.loadlib
+    ☐ package.path
+    ☐ package.preload
+    ☐ package.searchers
+    ☐ package.searchpath
+Strings:
+    ☐ string.byte
+    ☐ string.char
+    ☐ string.dump
+    ☐ string.find
+    ☐ string.format
+    ☐ string.gmatch
+    ☐ string.gsub
+    ☐ string.len
+    ☐ string.lower
+    ☐ string.match
+    ☐ string.pack
+    ☐ string.packsize
+    ☐ string.rep
+    ☐ string.reverse
+    ☐ string.sub
+    ☐ string.unpack
+    ☐ string.upper
+UTF-8:
+    ☐ utf8.char
+    ☐ utf8.charpattern
+    ☐ utf8.codes
+    ☐ utf8.codepoint
+    ☐ utf8.len
+    ☐ utf8.offset
+Tables:
+    ☐ table.concat
+    ☐ table.insert
+    ☐ table.move
+    ☐ table.pack
+    ☐ table.remove
+    ☐ table.sort
+    ☐ table.unpack
+Math:
+    ☐ math.abs
+    ☐ math.acos
+    ☐ math.asin
+    ☐ math.atan
+    ☐ math.ceil
+    ☐ math.cos
+    ☐ math.deg
+    ☐ math.exp
+    ☐ math.floor
+    ☐ math.fmod
+    ☐ math.huge
+    ☐ math.log
+    ☐ math.max
+    ☐ math.maxinteger
+    ☐ math.min
+    ☐ math.mininteger
+    ☐ math.modf
+    ☐ math.pi
+    ☐ math.rad
+    ☐ math.random
+    ☐ math.randomseed
+    ☐ math.sin
+    ☐ math.sqrt
+    ☐ math.tan
+    ☐ math.tointeger
+    ☐ math.type
+    ☐ math.ult
+IO:
+    ☐ io.close
+    ☐ io.flush
+    ☐ io.input
+    ☐ io.lines
+    ☐ io.open
+    ☐ io.output
+    ☐ io.popen
+    ☐ io.read
+    ☐ io.tmpfile
+    ☐ io.type
+    ☐ io.write
+    ☐ file:flush
+    ☐ file:lines
+    ☐ file:read
+    ☐ file:seek
+    ☐ file:setvbuf
+    ☐ file:write
+    ☐ io.stdin
+    ☐ io.stdout
+    ☐ io.stderr
+OS:
+    ☐ os.clock
+    ☐ os.date
+    ☐ os.difftime
+    ☐ os.execute
+    ☐ os.exit
+    ☐ os.getenv
+    ☐ os.remove
+    ☐ os.rename
+    ☐ os.setlocale
+    ☐ os.time
+    ☐ os.tmpname
+Debug:
+    ☐ debug.debug
+    ☐ debug.gethook
+    ☐ debug.getinfo
+    ☐ debug.getlocal
+    ☐ debug.getmetatable
+    ☐ debug.getregistry
+    ☐ debug.getupvalue
+    ☐ debug.getuservalue
+    ☐ debug.sethook
+    ☐ debug.setlocal
+    ☐ debug.setmetatable
+    ☐ debug.setupvalue
+    ☐ debug.setuservalue
+    ☐ debug.traceback
+    ☐ debug.upvalueid
+    ☐ debug.upvaluejoin
