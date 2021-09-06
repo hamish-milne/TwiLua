@@ -448,7 +448,7 @@ namespace YANCL
             void PostCall(int func, int nArgs) {
                 if (PeekSuffix()) {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    state.SetTop(func + 2);
+                    state.SetTop(func + 1);
                     ParseVarSuffix(state, src);
                 } else if (PeekAssignment() || PeekComma() || state.slots.Count > 1) {
                     throw new Exception("Cannot assign to function call");
@@ -539,7 +539,7 @@ namespace YANCL
                     ret = ParseExpressionSuffix(state, func);
                 } else {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    state.SetTop(func + 2);
+                    state.SetTop(func + 1);
                     ret = func;
                 }
                 return ret;
