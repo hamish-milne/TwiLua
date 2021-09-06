@@ -394,5 +394,40 @@ namespace YANCL.Test
                 1, 2
             );
         }
+
+        [Fact]
+        public void MultipleAssignmentOverflow()
+        {
+            DoCompilerTest(
+                "x, y = a, b, c",
+                new LuaValue[] { "x", "y", "a", "b", "c" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 2 | KFlag),
+                    Build3(GETTABUP, 1, 0, 3 | KFlag),
+                    Build3(GETTABUP, 2, 0, 4 | KFlag),
+                    Build3(SETTABUP, 0, 1 | KFlag, 1),
+                    Build3(SETTABUP, 0, 0 | KFlag, 0),
+                },
+                0, 3
+            );
+        }
+
+        [Fact]
+        public void MultipleAssignmentUnderflow()
+        {
+            DoCompilerTest(
+                "x, y, z = a, b",
+                new LuaValue[] { "x", "y", "z", "a", "b" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 3 | KFlag),
+                    Build3(GETTABUP, 1, 0, 4 | KFlag),
+                    Build2(LOADNIL, 2, 0),
+                    Build3(SETTABUP, 0, 2 | KFlag, 2),
+                    Build3(SETTABUP, 0, 1 | KFlag, 1),
+                    Build3(SETTABUP, 0, 0 | KFlag, 0),
+                },
+                0, 3
+            );
+        }
     }
 }

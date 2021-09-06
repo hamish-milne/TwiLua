@@ -224,7 +224,6 @@ namespace YANCL
                 case TokenType.Minus:
                     ParseVar(new ParseState {
                         compiler = this,
-                        slots = new List<int>()
                     });
                     break;
                 case TokenType.Do:
@@ -313,10 +312,14 @@ namespace YANCL
         readonly List<string?> stack = new List<string?>();
         int maxStack;
 
-        struct ParseState {
+        class ParseState {
             public Compiler compiler;
+            public int nSlots;
+            public int nResults;
+            public int firstResult;
+            public int lastValue;
 
-            public List<int> slots;
+            public int TopResult => firstResult + nResults - 1;
 
             public bool IsTemporary(int idx) {
                 return compiler.stack[idx] == null;
@@ -443,6 +446,40 @@ namespace YANCL
             return nArgs;
         }
 
+        void ParseAssignment(ParseState state) {
+            var baseR = stack.Count;
+            state.firstResult = baseR;
+            var nArgs = 0;
+            while (true) {
+                nArgs++;
+                state.lastValue = ParseExpression(state);
+                if (Peek() == TokenType.Comma) {
+                    state.SetTop(baseR + nArgs);
+                    AdjustDestination(state, state.lastValue, baseR + nArgs - 1);
+                    Next();
+                } else {
+                    break;
+                }
+            }
+            if (nArgs < state.nSlots) {
+                code.Add(Build2(LOADNIL, baseR + nArgs, baseR + state.nSlots - nArgs));
+                state.nResults = state.nSlots;
+            } else {
+                state.nResults = nArgs;
+            }
+        }
+
+        void PopAssignment(ParseState state) {
+            Debug.Assert(state.nResults > 0);
+            if (state.nResults == state.nSlots && state.lastValue != state.TopResult) {
+                state.nResults--;
+                return; // Last value is not in the stack
+            }
+            state.Pop(state.firstResult + state.nResults - 1);
+            state.nResults--;
+        }
+            
+
         void ParseVarSuffix(ParseState state, int src) {
 
             void PostCall(int func, int nArgs) {
@@ -450,7 +487,7 @@ namespace YANCL
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
                     state.SetTop(func + 1);
                     ParseVarSuffix(state, src);
-                } else if (PeekAssignment() || PeekComma() || state.slots.Count > 1) {
+                } else if (PeekAssignment() || PeekComma() || state.nSlots > 1) {
                     throw new Exception("Cannot assign to function call");
                 } else {
                     code.Add(Build3(CALL, func, nArgs + 1, 1));
@@ -473,12 +510,15 @@ namespace YANCL
                             ParseVarSuffix(state, dst);
                         }
                     } else if (PeekAssignment()) {
-                        var result = ParseExpression(state);
-                        code.Add(Build3(SETTABLE, src, constIdx, result));
-                        state.Pop(result);
+                        ParseAssignment(state);
+                        code.Add(Build3(SETTABLE, src, constIdx, state.lastValue));
+                        PopAssignment(state);
                         state.Pop(src);
                     } else if (PeekComma()) {
-                        ParseVar(state);
+                        ParseVarAdditional(state);
+                        code.Add(Build3(SETTABLE, src, constIdx, state.TopResult));
+                        PopAssignment(state);
+                        state.Pop(src);
                     } else {
                         throw new Exception($"Unexpected token {token.type}");
                     }
@@ -497,12 +537,17 @@ namespace YANCL
                             ParseVarSuffix(state, dst);
                         }
                     } else if (PeekAssignment()) {
-                        var result = ParseExpression(state);
-                        code.Add(Build3(SETTABLE, src, indexer, result));
+                        ParseAssignment(state);
+                        code.Add(Build3(SETTABLE, src, indexer, state.lastValue));
+                        PopAssignment(state);
                         state.Pop(indexer);
                         state.Pop(src);
                     } else if (PeekComma()) {
-                        ParseVar(state);
+                        ParseVarAdditional(state);
+                        code.Add(Build3(SETTABLE, src, indexer, state.TopResult));
+                        PopAssignment(state);
+                        state.Pop(indexer);
+                        state.Pop(src);
                     } else {
                         throw new Exception($"Unexpected token {token.type}");
                     }
@@ -633,7 +678,13 @@ namespace YANCL
             }
         }
 
+        void ParseVarAdditional(ParseState state) {
+            ParseVar(state);
+        }
+
         void ParseVar(ParseState state) {
+            
+            state.nSlots++;
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {
@@ -646,11 +697,13 @@ namespace YANCL
                             code.Add(Build3(GETTABUP, dst, state.EnvUp(), constIdx));
                             ParseVarSuffix(state, dst);
                         } else if (PeekAssignment()) {
-                            var result = ParseExpression(state);
-                            code.Add(Build3(SETTABUP, state.EnvUp(), constIdx, result));
-                            state.Pop(result);
+                            ParseAssignment(state);
+                            code.Add(Build3(SETTABUP, state.EnvUp(), constIdx, state.lastValue));
+                            PopAssignment(state);
                         } else if (PeekComma()) {
-                            ParseVar(state);
+                            ParseVarAdditional(state);
+                            code.Add(Build3(SETTABUP, state.EnvUp(), constIdx, state.TopResult));
+                            PopAssignment(state);
                         } else {
                             throw new Exception("Expected an call or assignment");
                         }
@@ -661,7 +714,8 @@ namespace YANCL
                             var result = ParseExpression(state);
                             AdjustDestination(state, result, index.Value);
                         } else if (PeekComma()) {
-                            ParseVar(state);
+                            ParseVarAdditional(state);
+                            AdjustDestination(state, state.TopResult, index.Value);
                         } else {
                             throw new Exception("Expected an call or assignment");
                         }
