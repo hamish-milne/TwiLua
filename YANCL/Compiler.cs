@@ -446,26 +446,52 @@ namespace YANCL
             return nArgs;
         }
 
+        void ExtendMultiReturn(ParseState state) {
+            var inst = code[code.Count - 1];
+            switch (Instruction.GetOpCode(inst)) {
+                case CALL: {
+                    var a = Instruction.GetA(inst);
+                    var b = Instruction.GetB(inst);
+                    code[code.Count - 1] = Build3(CALL, a, b, state.nSlots - state.nResults + 2);
+                    state.nResults = state.nSlots;
+                    break;
+                }
+                case VARARG: {
+                    var a = Instruction.GetA(inst);
+                    code[code.Count - 1] = Build2(VARARG, a, state.nSlots - state.nResults + 2);
+                    state.nResults = state.nSlots;
+                    break;
+                }
+            }
+        }
+
         void ParseAssignment(ParseState state) {
             var baseR = stack.Count;
             state.firstResult = baseR;
-            var nArgs = 0;
+            state.nResults = 0;
             while (true) {
-                nArgs++;
+                state.nResults++;
                 state.lastValue = ParseExpression(state);
                 if (Peek() == TokenType.Comma) {
-                    state.SetTop(baseR + nArgs);
-                    AdjustDestination(state, state.lastValue, baseR + nArgs - 1);
+                    state.SetTop(baseR + state.nResults);
+                    AdjustDestination(state, state.lastValue, baseR + state.nResults - 1);
                     Next();
                 } else {
                     break;
                 }
             }
-            if (nArgs < state.nSlots) {
-                code.Add(Build2(LOADNIL, baseR + nArgs, baseR + state.nSlots - nArgs));
+            if (state.nResults != state.nSlots) {
+                state.SetTop(baseR + state.nResults);
+                AdjustDestination(state, state.lastValue, baseR + state.nResults - 1);
+                if (state.nResults < state.nSlots) {
+                    ExtendMultiReturn(state);
+                }
+                if (state.nResults < state.nSlots) {
+                    code.Add(Build2(LOADNIL, baseR + state.nResults, baseR + state.nSlots - state.nResults - 1));
+                }
+                state.lastValue = baseR + state.nSlots - 1;
+                state.SetTop(baseR + state.nSlots);
                 state.nResults = state.nSlots;
-            } else {
-                state.nResults = nArgs;
             }
         }
 
@@ -672,7 +698,7 @@ namespace YANCL
                 case TokenType.Minus: return Unary(UNM);
                 case TokenType.True: return Literal(LOADBOOL, 1);
                 case TokenType.False: return Literal(LOADBOOL, 0);
-                case TokenType.Nil: return Literal(LOADNIL, 1);
+                case TokenType.Nil: return Literal(LOADNIL, 0);
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }

@@ -159,7 +159,7 @@ namespace YANCL
                         }
                         break;
                     case OpCode.LOADNIL:
-                        for (int a = GetA(op), b = GetB(op); a <= b; a++) {
+                        for (int a = GetA(op), b = a + GetB(op); a <= b; a++) {
                             stack[baseR + a] = LuaValue.Nil;
                         }
                         break;

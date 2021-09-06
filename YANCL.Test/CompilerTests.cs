@@ -214,8 +214,8 @@ namespace YANCL.Test
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(SELF, 0, 0, 1 | KFlag),
-                    Build2x(LOADK, 2, 2 | KFlag),
-                    Build2x(LOADK, 3, 3 | KFlag),
+                    Build2x(LOADK, 2, 2),
+                    Build2x(LOADK, 3, 3),
                     Build3(CALL, 0, 4, 1),
                 },
                 0, 4
@@ -308,9 +308,9 @@ namespace YANCL.Test
                 new LuaValue[] { "x", 1, 2, 3 },
                 new [] {
                     Build3(NEWTABLE, 0, 3, 0),
-                    Build2x(LOADK, 1, 1 | KFlag),
-                    Build2x(LOADK, 2, 2 | KFlag),
-                    Build2x(LOADK, 3, 3 | KFlag),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 2),
+                    Build2x(LOADK, 3, 3),
                     Build3(SETLIST, 0, 3, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
                 },
@@ -326,7 +326,7 @@ namespace YANCL.Test
                 new LuaValue[] { "x", 1 },
                 new [] {
                     Build2(LOADNIL, 0, 0),
-                    Build2(LOADK, 1, 1 | KFlag),
+                    Build2(LOADK, 1, 1),
                 },
                 1, 0
             );
@@ -354,7 +354,7 @@ namespace YANCL.Test
                 "x, y, z = 1, w()",
                 new LuaValue[] { "x", "y", "z", 1, "w" },
                 new [] {
-                    Build2x(LOADK, 0, 3 | KFlag),
+                    Build2x(LOADK, 0, 3),
                     Build3(GETTABUP, 1, 0, 4 | KFlag),
                     Build3(CALL, 1, 1, 3),
                     Build3(SETTABUP, 0, 2 | KFlag, 2),
@@ -372,8 +372,8 @@ namespace YANCL.Test
                 "local x, y = 1, 2",
                 new LuaValue[] { "x", "y", 1, 2 },
                 new [] {
-                    Build2(LOADK, 0, 0 | KFlag),
-                    Build2(LOADK, 1, 1 | KFlag),
+                    Build2(LOADK, 0, 0),
+                    Build2(LOADK, 1, 1),
                 },
                 2, 0
             );
@@ -387,7 +387,7 @@ namespace YANCL.Test
                 new LuaValue[] { "x", "y", 1, 2 },
                 new [] {
                     Build2(LOADNIL, 0, 0),
-                    Build2(LOADK, 1, 1 | KFlag),
+                    Build2(LOADK, 1, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 2 | KFlag),
                     Build2(MOVE, 0, 1),
                 },
