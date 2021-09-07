@@ -16,7 +16,7 @@ Function call:
     ☐ C functions
 Expressions:
     ✔ True, false, nil @done(21-09-07 10:16)
-    ☐ Number literals
+    ✔ Number literals @done(21-09-07 11:44)
     ✔ String literals @done(21-09-07 10:16)
     ✔ Local @done(21-09-05 19:13)
     ✔ Global @done(21-09-05 19:13)
@@ -32,6 +32,10 @@ Declarations:
     ☐ Global function
     ☐ Member function
     ☐ Self function
+Misc language features:
+    ☐ Comments
+    ☐ Hashbang
+    ☐ Compile error handling
 Upvalues:
     ☐ _ENV
     ☐ In-stack

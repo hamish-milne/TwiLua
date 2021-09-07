@@ -87,15 +87,23 @@ namespace YANCL
 
         readonly List<int> code = new List<int>(1024);
 
-        Stack<(TokenType, string?)> tokens = new Stack<(TokenType, string?)>();
+        struct Token {
+            public TokenType type;
+            public string? text;
+            public double number;
 
-        (TokenType type, string? text) Next() {
+            public static implicit operator Token(TokenType type) => new Token { type = type };
+        }
+
+        Stack<Token> tokens = new Stack<Token>();
+
+        Token Next() {
             if (tokens.Count > 0) {
                 return tokens.Pop();
             }
 
             if (position >= str.Length) {
-                return (TokenType.Eof, null);
+                return TokenType.Eof;
             }
 
             var start = position;
@@ -113,84 +121,137 @@ namespace YANCL
                 }
                 var identifier = str.Substring(start, position - start);
                 switch (identifier) {
-                    case "and": return (TokenType.And, null);
-                    case "or": return (TokenType.Or, null);
-                    case "not": return (TokenType.Not, null);
-                    case "if": return (TokenType.If, null);
-                    case "then": return (TokenType.Then, null);
-                    case "else": return (TokenType.Else, null);
-                    case "elseif": return (TokenType.ElseIf, null);
-                    case "for": return (TokenType.For, null);
-                    case "do": return (TokenType.Do, null);
-                    case "while": return (TokenType.While, null);
-                    case "end": return (TokenType.End, null);
-                    case "return": return (TokenType.Return, null);
-                    case "local": return (TokenType.Local, null);
-                    case "function": return (TokenType.Function, null);
-                    case "true": return (TokenType.True, null);
-                    case "false": return (TokenType.False, null);
-                    case "nil": return (TokenType.Nil, null);
-                    case "break": return (TokenType.Break, null);
-                    case "repeat": return (TokenType.Repeat, null);
-                    case "until": return (TokenType.Until, null);
-                    case "in": return (TokenType.In, null);
-                    default: return (TokenType.Identifier, identifier);
+                    case "and": return TokenType.And;
+                    case "or": return TokenType.Or;
+                    case "not": return TokenType.Not;
+                    case "if": return TokenType.If;
+                    case "then": return TokenType.Then;
+                    case "else": return TokenType.Else;
+                    case "elseif": return TokenType.ElseIf;
+                    case "for": return TokenType.For;
+                    case "do": return TokenType.Do;
+                    case "while": return TokenType.While;
+                    case "end": return TokenType.End;
+                    case "return": return TokenType.Return;
+                    case "local": return TokenType.Local;
+                    case "function": return TokenType.Function;
+                    case "true": return TokenType.True;
+                    case "false": return TokenType.False;
+                    case "nil": return TokenType.Nil;
+                    case "break": return TokenType.Break;
+                    case "repeat": return TokenType.Repeat;
+                    case "until": return TokenType.Until;
+                    case "in": return TokenType.In;
+                    default: return new Token {
+                        type = TokenType.Identifier,
+                        text = identifier
+                    };
                 }
             }
 
-            if (char.IsDigit(c)) {
-                while (position < str.Length && char.IsDigit(str[position])) {
-                    position++;
+            if (char.IsDigit(c) || (c == '.' && position < str.Length && char.IsDigit(str[position]))) {
+                position--;
+                bool hasDp = false;
+                bool end = false;
+                bool hasMantissa = false;
+                bool negativeExponent = false;
+                long mantissa = 0;
+                int exponent = 0;
+                while (!end && position < str.Length) {
+                    switch (str[position]) {
+                        case '.':
+                            if (hasDp || hasMantissa) {
+                                end = true;
+                                break;
+                            }
+                            hasDp = true;
+                            position++;
+                            break;
+                        case 'e':
+                        case 'E':
+                            if (hasMantissa) {
+                                end = true;
+                                break;
+                            }
+                            hasMantissa = true;
+                            position++;
+                            if (position < str.Length) {
+                                switch (str[position]) {
+                                    case '-':
+                                        negativeExponent = true;
+                                        position++;
+                                        break;
+                                    case '+':
+                                        position++;
+                                        break;
+                                }
+                            }
+                            break;
+                        case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+                            if (hasMantissa) {
+                                exponent = exponent * 10 + ((str[position] - '0') * (negativeExponent ? -1 : 1));
+                                position++;
+                            } else {
+                                mantissa = mantissa * 10 + (str[position] - '0');
+                                if (hasDp) {
+                                    exponent -= 1;
+                                }
+                                position++;
+                            }
+                            break;
+                        default:
+                            end = true;
+                            break;
+                    }
                 }
-                return (TokenType.Number, str.Substring(start, position - start));
+                return new Token {
+                    type = TokenType.Number,
+                    number = mantissa * Math.Pow(10, exponent)
+                };
             }
 
-            (TokenType, string?) CharToken(TokenType token) {
-                return (token, null);
-            }
-
-            (TokenType, string?) TwoCharToken(TokenType token, char c, TokenType token2) {
+            TokenType TwoCharToken(TokenType token, char c, TokenType token2) {
                 if (position < str.Length && str[position] == c) {
                     position++;
-                    return (token2, null);
+                    return token2;
                 }
-                return (token, null);
+                return token;
             }
 
 
             switch (c) {
-                case '\'': return CharToken(TokenType.SingleQuote);
-                case '"': return CharToken(TokenType.DoubleQuote);
-                case '(': return CharToken(TokenType.OpenParen);
-                case ')': return CharToken(TokenType.CloseParen);
-                case '[': return CharToken(TokenType.OpenBracket);
-                case ']': return CharToken(TokenType.CloseBracket);
-                case '{': return CharToken(TokenType.OpenBrace);
-                case '}': return CharToken(TokenType.CloseBrace);
-                case ',': return CharToken(TokenType.Comma);
+                case '\'': return TokenType.SingleQuote;
+                case '"': return TokenType.DoubleQuote;
+                case '(': return TokenType.OpenParen;
+                case ')': return TokenType.CloseParen;
+                case '[': return TokenType.OpenBracket;
+                case ']': return TokenType.CloseBracket;
+                case '{': return TokenType.OpenBrace;
+                case '}': return TokenType.CloseBrace;
+                case ',': return TokenType.Comma;
                 case '.':
                     if (position < str.Length && str[position] == '.') {
                         position++;
                         if (position < str.Length && str[position] == '.') {
                             position++;
-                            return (TokenType.TripleDot, null);
+                            return TokenType.TripleDot;
                         }
-                        return (TokenType.DoubleDot, null);
+                        return TokenType.DoubleDot;
                     }
-                    return (TokenType.Dot, null);
-                case ':': return CharToken(TokenType.Colon);
-                case ';': return CharToken(TokenType.Semicolon);
-                case '+': return CharToken(TokenType.Plus);
-                case '-': return CharToken(TokenType.Minus);
-                case '*': return CharToken(TokenType.Star);
-                case '/': return CharToken(TokenType.Slash);
-                case '%': return CharToken(TokenType.Percent);
-                case '^': return CharToken(TokenType.Caret);
+                    return TokenType.Dot;
+                case ':': return TokenType.Colon;
+                case ';': return TokenType.Semicolon;
+                case '+': return TokenType.Plus;
+                case '-': return TokenType.Minus;
+                case '*': return TokenType.Star;
+                case '/': return TokenType.Slash;
+                case '%': return TokenType.Percent;
+                case '^': return TokenType.Caret;
                 case '~': return TwoCharToken(TokenType.Tilde, '=', TokenType.NotEqual);
                 case '=': return TwoCharToken(TokenType.Equal, '=', TokenType.DoubleEqual);
                 case '<': return TwoCharToken(TokenType.LessThan, '=', TokenType.LessThanEqual);
                 case '>': return TwoCharToken(TokenType.GreaterThan, '=', TokenType.GreaterThanEqual);
-                case '#': return CharToken(TokenType.Hash);
+                case '#': return TokenType.Hash;
                 default:
                     throw new Exception($"Unexpected character '{c}' at position {position}");
             }
@@ -306,7 +367,7 @@ namespace YANCL
             if (tokens.Count == 0) {
                 tokens.Push(Next());
             }
-            return tokens.Peek().Item1;
+            return tokens.Peek().type;
         }
 
         
@@ -686,7 +747,7 @@ namespace YANCL
                         return ParseExpressionSuffix(state, idx);
                     }
                 }
-                case TokenType.Number: return Constant(double.Parse(token.text!));
+                case TokenType.Number: return Constant(token.number);
                 case TokenType.DoubleQuote: return Constant(ParseString('"'));
                 case TokenType.SingleQuote: return Constant(ParseString('\''));
                 case TokenType.OpenParen: {
