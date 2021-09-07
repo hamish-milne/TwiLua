@@ -175,7 +175,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public void CallTableSyntax()
         {
             DoCompilerTest(
@@ -205,7 +205,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public void SelfCall()
         {
             DoCompilerTest(
@@ -300,7 +300,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public void TableConstructor()
         {
             DoCompilerTest(
