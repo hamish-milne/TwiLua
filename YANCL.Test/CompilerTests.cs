@@ -242,7 +242,7 @@ namespace YANCL.Test
         {
             DoCompilerTest(
                 "local x = true; local y = false; local z = nil",
-                new LuaValue[] { "x", "y", "z" },
+                new LuaValue[] { },
                 new [] {
                     Build2(LOADBOOL, 0, 1),
                     Build2(LOADBOOL, 1, 0),
@@ -323,10 +323,10 @@ namespace YANCL.Test
         {
             DoCompilerTest(
                 "local x; x = 1",
-                new LuaValue[] { "x", 1 },
+                new LuaValue[] { 1 },
                 new [] {
                     Build2(LOADNIL, 0, 0),
-                    Build2(LOADK, 1, 1),
+                    Build2x(LOADK, 0, 0),
                 },
                 1, 0
             );
@@ -370,10 +370,10 @@ namespace YANCL.Test
         {
             DoCompilerTest(
                 "local x, y = 1, 2",
-                new LuaValue[] { "x", "y", 1, 2 },
+                new LuaValue[] { 1, 2 },
                 new [] {
-                    Build2(LOADK, 0, 0),
-                    Build2(LOADK, 1, 1),
+                    Build2x(LOADK, 0, 0),
+                    Build2x(LOADK, 1, 1),
                 },
                 2, 0
             );
@@ -384,14 +384,14 @@ namespace YANCL.Test
         {
             DoCompilerTest(
                 "local x; x, y = 1, 2",
-                new LuaValue[] { "x", "y", 1, 2 },
+                new LuaValue[] { "y", 1, 2 },
                 new [] {
                     Build2(LOADNIL, 0, 0),
-                    Build2(LOADK, 1, 1),
+                    Build2x(LOADK, 1, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 2 | KFlag),
                     Build2(MOVE, 0, 1),
                 },
-                1, 2
+                1, 1
             );
         }
 

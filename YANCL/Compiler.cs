@@ -237,7 +237,8 @@ namespace YANCL
                 case TokenType.While:
                     throw new NotImplementedException();
                 case TokenType.Local:
-                    throw new NotImplementedException();
+                    ParseLocal();
+                    break;
                 case TokenType.Function:
                     throw new NotImplementedException();
                 case TokenType.Return:
@@ -312,6 +313,16 @@ namespace YANCL
         readonly List<string?> stack = new List<string?>();
         int maxStack;
 
+        public void SetTop(int top) {
+            while (stack.Count < top) {
+                stack.Add(null);
+            }
+            maxStack = Math.Max(maxStack, stack.Count);
+            while (stack.Count > top) {
+                stack.RemoveAt(stack.Count - 1);
+            }
+        }
+
         class ParseState {
             public Compiler compiler;
             public int nSlots;
@@ -340,16 +351,6 @@ namespace YANCL
                     return;
                 }
                 compiler.stack.RemoveAt(idx);
-            }
-
-            public void SetTop(int top) {
-                while (compiler.stack.Count < top) {
-                    compiler.stack.Add(null);
-                }
-                compiler.maxStack = Math.Max(compiler.maxStack, compiler.stack.Count);
-                while (compiler.stack.Count > top) {
-                    compiler.stack.RemoveAt(compiler.stack.Count - 1);
-                }
             }
 
             public int? GetLocal(string name) {
@@ -434,7 +435,7 @@ namespace YANCL
             while (Peek() != TokenType.CloseParen) {
                 nArgs++;
                 var arg = ParseExpression(state);
-                state.SetTop(func + 1 + nArgs);
+                SetTop(func + 1 + nArgs);
                 AdjustDestination(state, arg, func + nArgs);
                 if (Peek() == TokenType.Comma) {
                     Next();
@@ -473,7 +474,7 @@ namespace YANCL
                 state.nResults++;
                 state.lastValue = ParseExpression(state);
                 if (Peek() == TokenType.Comma) {
-                    state.SetTop(baseR + state.nResults);
+                    SetTop(baseR + state.nResults);
                     AdjustDestination(state, state.lastValue, baseR + state.nResults - 1);
                     Next();
                 } else {
@@ -481,7 +482,7 @@ namespace YANCL
                 }
             }
             if (state.nResults != state.nSlots) {
-                state.SetTop(baseR + state.nResults);
+                SetTop(baseR + state.nResults);
                 AdjustDestination(state, state.lastValue, baseR + state.nResults - 1);
                 if (state.nResults < state.nSlots) {
                     ExtendMultiReturn(state);
@@ -490,7 +491,7 @@ namespace YANCL
                     code.Add(Build2(LOADNIL, baseR + state.nResults, baseR + state.nSlots - state.nResults - 1));
                 }
                 state.lastValue = baseR + state.nSlots - 1;
-                state.SetTop(baseR + state.nSlots);
+                SetTop(baseR + state.nSlots);
                 state.nResults = state.nSlots;
             }
         }
@@ -511,13 +512,13 @@ namespace YANCL
             void PostCall(int func, int nArgs) {
                 if (PeekSuffix()) {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    state.SetTop(func + 1);
+                    SetTop(func + 1);
                     ParseVarSuffix(state, src);
                 } else if (PeekAssignment() || PeekComma() || state.nSlots > 1) {
                     throw new Exception("Cannot assign to function call");
                 } else {
                     code.Add(Build3(CALL, func, nArgs + 1, 1));
-                    state.SetTop(func);
+                    SetTop(func);
                 }
             }
 
@@ -589,7 +590,7 @@ namespace YANCL
                 case TokenType.DoubleQuote: {
                     var func = PreCall(state, src);
                     var arg = Constant(ParseString(token.type == TokenType.SingleQuote ? '\'' : '"'));
-                    state.SetTop(func + 2);
+                    SetTop(func + 2);
                     AdjustDestination(state, arg, func + 1);
                     PostCall(func, 1);
                     break;
@@ -606,11 +607,11 @@ namespace YANCL
                 int ret;
                 if (PeekSuffix()) {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    state.SetTop(func + 2);
+                    SetTop(func + 2);
                     ret = ParseExpressionSuffix(state, func);
                 } else {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    state.SetTop(func + 1);
+                    SetTop(func + 1);
                     ret = func;
                 }
                 return ret;
@@ -644,7 +645,7 @@ namespace YANCL
                     Next();
                     var func = PreCall(state, src);
                     var arg = Constant(ParseString(Peek() == TokenType.SingleQuote ? '\'' : '"'));
-                    state.SetTop(func + 2);
+                    SetTop(func + 2);
                     AdjustDestination(state, arg, func + 1);
                     return PostCall(func, 1);
                 }
@@ -778,5 +779,32 @@ namespace YANCL
             }
         }
 
+        void ParseLocal() {
+            var names = new List<string>();
+            do {
+                Next();
+                names.Add(Expect(TokenType.Identifier, "local declaration")!);
+            } while (Peek() == TokenType.Comma);
+            int startR = stack.Count;
+            if (Peek() == TokenType.Equal) {
+                Next();
+                var state = new ParseState {
+                    compiler = this,
+                    nSlots = names.Count,
+                };
+                ParseAssignment(state);
+                if (state.lastValue != state.TopResult) {
+                    AdjustDestination(state, state.lastValue, state.Push());
+                }
+                Debug.Assert(state.firstResult == startR);
+                Debug.Assert(stack.Count == startR + names.Count);
+            } else {
+                code.Add(Build2(LOADNIL, stack.Count, stack.Count + names.Count - 1));
+                SetTop(startR + names.Count);
+            }
+            for (var i = 0; i < names.Count; i++) {
+                stack[startR + i] = names[i];
+            }
+        }
     }
 }

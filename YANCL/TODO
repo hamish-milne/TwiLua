@@ -5,7 +5,7 @@ Assignment:
     ✔ Dot suffix @done(21-09-05 19:13)
     ✔ Index suffix @done(21-09-05 20:49)
     ✔ Call suffix @done(21-09-05 21:55)
-    ☐ Multiple assignment
+    ✔ Multiple assignment @done(21-09-07 10:16)
 Function call:
     ✔ Statement @done(21-09-05 19:13)
     ✔ Assignment prefix @done(21-09-05 21:42)
@@ -15,9 +15,9 @@ Function call:
     ☐ Self call
     ☐ C functions
 Expressions:
-    ☐ True, false, nil
+    ✔ True, false, nil @done(21-09-07 10:16)
     ☐ Number literals
-    ☐ String literals
+    ✔ String literals @done(21-09-07 10:16)
     ✔ Local @done(21-09-05 19:13)
     ✔ Global @done(21-09-05 19:13)
     ✔ Dot suffix @done(21-09-05 19:13)
@@ -27,7 +27,7 @@ Expressions:
     ☐ Function expression
     ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:
-    ☐ Local variable
+    ✔ Local variable @done(21-09-07 10:48)
     ☐ Local function
     ☐ Global function
     ☐ Member function
