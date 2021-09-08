@@ -20,7 +20,7 @@ namespace YANCL
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetB(int instruction) {
-            return (instruction >> 6+8+9) & 0b011111111;
+            return (instruction >> 6+8+9) & 0b111111111;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetBx(int instruction) {
@@ -64,10 +64,10 @@ namespace YANCL
             var sbx = GetSbx(instruction);
             var ax = GetAx(instruction);
             if ((b & KFlag) != 0) {
-                b = (1 + (b & ~KFlag));
+                b = -1 - (b & ~KFlag);
             }
             if ((c & KFlag) != 0) {
-                c = (1 + (c & ~KFlag));
+                c = -1 - (c & ~KFlag);
             }
             return $"{opCode}\n    A: {a}\n    B: {b}\n    C: {c}\n    Bx: {bx}\n    Sbx: {sbx}\n    Ax: {ax}";
         }

@@ -230,8 +230,8 @@ namespace YANCL.Test
                 new LuaValue[] { "x", true, "y", false, "z", LuaValue.Nil },
                 new [] {
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
-                    Build3(SETTABUP, 0, 1 | KFlag, 2 | KFlag),
-                    Build3(SETTABUP, 0, 3 | KFlag, 4 | KFlag),
+                    Build3(SETTABUP, 0, 2 | KFlag, 3 | KFlag),
+                    Build3(SETTABUP, 0, 4 | KFlag, 5 | KFlag),
                 },
                 0, 0
             );

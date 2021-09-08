@@ -303,18 +303,17 @@ namespace YANCL
         }
 
         int Top;
+        int Head => Top - 1;
         int nSlots;
         int nResults;
         int firstResult;
-        int lastValue;
         int maxStack;
-
-        int TopResult => firstResult + nResults - 1;
-        int Base => constants.Count;
+        int pcAtMaxStack;
 
         void SetTop(int top) {
             if (top > maxStack) {
                 maxStack = top;
+                pcAtMaxStack = code.Count;
             }
             Top = top;
         }
@@ -325,28 +324,57 @@ namespace YANCL
             Top++;
             if (Top > maxStack) {
                 maxStack = Top;
+                pcAtMaxStack = code.Count;
             }
-            return Top - 1;
+            return Head;
         }
 
-        void Pop(int idx) {
-            if ((idx & KFlag) != 0) {
-                return;
-            }
-            Debug.Assert(Top == idx + 1);
-            Top--;
+        int PopS() {
+            return --Top;
         }
 
-        bool IsTemporary(int idx) {
-            return idx >= locals.Count;
-        }
-
-        int? GetLocal(string name) {
-            var idx = locals.IndexOf(name);
-            if (idx == -1) {
-                return null;
+        int PopRK() {
+            void Shrink() {
+                code.RemoveAt(code.Count - 1);
+                if (code.Count == pcAtMaxStack && maxStack == Top) {
+                    maxStack--;
+                    pcAtMaxStack--;
+                }
+                Top--;
             }
-            return idx;
+
+            Debug.Assert(Top > 0);
+            Debug.Assert(code.Count > 0);
+            var inst = code[code.Count - 1];
+            switch (GetOpCode(inst)) {
+                case MOVE:
+                    if (GetA(inst) == Head) {
+                        Shrink();
+                        return GetB(inst);
+                    }
+                    break;
+                case LOADK:
+                    if (GetA(inst) == Head) {
+                        Shrink();
+                        return GetBx(inst) | KFlag;
+                    }
+                    break;
+                case LOADBOOL:
+                    if (GetA(inst) == Head) {
+                        Shrink();
+                        return Constant(GetB(inst) != 0);
+                    }
+                    break;
+                case LOADNIL:
+                    if (GetA(inst) == Head && GetB(inst) == 0) {
+                        Shrink();
+                        return Constant(LuaValue.Nil);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return PopS();
         }
 
         Token Next() => lexer.Next();
@@ -388,7 +416,7 @@ namespace YANCL
                 case TokenType.OpenParen:
                 case TokenType.OpenBrace:
                 case TokenType.Minus:
-                    ParseVar();
+                    ParseVar(resultIdx: 0);
                     break;
                 case TokenType.Do:
                     Next();
@@ -415,22 +443,17 @@ namespace YANCL
             }
         }
 
-        int Constant(string str) {
-            var constIdx = constants.IndexOf(str);
+        int Constant(LuaValue value) {
+            var constIdx = constants.IndexOf(value);
             if (constIdx < 0) {
                 constIdx = constants.Count;
-                constants.Add(str);
+                constants.Add(value);
             }
             return constIdx | KFlag;
         }
 
-        int Constant(double num) {
-            var constIdx = constants.IndexOf(num);
-            if (constIdx < 0) {
-                constIdx = constants.Count;
-                constants.Add(num);
-            }
-            return constIdx | KFlag;
+        void PushK(LuaValue value) {
+            code.Add(Build2x(LOADK, Push(), Constant(value) & ~KFlag));
         }
 
         bool PeekSuffix() {
@@ -462,35 +485,11 @@ namespace YANCL
             return false;
         }
 
-        void AdjustDestination(int old, int newIdx) {
-            if (old == newIdx) {
-                return;
-            }
-            if ((old & KFlag) != 0) {
-                var constIdx = old & ~KFlag;
-                code.Add(Build2x(LOADK, newIdx, constIdx));
-            } else {
-                code.Add(Build2(MOVE, newIdx, old));
-                Pop(old);
-            }
-        }
-
-        int PreCall(int src) {
-            var func = src;
-            if (!IsTemporary(src)) {
-                func = Push();
-                code.Add(Build2(MOVE, func, src));
-            }
-            return func;
-        }
-
         int ParseArgs(int func) {
             var nArgs = 0;
             while (Peek() != TokenType.CloseParen) {
                 nArgs++;
-                var arg = ParseExpression();
-                SetTop(func + 1 + nArgs);
-                AdjustDestination(arg, func + nArgs);
+                PushExpression();
                 if (Peek() == TokenType.Comma) {
                     Next();
                 } else if (Peek() != TokenType.CloseParen) {
@@ -520,53 +519,44 @@ namespace YANCL
             }
         }
 
-        void ParseAssignment() {
+        int ParseAssignment(bool forceStack = false) {
             firstResult = Top;
             nResults = 0;
             while (true) {
                 nResults++;
-                lastValue = ParseExpression();
+                PushExpression();
                 if (Peek() == TokenType.Comma) {
-                    SetTop(firstResult + nResults);
-                    AdjustDestination(lastValue, firstResult + nResults - 1);
                     Next();
                 } else {
                     break;
                 }
             }
+            int result;
             if (nResults != nSlots) {
-                SetTop(firstResult + nResults);
-                AdjustDestination(lastValue, firstResult + nResults - 1);
                 if (nResults < nSlots) {
                     ExtendMultiReturn();
                 }
                 if (nResults < nSlots) {
                     code.Add(Build2(LOADNIL, firstResult + nResults, firstResult + nSlots - nResults - 1));
                 }
-                lastValue = firstResult + nSlots - 1;
-                SetTop(firstResult + nSlots);
                 nResults = nSlots;
+                SetTop(firstResult + nSlots);
+                // PopRK() would be valid here, but the reference implementation doesn't do it.
+                result = PopS();
+            } else {
+                result = forceStack ? PopS() : PopRK();
             }
+            SetTop(firstResult);
+            return result;
         }
 
-        void PopAssignment() {
-            Debug.Assert(nResults > 0);
-            if (nResults == nSlots && lastValue != TopResult) {
-                nResults--;
-                return; // Last value is not in the stack
-            }
-            Pop(firstResult + nResults - 1);
-            nResults--;
-        }
-            
-
-        void ParseVarSuffix(int src) {
+        void ParseVarSuffix(int resultIdx) {
 
             void PostCall(int func, int nArgs) {
                 if (PeekSuffix()) {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
                     SetTop(func + 1);
-                    ParseVarSuffix(src);
+                    ParseVarSuffix(resultIdx);
                 } else if (PeekAssignment() || PeekComma() || nSlots > 1) {
                     throw new Exception("Cannot assign to function call");
                 } else {
@@ -581,70 +571,49 @@ namespace YANCL
                     var name = Expect(TokenType.Identifier, "dot")!;
                     var constIdx = Constant(name);
                     if (PeekSuffix()) {
-                        if (IsTemporary(src)) {
-                            code.Add(Build3(GETTABLE, src, src, constIdx));
-                            ParseVarSuffix(src);
-                        } else {
-                            var dst = Push();
-                            code.Add(Build3(GETTABLE, dst, src, constIdx));
-                            ParseVarSuffix(dst);
-                        }
+                        code.Add(Build3(GETTABLE, Head, Head, constIdx));
+                        ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment()) {
-                        ParseAssignment();
-                        code.Add(Build3(SETTABLE, src, constIdx, lastValue));
-                        PopAssignment();
-                        Pop(src);
+                        var result = ParseAssignment();
+                        code.Add(Build3(SETTABLE, PopS(), constIdx, result));
                     } else if (PeekComma()) {
-                        ParseVarAdditional();
-                        code.Add(Build3(SETTABLE, src, constIdx, TopResult));
-                        PopAssignment();
-                        Pop(src);
+                        ParseVarAdditional(resultIdx);
+                        code.Add(Build3(SETTABLE, PopS(), constIdx, firstResult + resultIdx));
                     } else {
                         throw new Exception($"Unexpected token {token.type}");
                     }
                     break;
                 }
                 case TokenType.OpenBracket: {
-                    var indexer = ParseExpression();
+                    PushExpression();
                     Expect(TokenType.CloseBracket, "index expression");
                     if (PeekSuffix()) {
-                        if (IsTemporary(src)) {
-                            code.Add(Build3(GETTABLE, src, src, indexer));
-                            ParseVarSuffix(src);
-                        } else {
-                            var dst = Push();
-                            code.Add(Build3(GETTABLE, dst, src, indexer));
-                            ParseVarSuffix(dst);
-                        }
+                        var indexer = PopRK();
+                        code.Add(Build3(GETTABLE, Head, Head, indexer));
+                        ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment()) {
-                        ParseAssignment();
-                        code.Add(Build3(SETTABLE, src, indexer, lastValue));
-                        PopAssignment();
-                        Pop(indexer);
-                        Pop(src);
+                        var result = ParseAssignment();
+                        var indexer = PopRK();
+                        code.Add(Build3(SETTABLE, PopS(), indexer, result));
                     } else if (PeekComma()) {
-                        ParseVarAdditional();
-                        code.Add(Build3(SETTABLE, src, indexer, TopResult));
-                        PopAssignment();
-                        Pop(indexer);
-                        Pop(src);
+                        ParseVarAdditional(resultIdx);
+                        var indexer = PopRK();
+                        code.Add(Build3(SETTABLE, PopS(), indexer, firstResult + resultIdx));
                     } else {
                         throw new Exception($"Unexpected token {token.type}");
                     }
                     break;
                 }
                 case TokenType.OpenParen: {
-                    var func = PreCall(src);
+                    var func = Head;
                     var nArgs = ParseArgs(func);
                     PostCall(func, nArgs);
                     break;
                 }
                 case TokenType.SingleQuote:
                 case TokenType.DoubleQuote: {
-                    var func = PreCall(src);
-                    var arg = Constant(ParseString(token.type == TokenType.SingleQuote ? '\'' : '"'));
-                    SetTop(func + 2);
-                    AdjustDestination(arg, func + 1);
+                    var func = Head;
+                    PushK(ParseString(token.type == TokenType.SingleQuote ? '\'' : '"'));
                     PostCall(func, 1);
                     break;
                 }
@@ -654,20 +623,19 @@ namespace YANCL
             }
         }
 
-        int ParseExpressionSuffix(int src) {
+        void PushExpressionSuffix() {
 
-            int PostCall(int func, int nArgs) {
+            void PostCall(int func, int nArgs) {
                 int ret;
                 if (PeekSuffix()) {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
                     SetTop(func + 2);
-                    ret = ParseExpressionSuffix(func);
+                    PushExpressionSuffix();
                 } else {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
                     SetTop(func + 1);
                     ret = func;
                 }
-                return ret;
             }
 
             switch (Peek()) {
@@ -675,127 +643,127 @@ namespace YANCL
                     Next();
                     var name = Expect(TokenType.Identifier, "dot")!;
                     var indexer = Constant(name);
-                    var dst = IsTemporary(src) ? src : Push();
-                    code.Add(Build3(GETTABLE, dst, src, indexer));
-                    return ParseExpressionSuffix(dst);
+                    code.Add(Build3(GETTABLE, Head, Head, indexer));
+                    PushExpressionSuffix();
+                    break;
                 }
                 case TokenType.OpenBracket: {
                     Next();
-                    var indexer = ParseExpression();
+                    PushExpression();
                     Expect(TokenType.CloseBracket, "index expression");
-                    var dst = IsTemporary(src) ? src : Push();
-                    code.Add(Build3(GETTABLE, dst, src, indexer));
-                    return ParseExpressionSuffix(dst);
+                    var indexer = PopRK();
+                    code.Add(Build3(GETTABLE, Head, Head, indexer));
+                    PushExpressionSuffix();
+                    break;
                 }
                 case TokenType.OpenParen: {
                     Next();
-                    var func = PreCall(src);
+                    var func = Head;
                     var nArgs = ParseArgs(func);
-                    return PostCall(func, nArgs);
+                    PostCall(func, nArgs);
+                    break;
                 }
                 case TokenType.SingleQuote:
                 case TokenType.DoubleQuote: {
                     Next();
-                    var func = PreCall(src);
+                    var func = Head;
                     var arg = Constant(ParseString(Peek() == TokenType.SingleQuote ? '\'' : '"'));
                     SetTop(func + 2);
-                    AdjustDestination(arg, func + 1);
-                    return PostCall(func, 1);
+                    PostCall(func, 1);
+                    break;
                 }
                 default:
-                    return src;
+                    return;
             }
         }
 
-        int ParseExpression() {
-            return ParseTerm();
+        void PushExpression() {
+            PushTerm();
         }
 
-        int ParseTerm() {
-            int Unary(OpCode op) {
-                var expr = ParseTerm();
-                var idx = Push();
-                code.Add(Build2(op, idx, expr));
-                return idx;
+        void PushTerm() {
+            void Unary(OpCode op) {
+                PushTerm();
+                var expr = PopS();
+                code.Add(Build2(op, Push(), expr));
             }
 
-            int Literal(OpCode op, int arg) {
-                var idx = Push();
-                code.Add(Build2(op, idx, arg));
-                return idx;
+            void Literal(OpCode op, int arg) {
+                code.Add(Build2(op, Push(), arg));
             }
 
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {
                     var name = token.text!;
-                    var localIdx = GetLocal(name);
-                    if (localIdx != null) {
-                        return ParseExpressionSuffix(localIdx.Value);
+                    var localIdx = locals.IndexOf(name);
+                    if (localIdx >= 0) {
+                        code.Add(Build2(MOVE, Push(), localIdx));
                     } else {
                         var globalIdx = Constant(name);
-                        var idx = Push();
-                        code.Add(Build3(GETTABUP, idx, EnvUp(), globalIdx));
-                        return ParseExpressionSuffix(idx);
+                        code.Add(Build3(GETTABUP, Push(), EnvUp(), globalIdx));
                     }
+                    PushExpressionSuffix();
+                    break;
                 }
-                case TokenType.Number: return Constant(token.number);
-                case TokenType.DoubleQuote: return Constant(ParseString('"'));
-                case TokenType.SingleQuote: return Constant(ParseString('\''));
+                case TokenType.Number: PushK(token.number); break;
+                case TokenType.DoubleQuote: PushK(ParseString('"')); break;
+                case TokenType.SingleQuote: PushK(ParseString('\'')); break;
                 case TokenType.OpenParen: {
-                    var expr = ParseExpression();
+                    PushExpression();
                     Expect(TokenType.CloseParen, "parenthesized expression");
-                    return ParseExpressionSuffix(expr);
+                    PushExpressionSuffix();
+                    break;
                 }
-                case TokenType.Hash: return Unary(LEN);
-                case TokenType.Not: return Unary(NOT);
-                case TokenType.Minus: return Unary(UNM);
-                case TokenType.True: return Literal(LOADBOOL, 1);
-                case TokenType.False: return Literal(LOADBOOL, 0);
-                case TokenType.Nil: return Literal(LOADNIL, 0);
+                case TokenType.Hash: Unary(LEN); break;
+                case TokenType.Not: Unary(NOT); break;
+                case TokenType.Minus: Unary(UNM); break;
+                case TokenType.True: Literal(LOADBOOL, 1); break;
+                case TokenType.False: Literal(LOADBOOL, 0); break;
+                case TokenType.Nil: Literal(LOADNIL, 0); break;
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }
         }
 
-        void ParseVarAdditional() {
-            ParseVar();
+        void ParseVarAdditional(int resultIdx) {
+            ParseVar(resultIdx + 1);
         }
 
-        void ParseVar() {
-            
+        void ParseVar(int resultIdx) {
             nSlots++;
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {
                     var name = token.text!;
-                    var index = GetLocal(name);
-                    if (index == null) {
+                    var localIdx = locals.IndexOf(name);
+                    if (localIdx < 0) {
                         var constIdx = Constant(name);
                         if (PeekSuffix()) {
-                            var dst = Push();
-                            code.Add(Build3(GETTABUP, dst, EnvUp(), constIdx));
-                            ParseVarSuffix(dst);
+                            code.Add(Build3(GETTABUP, Push(), EnvUp(), constIdx));
+                            ParseVarSuffix(resultIdx);
                         } else if (PeekAssignment()) {
-                            ParseAssignment();
-                            code.Add(Build3(SETTABUP, EnvUp(), constIdx, lastValue));
-                            PopAssignment();
+                            var result = ParseAssignment();
+                            code.Add(Build3(SETTABUP, EnvUp(), constIdx, result));
                         } else if (PeekComma()) {
-                            ParseVarAdditional();
-                            code.Add(Build3(SETTABUP, EnvUp(), constIdx, TopResult));
-                            PopAssignment();
+                            ParseVarAdditional(resultIdx);
+                            code.Add(Build3(SETTABUP, EnvUp(), constIdx, firstResult + resultIdx));
                         } else {
                             throw new Exception("Expected an call or assignment");
                         }
                     } else {
                         if (PeekSuffix()) {
-                            ParseVarSuffix(index.Value);
+                            code.Add(Build2(MOVE, Push(), localIdx));
                         } else if (PeekAssignment()) {
-                            var result = ParseExpression();
-                            AdjustDestination(result, index.Value);
+                            var result = ParseAssignment();
+                            if ((result & KFlag) != 0) {
+                                code.Add(Build2x(LOADK, localIdx, result & ~KFlag));
+                            } else if (result != localIdx) {
+                                code.Add(Build2(MOVE, localIdx, result));
+                            }
                         } else if (PeekComma()) {
-                            ParseVarAdditional();
-                            AdjustDestination(TopResult, index.Value);
+                            ParseVarAdditional(resultIdx);
+                            code.Add(Build2(MOVE, localIdx, firstResult + resultIdx));
                         } else {
                             throw new Exception("Expected an call or assignment");
                         }
@@ -803,10 +771,10 @@ namespace YANCL
                     break;
                 }
                 case TokenType.OpenParen: {
-                    var result = ParseExpression();
+                    PushExpression();
                     Expect(TokenType.CloseParen, "parenthesized expression");
                     if (PeekSuffix()) {
-                        ParseVarSuffix(result);
+                        ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment() || PeekComma()) {
                         throw new Exception("Cannot assign to parenthesized expression");
                     } else {
@@ -832,29 +800,25 @@ namespace YANCL
             }
         }
 
+        private readonly List<string> tmpLocals = new List<string>();
+
         void ParseLocal() {
-            var names = new List<string>();
             do {
                 Next();
-                names.Add(Expect(TokenType.Identifier, "local declaration")!);
+                tmpLocals.Add(Expect(TokenType.Identifier, "local declaration")!);
             } while (Peek() == TokenType.Comma);
-            nSlots = names.Count;
-            int startR = Top;
+            nSlots = tmpLocals.Count;
             if (Peek() == TokenType.Equal) {
                 Next();
-                ParseAssignment();
-                if (lastValue != TopResult) {
-                    AdjustDestination(lastValue, Push());
-                }
-                Debug.Assert(firstResult == startR);
-                Debug.Assert(Top == startR + names.Count);
+                ParseAssignment(forceStack: true);
             } else {
-                code.Add(Build2(LOADNIL, Top, Top + names.Count - 1));
-                SetTop(startR + names.Count);
+                code.Add(Build2(LOADNIL, Top, Top + tmpLocals.Count - 1));
             }
-            for (var i = 0; i < names.Count; i++) {
-                locals.Add(names[i]);
+            SetTop(firstResult + tmpLocals.Count);
+            for (var i = 0; i < tmpLocals.Count; i++) {
+                locals.Add(tmpLocals[i]);
             }
+            tmpLocals.Clear();
         }
     }
 }
