@@ -175,7 +175,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void CallTableSyntax()
         {
             DoCompilerTest(

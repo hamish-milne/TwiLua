@@ -180,6 +180,7 @@ namespace YANCL
                 case TokenType.OpenParen:
                 case TokenType.SingleQuote:
                 case TokenType.DoubleQuote:
+                case TokenType.OpenBrace:
                     return true;
                 default:
                     return false;
@@ -334,6 +335,12 @@ namespace YANCL
                     PostCall(func, 1);
                     break;
                 }
+                case TokenType.OpenBrace: {
+                    var func = Head;
+                    PushTableConstructor();
+                    PostCall(func, 1);
+                    break;
+                }
                 default:
                     Debug.Assert(false);
                     break;
@@ -387,6 +394,13 @@ namespace YANCL
                     PostCall(func, 1);
                     break;
                 }
+                case TokenType.OpenBrace: {
+                    var func = Head;
+                    PushTableConstructor();
+                    SetTop(func + 2);
+                    PostCall(func, 1);
+                    break;
+                }
                 default:
                     return;
             }
@@ -436,66 +450,67 @@ namespace YANCL
                 case TokenType.True: Literal(LOADBOOL, 1); break;
                 case TokenType.False: Literal(LOADBOOL, 0); break;
                 case TokenType.Nil: Literal(LOADNIL, 0); break;
-                case TokenType.OpenBrace: {
-                    var opIdx = code.Count;
-                    var table = Push();
-                    code.Add(0);
-                    int nArr = 0;
-                    int nHash = 0;
-                    while (Peek() != TokenType.CloseBrace) {
-                        switch (Peek()) {
-                            case TokenType.Identifier: {
-                                var key = Next();
-                                if (Peek() == TokenType.Equal) {
-                                    Next();
-                                    var constIdx = Constant(key.text!);
-                                    PushExpression();
-                                    code.Add(Build3(SETTABLE, table, constIdx, PopRK()));
-                                    nHash++;
-                                } else {
-                                    lexer.PushBack(key);
-                                    PushExpression();
-                                    nArr++;
-                                }
-                                break;
-                            }
-                            case TokenType.OpenBracket: {
-                                Next();
-                                PushExpression();
-                                Expect(TokenType.CloseBracket, "table index expression");
-                                Expect(TokenType.Equal, "table index");
-                                PushExpression();
-                                var value = PopRK();
-                                code.Add(Build3(SETTABLE, table, PopRK(), value));
-                                nHash++;
-                                break;
-                            }
-                            default:
-                                PushExpression();
-                                nArr++;
-                                break;
-                        }
-                        switch (Peek()) {
-                            case TokenType.Comma:
-                                Next();
-                                break;
-                            case TokenType.CloseBrace:
-                                break;
-                            default:
-                                throw new Exception("'}' or ',' expected");
-                        }
-                    }
-                    Next();
-                    code[opIdx] = Build3(NEWTABLE, table, nArr, nHash);
-                    if (nArr > 0) {
-                        code.Add(Build3(SETLIST, table, nArr, table + 1));
-                    }
-                    SetTop(table + 1);
-                    break;
-                }
+                case TokenType.OpenBrace: PushTableConstructor(); break;
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }
+        }
+
+        void PushTableConstructor() {
+            var opIdx = code.Count;
+            var table = Push();
+            code.Add(0);
+            int nArr = 0;
+            int nHash = 0;
+            while (Peek() != TokenType.CloseBrace) {
+                switch (Peek()) {
+                    case TokenType.Identifier: {
+                        var key = Next();
+                        if (Peek() == TokenType.Equal) {
+                            Next();
+                            var constIdx = Constant(key.text!);
+                            PushExpression();
+                            code.Add(Build3(SETTABLE, table, constIdx, PopRK()));
+                            nHash++;
+                        } else {
+                            lexer.PushBack(key);
+                            PushExpression();
+                            nArr++;
+                        }
+                        break;
+                    }
+                    case TokenType.OpenBracket: {
+                        Next();
+                        PushExpression();
+                        Expect(TokenType.CloseBracket, "table index expression");
+                        Expect(TokenType.Equal, "table index");
+                        PushExpression();
+                        var value = PopRK();
+                        code.Add(Build3(SETTABLE, table, PopRK(), value));
+                        nHash++;
+                        break;
+                    }
+                    default:
+                        PushExpression();
+                        nArr++;
+                        break;
+                }
+                switch (Peek()) {
+                    case TokenType.Comma:
+                        Next();
+                        break;
+                    case TokenType.CloseBrace:
+                        break;
+                    default:
+                        throw new Exception("'}' or ',' expected");
+                }
+            }
+            Next();
+            code[opIdx] = Build3(NEWTABLE, table, nArr, nHash);
+            if (nArr > 0) {
+                code.Add(Build3(SETLIST, table, nArr, table + 1));
+            }
+            SetTop(table + 1);
         }
 
         void ParseVarAdditional(int resultIdx) {
@@ -521,7 +536,7 @@ namespace YANCL
                             ParseVarAdditional(resultIdx);
                             code.Add(Build3(SETTABUP, EnvUp(), constIdx, firstResult + resultIdx));
                         } else {
-                            throw new Exception("Expected an call or assignment");
+                            throw new Exception("Expected a call or assignment");
                         }
                     } else {
                         if (PeekSuffix()) {
@@ -537,7 +552,7 @@ namespace YANCL
                             ParseVarAdditional(resultIdx);
                             code.Add(Build2(MOVE, localIdx, firstResult + resultIdx));
                         } else {
-                            throw new Exception("Expected an call or assignment");
+                            throw new Exception("Expected a call or assignment");
                         }
                     }
                     break;

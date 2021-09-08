@@ -10,7 +10,7 @@ Function call:
     ✔ Statement @done(21-09-05 19:13)
     ✔ Assignment prefix @done(21-09-05 21:42)
     ✔ Expression @done(21-09-05 21:58)
-    ☐ Table syntax
+    ✔ Table syntax @done(21-09-08 17:39)
     ✔ String syntax @done(21-09-05 22:26)
     ☐ Self call
     ☐ C functions
