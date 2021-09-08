@@ -24,7 +24,7 @@ Expressions:
     ✔ Index suffix @done(21-09-05 21:55)
     ✔ Call suffix @done(21-09-05 21:55)
     ✔ Table constructor @done(21-09-08 17:19)
-    ☐ Function expression
+    ✔ Function expression @done(21-09-08 23:08)
     ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:
     ✔ Local variable @done(21-09-07 10:48)
@@ -54,10 +54,10 @@ Binary operators:
     ☐ Logical
     ☐ Precedence
 Varargs:
-    ☐ Parameter
-    ☐ Call
-    ☐ Table constructor
-    ☐ Assignment
+    ✔ Parameter @done(21-09-08 21:35)
+    ✔ Call @done(21-09-08 21:35)
+    ✔ Table constructor @done(21-09-08 21:35)
+    ✔ Assignment @done(21-09-08 21:35)
 Blocks:
     ☐ Do/end
     ☐ If

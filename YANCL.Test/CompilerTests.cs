@@ -12,7 +12,8 @@ namespace YANCL.Test
             string source,
             LuaValue[] expectedConstants,
             int[] expectedInstructions,
-            int nLocals, int nSlots
+            int nLocals, int nSlots,
+            (LuaValue[] constants, int[] instructions, int nLocals, int nSlots)[] functions = null
         ) {
             var result = Compiler.Compile(source);
             Assert.Equal(expectedConstants, result.constants);
@@ -25,6 +26,20 @@ namespace YANCL.Test
             }
             Assert.Equal(nLocals, result.nLocals);
             Assert.Equal(nSlots, result.nSlots);
+            if (functions != null) {
+                Assert.Equal(functions.Length, result.prototypes.Length);
+                for (int i = 0; i < functions.Length; i++) {
+                    var (expectedConstants1, expectedInstructions1, expectedNLocals, expectedNSlots) = functions[i];
+                    Assert.Equal(expectedConstants1, result.prototypes[i].constants);
+                    foreach (var pair in expectedInstructions1.Zip(result.prototypes[i].code)) {
+                        if (pair.Item1 != pair.Item2) {
+                            throw new Exception($"Expected {Stringify(pair.Item1)}\n but got {Stringify(pair.Item2)}");
+                        }
+                    }
+                    Assert.Equal(expectedNLocals, result.prototypes[i].nLocals);
+                    Assert.Equal(expectedNSlots, result.prototypes[i].nSlots);
+                }
+            }
         }
 
         [Fact]
@@ -533,6 +548,28 @@ namespace YANCL.Test
                     Build3(SETLIST, 1, 0, 1),
                 },
                 2, 1
+            );
+        }
+
+        [Fact]
+        public void SimpleClosure()
+        {
+            DoCompilerTest(
+                "local a = function (a) print(b) end",
+                new LuaValue[] { },
+                new [] {
+                    Build2(CLOSURE, 0, 0),
+                },
+                1, 0,
+                new [] {(
+                    new LuaValue[] { "print", "b" },
+                    new [] {
+                        Build3(GETTABUP, 1, 0, 0 | KFlag),
+                        Build3(GETTABUP, 2, 0, 1 | KFlag),
+                        Build3(CALL, 1, 2, 1),
+                    },
+                    1, 2
+                )}
             );
         }
     }

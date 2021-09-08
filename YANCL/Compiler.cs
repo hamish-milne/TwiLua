@@ -14,6 +14,18 @@ namespace YANCL
         readonly Compiler? parent;
         readonly List<LuaValue> constants = new List<LuaValue>();
         readonly List<string> locals = new List<string>();
+        readonly List<LuaFunction> prototypes = new List<LuaFunction>();
+
+        LuaFunction MakeFunction() {
+            return new LuaFunction {
+                code = code.ToArray(),
+                constants = constants.ToArray(),
+                upvalues = Array.Empty<LuaUpValue>(),
+                prototypes = prototypes.ToArray(),
+                nLocals = locals.Count,
+                nSlots = maxStack - locals.Count,
+            };
+        }
 
         Compiler(string str) {
             lexer = new Lexer(str);
@@ -103,14 +115,7 @@ namespace YANCL
         public static LuaFunction Compile(string str) {
             var c = new Compiler(str);
             c.ParseChunk();
-            return new LuaFunction {
-                code = c.code.ToArray(),
-                constants = c.constants.ToArray(),
-                upvalues = Array.Empty<LuaUpValue>(),
-                prototypes = Array.Empty<LuaFunction>(),
-                nLocals = c.locals.Count,
-                nSlots = c.maxStack - c.locals.Count,
-            };
+            return c.MakeFunction();
         }
 
         void ParseChunk() {
@@ -414,6 +419,29 @@ namespace YANCL
             PushTerm();
         }
 
+        Compiler(Compiler parent) {
+            this.parent = parent;
+            lexer = parent.lexer;
+        }
+
+        void PushFunction() {
+            Expect(TokenType.OpenParen, "function");
+            var scope = new Compiler(this);
+            while (Peek() != TokenType.CloseParen) {
+                scope.locals.Add(Expect(TokenType.Identifier, "function argument")!);
+                if (Peek() == TokenType.Comma) {
+                    Next();
+                } else if (Peek() != TokenType.CloseParen) {
+                    throw new Exception($"Expected ',' or ')' but got {Peek()}");
+                }
+            }
+            Next();
+            scope.SetTop(scope.locals.Count);
+            scope.ParseBlock();
+            code.Add(Build2(CLOSURE, Push(), prototypes.Count));
+            prototypes.Add(scope.MakeFunction());
+        }
+
         void PushTerm() {
             void Unary(OpCode op) {
                 PushTerm();
@@ -458,6 +486,7 @@ namespace YANCL
                 case TokenType.TripleDot:
                     code.Add(Build2(VARARG, Push(), 2));
                     break;
+                case TokenType.Function: PushFunction(); break;
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }
