@@ -452,5 +452,88 @@ namespace YANCL.Test
                 0, 3
             );
         }
+
+        [Fact]
+        public void FunctionCallDispatch()
+        {
+            DoCompilerTest(
+                "foo(1, 2, bar())",
+                new LuaValue[] { "foo", 1, 2, "bar" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 2),
+                    Build3(GETTABUP, 3, 0, 3 | KFlag),
+                    Build3(CALL, 3, 1, 0),
+                    Build3(CALL, 0, 0, 1),
+                },
+                0, 4
+            );
+        }
+
+        [Fact]
+        public void VarargDispatch()
+        {
+            DoCompilerTest(
+                "foo(1, 2, ...)",
+                new LuaValue[] { "foo", 1, 2 },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 2),
+                    Build2(VARARG, 3, 0),
+                    Build3(CALL, 0, 0, 1),
+                },
+                0, 4
+            );
+        }
+
+        [Fact]
+        public void VarargExpression()
+        {
+            DoCompilerTest(
+                "local a = (...)[...]",
+                new LuaValue[] { "a" },
+                new [] {
+                    Build2(VARARG, 0, 2),
+                    Build2(VARARG, 1, 2),
+                    Build3(GETTABLE, 0, 0, 1),
+                },
+                1, 1
+            );
+        }
+
+        [Fact]
+        public void VarargAssignment()
+        {
+            DoCompilerTest(
+                "local a, b, c = 1, ...",
+                new LuaValue[] { 1 },
+                new [] {
+                    Build2(LOADK, 0, 0),
+                    Build2(VARARG, 1, 3),
+                },
+                3, 0
+            );
+        }
+
+        [Fact]
+        public void VarargTableConstructor()
+        {
+            DoCompilerTest(
+                "local a, b = {c()}, {...}",
+                new LuaValue[] { "c" },
+                new [] {
+                    Build3(NEWTABLE, 0, 0, 0),
+                    Build3(GETTABUP, 1, 0, 0 | KFlag),
+                    Build3(CALL, 1, 1, 0),
+                    Build3(SETLIST, 0, 0, 1),
+                    Build3(NEWTABLE, 1, 0, 0),
+                    Build2(VARARG, 2, 0),
+                    Build3(SETLIST, 1, 0, 1),
+                },
+                2, 1
+            );
+        }
     }
 }

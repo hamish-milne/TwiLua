@@ -215,26 +215,28 @@ namespace YANCL
                 }
             }
             Next();
+            if (ExtendVararg(0)) {
+                nArgs = -1;
+            }
             return nArgs;
         }
 
-        void ExtendMultiReturn() {
+        bool ExtendVararg(int nReturns) {
             var inst = code[code.Count - 1];
             switch (Instruction.GetOpCode(inst)) {
                 case CALL: {
                     var a = Instruction.GetA(inst);
                     var b = Instruction.GetB(inst);
-                    code[code.Count - 1] = Build3(CALL, a, b, nSlots - nResults + 2);
-                    nResults = nSlots;
-                    break;
+                    code[code.Count - 1] = Build3(CALL, a, b, nReturns);
+                    return true;
                 }
                 case VARARG: {
                     var a = Instruction.GetA(inst);
-                    code[code.Count - 1] = Build2(VARARG, a, nSlots - nResults + 2);
-                    nResults = nSlots;
-                    break;
+                    code[code.Count - 1] = Build2(VARARG, a, nReturns);
+                    return true;
                 }
             }
+            return false;
         }
 
         int ParseAssignment(bool forceStack = false) {
@@ -252,7 +254,9 @@ namespace YANCL
             int result;
             if (nResults != nSlots) {
                 if (nResults < nSlots) {
-                    ExtendMultiReturn();
+                    if (ExtendVararg(nSlots - nResults + 2)) {
+                        nResults = nSlots;
+                    }
                 }
                 if (nResults < nSlots) {
                     code.Add(Build2(LOADNIL, firstResult + nResults, firstResult + nSlots - nResults - 1));
