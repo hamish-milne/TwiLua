@@ -23,7 +23,7 @@ Expressions:
     ✔ Dot suffix @done(21-09-05 19:13)
     ✔ Index suffix @done(21-09-05 21:55)
     ✔ Call suffix @done(21-09-05 21:55)
-    ☐ Table constructor
+    ✔ Table constructor @done(21-09-08 17:19)
     ☐ Function expression
     ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:

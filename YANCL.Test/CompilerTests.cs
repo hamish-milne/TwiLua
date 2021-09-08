@@ -300,8 +300,8 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
-        public void TableConstructor()
+        [Fact]
+        public void SimpleTableConstructor()
         {
             DoCompilerTest(
                 "x = { 1, 2, 3 }",
@@ -315,6 +315,29 @@ namespace YANCL.Test
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
                 },
                 0, 4
+            );
+        }
+
+        [Fact]
+        public void ComplexTableConstructor()
+        {
+            DoCompilerTest(
+                "x = { 1, 2, 3, a = 4, [b] = 5, ['c'] = 6, 7 }",
+                new LuaValue[] { "x", 1, 2, 3, "a", 4, "b", 5, "c", 6, 7 },
+                new [] {
+                    Build3(NEWTABLE, 0, 4, 3),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 2),
+                    Build2x(LOADK, 3, 3),
+                    Build3(SETTABLE, 0, 4 | KFlag, 5 | KFlag),
+                    Build3(GETTABUP, 4, 0, 6 | KFlag),
+                    Build3(SETTABLE, 0, 4, 7 | KFlag),
+                    Build3(SETTABLE, 0, 8 | KFlag, 9 | KFlag),
+                    Build2x(LOADK, 4, 10),
+                    Build3(SETLIST, 0, 4, 1),
+                    Build3(SETTABUP, 0, 0 | KFlag, 0),
+                },
+                0, 5
             );
         }
 

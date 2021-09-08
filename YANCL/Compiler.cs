@@ -84,6 +84,8 @@ namespace YANCL
 
         Stack<Token> tokens = new Stack<Token>();
 
+        public void PushBack(Token token) => tokens.Push(token);
+
         public Token Next() {
             if (tokens.Count > 0) {
                 return tokens.Pop();
@@ -485,7 +487,7 @@ namespace YANCL
             return false;
         }
 
-        int ParseArgs(int func) {
+        int ParseArgs() {
             var nArgs = 0;
             while (Peek() != TokenType.CloseParen) {
                 nArgs++;
@@ -493,7 +495,7 @@ namespace YANCL
                 if (Peek() == TokenType.Comma) {
                     Next();
                 } else if (Peek() != TokenType.CloseParen) {
-                    throw new Exception("Expected ',' or ')' but got " + Peek());
+                    throw new Exception($"Expected ',' or ')' but got {Peek()}");
                 }
             }
             Next();
@@ -606,7 +608,7 @@ namespace YANCL
                 }
                 case TokenType.OpenParen: {
                     var func = Head;
-                    var nArgs = ParseArgs(func);
+                    var nArgs = ParseArgs();
                     PostCall(func, nArgs);
                     break;
                 }
@@ -626,7 +628,6 @@ namespace YANCL
         void PushExpressionSuffix() {
 
             void PostCall(int func, int nArgs) {
-                int ret;
                 if (PeekSuffix()) {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
                     SetTop(func + 2);
@@ -634,7 +635,6 @@ namespace YANCL
                 } else {
                     code.Add(Build3(CALL, func, nArgs + 1, 2));
                     SetTop(func + 1);
-                    ret = func;
                 }
             }
 
@@ -659,7 +659,7 @@ namespace YANCL
                 case TokenType.OpenParen: {
                     Next();
                     var func = Head;
-                    var nArgs = ParseArgs(func);
+                    var nArgs = ParseArgs();
                     PostCall(func, nArgs);
                     break;
                 }
@@ -721,6 +721,63 @@ namespace YANCL
                 case TokenType.True: Literal(LOADBOOL, 1); break;
                 case TokenType.False: Literal(LOADBOOL, 0); break;
                 case TokenType.Nil: Literal(LOADNIL, 0); break;
+                case TokenType.OpenBrace: {
+                    var opIdx = code.Count;
+                    var table = Push();
+                    code.Add(0);
+                    int nArr = 0;
+                    int nHash = 0;
+                    while (Peek() != TokenType.CloseBrace) {
+                        switch (Peek()) {
+                            case TokenType.Identifier: {
+                                var key = Next();
+                                if (Peek() == TokenType.Equal) {
+                                    Next();
+                                    var constIdx = Constant(key.text!);
+                                    PushExpression();
+                                    code.Add(Build3(SETTABLE, table, constIdx, PopRK()));
+                                    nHash++;
+                                } else {
+                                    lexer.PushBack(key);
+                                    PushExpression();
+                                    nArr++;
+                                }
+                                break;
+                            }
+                            case TokenType.OpenBracket: {
+                                Next();
+                                PushExpression();
+                                Expect(TokenType.CloseBracket, "table index expression");
+                                Expect(TokenType.Equal, "table index");
+                                PushExpression();
+                                var value = PopRK();
+                                code.Add(Build3(SETTABLE, table, PopRK(), value));
+                                nHash++;
+                                break;
+                            }
+                            default:
+                                PushExpression();
+                                nArr++;
+                                break;
+                        }
+                        switch (Peek()) {
+                            case TokenType.Comma:
+                                Next();
+                                break;
+                            case TokenType.CloseBrace:
+                                break;
+                            default:
+                                throw new Exception("'}' or ',' expected");
+                        }
+                    }
+                    Next();
+                    code[opIdx] = Build3(NEWTABLE, table, nArr, nHash);
+                    if (nArr > 0) {
+                        code.Add(Build3(SETLIST, table, nArr, table + 1));
+                    }
+                    SetTop(table + 1);
+                    break;
+                }
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }
