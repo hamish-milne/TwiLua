@@ -493,7 +493,7 @@ namespace YANCL.Test
         {
             DoCompilerTest(
                 "local a = (...)[...]",
-                new LuaValue[] { "a" },
+                new LuaValue[] { },
                 new [] {
                     Build2(VARARG, 0, 2),
                     Build2(VARARG, 1, 2),

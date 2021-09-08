@@ -455,6 +455,9 @@ namespace YANCL
                 case TokenType.False: Literal(LOADBOOL, 0); break;
                 case TokenType.Nil: Literal(LOADNIL, 0); break;
                 case TokenType.OpenBrace: PushTableConstructor(); break;
+                case TokenType.TripleDot:
+                    code.Add(Build2(VARARG, Push(), 2));
+                    break;
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }
@@ -510,10 +513,13 @@ namespace YANCL
                 }
             }
             Next();
-            code[opIdx] = Build3(NEWTABLE, table, nArr, nHash);
             if (nArr > 0) {
-                code.Add(Build3(SETLIST, table, nArr, table + 1));
+                if (ExtendVararg(0)) {
+                    nArr = 0;
+                }
+                code.Add(Build3(SETLIST, table, nArr, 1));
             }
+            code[opIdx] = Build3(NEWTABLE, table, nArr, nHash);
             SetTop(table + 1);
         }
 
