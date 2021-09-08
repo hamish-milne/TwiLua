@@ -309,23 +309,44 @@ namespace YANCL
         int lastValue;
         int maxStack;
 
-        int TopResult => Top + nResults;
+        int TopResult => firstResult + nResults - 1;
         int Base => constants.Count;
 
-        void SetTop(int top) => Top = top;
+        void SetTop(int top) {
+            if (top > maxStack) {
+                maxStack = top;
+            }
+            Top = top;
+        }
 
         int EnvUp() => 0;
 
         int Push() {
-            throw new NotImplementedException();
+            Top++;
+            if (Top > maxStack) {
+                maxStack = Top;
+            }
+            return Top - 1;
         }
 
         void Pop(int idx) {
-            throw new NotImplementedException();
+            if ((idx & KFlag) != 0) {
+                return;
+            }
+            Debug.Assert(Top == idx + 1);
+            Top--;
         }
 
         bool IsTemporary(int idx) {
-            throw new NotImplementedException();
+            return idx >= locals.Count;
+        }
+
+        int? GetLocal(string name) {
+            var idx = locals.IndexOf(name);
+            if (idx == -1) {
+                return null;
+            }
+            return idx;
         }
 
         Token Next() => lexer.Next();
@@ -342,8 +363,8 @@ namespace YANCL
                 constants = c.constants.ToArray(),
                 upvalues = Array.Empty<LuaUpValue>(),
                 prototypes = Array.Empty<LuaFunction>(),
-                nLocals = c.stack.Count,
-                nSlots = c.maxStack - c.stack.Count,
+                nLocals = c.locals.Count,
+                nSlots = c.maxStack - c.locals.Count,
             };
         }
 
@@ -360,6 +381,8 @@ namespace YANCL
         }
 
         void ParseStat() {
+            nSlots = 0;
+            nResults = 0;
             switch (Peek()) {
                 case TokenType.Identifier:
                 case TokenType.OpenParen:
@@ -449,7 +472,6 @@ namespace YANCL
             } else {
                 code.Add(Build2(MOVE, newIdx, old));
                 Pop(old);
-                Pop(newIdx);
             }
         }
 
@@ -505,7 +527,7 @@ namespace YANCL
                 nResults++;
                 lastValue = ParseExpression();
                 if (Peek() == TokenType.Comma) {
-                    Top = firstResult + nResults;
+                    SetTop(firstResult + nResults);
                     AdjustDestination(lastValue, firstResult + nResults - 1);
                     Next();
                 } else {
@@ -816,7 +838,8 @@ namespace YANCL
                 Next();
                 names.Add(Expect(TokenType.Identifier, "local declaration")!);
             } while (Peek() == TokenType.Comma);
-            int startR = stack.Count;
+            nSlots = names.Count;
+            int startR = Top;
             if (Peek() == TokenType.Equal) {
                 Next();
                 ParseAssignment();
@@ -824,13 +847,13 @@ namespace YANCL
                     AdjustDestination(lastValue, Push());
                 }
                 Debug.Assert(firstResult == startR);
-                Debug.Assert(stack.Count == startR + names.Count);
+                Debug.Assert(Top == startR + names.Count);
             } else {
-                code.Add(Build2(LOADNIL, stack.Count, stack.Count + names.Count - 1));
+                code.Add(Build2(LOADNIL, Top, Top + names.Count - 1));
                 SetTop(startR + names.Count);
             }
             for (var i = 0; i < names.Count; i++) {
-                stack[startR + i] = names[i];
+                locals.Add(names[i]);
             }
         }
     }
