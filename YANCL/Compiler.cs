@@ -629,10 +629,21 @@ namespace YANCL
         private readonly List<string> tmpLocals = new List<string>();
 
         void ParseLocal() {
-            do {
+            Next();
+            if (Peek() == TokenType.Function) {
                 Next();
+                var name = Expect(TokenType.Identifier, "function name")!;
+                PushFunction();
+                locals.Add(name);
+                return;
+            }
+            while (true) {
                 tmpLocals.Add(Expect(TokenType.Identifier, "local declaration")!);
-            } while (Peek() == TokenType.Comma);
+                if (Peek() != TokenType.Comma) {
+                    break;
+                }
+                Next();
+            }
             nSlots = tmpLocals.Count;
             if (Peek() == TokenType.Equal) {
                 Next();

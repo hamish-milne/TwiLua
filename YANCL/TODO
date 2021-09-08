@@ -28,7 +28,7 @@ Expressions:
     ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:
     ✔ Local variable @done(21-09-07 10:48)
-    ☐ Local function
+    ✔ Local function @done(21-09-08 23:55)
     ☐ Global function
     ☐ Member function
     ☐ Self function

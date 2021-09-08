@@ -572,5 +572,89 @@ namespace YANCL.Test
                 )}
             );
         }
+
+        [Fact]
+        public void LocalFunction()
+        {
+            DoCompilerTest(
+                "local function foo() end",
+                new LuaValue[] { },
+                new [] {
+                    Build2(CLOSURE, 0, 0),
+                },
+                1, 0,
+                new [] {(
+                    new LuaValue[] { },
+                    new int[] { },
+                    0, 0
+                )}
+            );
+        }
+
+        [Fact]
+        public void GlobalFunction()
+        {
+            DoCompilerTest(
+                "function foo() end",
+                new LuaValue[] { "foo" },
+                new [] {
+                    Build2(CLOSURE, 0, 0),
+                    Build3(SETTABUP, 0, 0 | KFlag, 0),
+                },
+                1, 0,
+                new [] {(
+                    new LuaValue[] { },
+                    new int[] { },
+                    0, 0
+                )}
+            );
+        }
+
+        [Fact]
+        public void MemberFunction()
+        {
+            DoCompilerTest(
+                "function a.b.c() end",
+                new LuaValue[] { "a", "b", "c" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(GETTABLE, 0, 0, 1 | KFlag),
+                    Build2(CLOSURE, 1, 0),
+                    Build3(SETTABLE, 0, 2 | KFlag, 1),
+                },
+                0, 2,
+                new [] {(
+                    new LuaValue[] { },
+                    new int[] { },
+                    0, 0
+                )}
+            );
+        }
+
+        [Fact]
+        public void SelfFunction()
+        {
+            DoCompilerTest(
+                "function a.b:c() print(self) end",
+                new LuaValue[] { "a", "b", "c" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(GETTABLE, 0, 0, 1 | KFlag),
+                    Build2(CLOSURE, 1, 0),
+                    Build3(SETTABLE, 0, 2 | KFlag, 1),
+                },
+                0, 2,
+                new [] {(
+                    new LuaValue[] { "print" },
+                    new [] {
+                        Build3(GETTABUP, 1, 0, 0 | KFlag),
+                        Build2(MOVE, 2, 0),
+                        Build3(CALL, 1, 2, 1),
+                    },
+                    1, 2
+                )}
+            );
+        }
+
     }
 }
