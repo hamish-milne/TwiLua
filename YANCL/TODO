@@ -12,7 +12,7 @@ Function call:
     ✔ Expression @done(21-09-05 21:58)
     ✔ Table syntax @done(21-09-08 17:39)
     ✔ String syntax @done(21-09-05 22:26)
-    ☐ Self call
+    ✔ Self call @done(21-09-09 11:56)
     ☐ C functions
 Expressions:
     ✔ True, false, nil @done(21-09-07 10:16)

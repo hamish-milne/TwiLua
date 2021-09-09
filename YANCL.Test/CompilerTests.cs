@@ -191,7 +191,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact]
+        [Fact(Skip = "luac has a little optimization here for locals")]
         public void LocalIndexAssignment()
         {
             DoCompilerTest(
@@ -203,6 +203,57 @@ namespace YANCL.Test
                     Build3(GETTABLE, 1, 0, 1),
                     Build3(GETTABUP, 2, 0, 1 | KFlag),
                     Build3(SETTABLE, 1, 2, 2 | KFlag),
+                },
+                1, 2
+            );
+        }
+
+        [Fact]
+        public void LocalMemberRead()
+        {
+            DoCompilerTest(
+                "local x; a = x.y.z",
+                new LuaValue[] { "a", "y", "z" },
+                new [] {
+                    Build2(LOADNIL, 0, 0),
+                    Build3(GETTABLE, 1, 0, 1 | KFlag),
+                    Build3(GETTABLE, 1, 1, 2 | KFlag),
+                    Build3(SETTABUP, 0, 0 | KFlag, 1),
+                },
+                1, 1
+            );
+        }
+
+        [Fact(Skip = "luac has a little optimization here for locals")]
+        public void LocalIndexRead()
+        {
+            DoCompilerTest(
+                "local x; a = x[y][z]",
+                new LuaValue[] { "a", "y", "z" },
+                new [] {
+                    Build2(LOADNIL, 0, 0),
+                    Build3(GETTABUP, 1, 0, 1 | KFlag),
+                    Build3(GETTABLE, 1, 0, 1),
+                    Build3(GETTABUP, 2, 0, 2 | KFlag),
+                    Build3(GETTABLE, 1, 1, 2),
+                    Build3(SETTABUP, 0, 0 | KFlag, 1),
+                },
+                1, 1
+            );
+        }
+
+        [Fact]
+        public void LocalCall()
+        {
+            DoCompilerTest(
+                "local x; a = x(y)",
+                new LuaValue[] { "a", "y" },
+                new [] {
+                    Build2(LOADNIL, 0, 0),
+                    Build2(MOVE, 1, 0),
+                    Build3(GETTABUP, 2, 0, 1 | KFlag),
+                    Build3(CALL, 1, 2, 2),
+                    Build3(SETTABUP, 0, 0 | KFlag, 1),
                 },
                 1, 2
             );
@@ -270,10 +321,10 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void SelfCall()
         {
-            DoCompilerTest(
+            DoCompilerTest( 
                 "x:y(1, 2)",
                 new LuaValue[] { "x", "y", 1, 2 },
                 new [] {

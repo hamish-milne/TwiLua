@@ -240,6 +240,7 @@ namespace YANCL
                 case TokenType.SingleQuote:
                 case TokenType.DoubleQuote:
                 case TokenType.OpenBrace:
+                case TokenType.Colon:
                     return true;
                 default:
                     return false;
@@ -262,8 +263,11 @@ namespace YANCL
             return false;
         }
 
-        int ParseArgs() {
-            var nArgs = 0;
+        int ParseArgs(bool hasSelf) {
+            var nArgs = hasSelf ? 1 : 0;
+            if (hasSelf) {
+                Push();
+            }
             while (Peek() != TokenType.CloseParen) {
                 nArgs++;
                 PushExpression();
@@ -331,24 +335,49 @@ namespace YANCL
             return result;
         }
 
-        void ParseVarSuffix(int resultIdx) {
-
-            void PostCall(int func, int nArgs) {
-                if (PeekSuffix()) {
-                    code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    SetTop(func + 1);
-                    ParseVarSuffix(resultIdx);
-                } else if (PeekAssignment() || PeekComma() || nSlots > 1) {
-                    throw new Exception("Cannot assign to function call");
-                } else {
-                    code.Add(Build3(CALL, func, nArgs + 1, 1));
-                    SetTop(func);
-                }
-            }
-
+        bool TryParseCall(out int func, out int nArgs) {
             var token = Next();
             switch (token.type) {
+                case TokenType.OpenParen: {
+                    func = Head;
+                    nArgs = ParseArgs(hasSelf: false);
+                    return true;
+                }
+                case TokenType.SingleQuote:
+                case TokenType.DoubleQuote: {
+                    func = Head;
+                    PushK(ParseString(token.type == TokenType.SingleQuote ? '\'' : '"'));
+                    nArgs = 1;
+                    return true;
+                }
+                case TokenType.OpenBrace: {
+                    func = Head;
+                    PushTableConstructor();
+                    nArgs = 1;
+                    return true;
+                }
+                case TokenType.Colon: {
+                    var src = PopRK();
+                    var name = Expect(TokenType.Identifier, "self call")!;
+                    Expect(TokenType.OpenParen, "self call");
+                    func = Push();
+                    code.Add(Build3(SELF, func, src, Constant(name)));
+                    nArgs = ParseArgs(hasSelf: true);
+                    return true;
+                }
+                default:
+                    func = 0;
+                    nArgs = 0;
+                    lexer.PushBack(token);
+                    return false;
+            }
+        }
+
+        void ParseVarSuffix(int resultIdx) {
+
+            switch (Peek()) {
                 case TokenType.Dot: {
+                    Next();
                     var name = Expect(TokenType.Identifier, "dot")!;
                     var constIdx = Constant(name);
                     if (PeekSuffix()) {
@@ -362,11 +391,12 @@ namespace YANCL
                         ParseVarAdditional(resultIdx);
                         code.Add(Build3(SETTABLE, PopS(), constIdx, firstResult + resultIdx));
                     } else {
-                        throw new Exception($"Unexpected token {token.type}");
+                        throw new Exception($"Unexpected token {Peek()}");
                     }
                     break;
                 }
                 case TokenType.OpenBracket: {
+                    Next();
                     PushExpression();
                     Expect(TokenType.CloseBracket, "index expression");
                     if (PeekSuffix()) {
@@ -383,54 +413,36 @@ namespace YANCL
                         var indexer = PopRK();
                         code.Add(Build3(SETTABLE, PopS(), indexer, firstResult + resultIdx));
                     } else {
-                        throw new Exception($"Unexpected token {token.type}");
+                        throw new Exception($"Unexpected token {Peek()}");
                     }
                     break;
                 }
-                case TokenType.OpenParen: {
-                    var func = Head;
-                    var nArgs = ParseArgs();
-                    PostCall(func, nArgs);
+                default: {
+                    Debug.Assert(TryParseCall(out var func, out var nArgs));
+                    if (PeekSuffix()) {
+                        code.Add(Build3(CALL, func, nArgs + 1, 2));
+                        SetTop(func + 1);
+                        ParseVarSuffix(resultIdx);
+                    } else if (PeekAssignment() || PeekComma() || nSlots > 1) {
+                        throw new Exception("Cannot assign to function call");
+                    } else {
+                        code.Add(Build3(CALL, func, nArgs + 1, 1));
+                        SetTop(func);
+                    }
                     break;
                 }
-                case TokenType.SingleQuote:
-                case TokenType.DoubleQuote: {
-                    var func = Head;
-                    PushK(ParseString(token.type == TokenType.SingleQuote ? '\'' : '"'));
-                    PostCall(func, 1);
-                    break;
-                }
-                case TokenType.OpenBrace: {
-                    var func = Head;
-                    PushTableConstructor();
-                    PostCall(func, 1);
-                    break;
-                }
-                default:
-                    Debug.Assert(false);
-                    break;
             }
         }
 
         void PushExpressionSuffix() {
-
-            void PostCall(int func, int nArgs) {
-                if (PeekSuffix()) {
-                    code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    SetTop(func + 2);
-                    PushExpressionSuffix();
-                } else {
-                    code.Add(Build3(CALL, func, nArgs + 1, 2));
-                    SetTop(func + 1);
-                }
-            }
 
             switch (Peek()) {
                 case TokenType.Dot: {
                     Next();
                     var name = Expect(TokenType.Identifier, "dot")!;
                     var indexer = Constant(name);
-                    code.Add(Build3(GETTABLE, Head, Head, indexer));
+                    var src = PopRK();
+                    code.Add(Build3(GETTABLE, Push(), src, indexer));
                     PushExpressionSuffix();
                     break;
                 }
@@ -439,35 +451,18 @@ namespace YANCL
                     PushExpression();
                     Expect(TokenType.CloseBracket, "index expression");
                     var indexer = PopRK();
-                    code.Add(Build3(GETTABLE, Head, Head, indexer));
+                    var src = PopRK();
+                    code.Add(Build3(GETTABLE, Push(), src, indexer));
                     PushExpressionSuffix();
                     break;
                 }
-                case TokenType.OpenParen: {
-                    Next();
-                    var func = Head;
-                    var nArgs = ParseArgs();
-                    PostCall(func, nArgs);
-                    break;
-                }
-                case TokenType.SingleQuote:
-                case TokenType.DoubleQuote: {
-                    Next();
-                    var func = Head;
-                    var arg = Constant(ParseString(Peek() == TokenType.SingleQuote ? '\'' : '"'));
-                    SetTop(func + 2);
-                    PostCall(func, 1);
-                    break;
-                }
-                case TokenType.OpenBrace: {
-                    var func = Head;
-                    PushTableConstructor();
-                    SetTop(func + 2);
-                    PostCall(func, 1);
-                    break;
-                }
                 default:
-                    return;
+                    if (TryParseCall(out var func, out var nArgs)) {
+                        code.Add(Build3(CALL, func, nArgs + 1, 2));
+                        SetTop(func + 1);
+                        PushExpressionSuffix();
+                    }
+                    break;
             }
         }
 
