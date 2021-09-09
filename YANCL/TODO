@@ -42,10 +42,10 @@ Upvalues:
     ☐ Out-of-stack
     ☐ Closure
 Unary operators:
-    ☐ Length
-    ☐ Negation
-    ☐ Bitwise not
-    ☐ Logical not
+    ✔ Length @done(21-09-09 12:15)
+    ✔ Negation @done(21-09-09 12:15)
+    ✔ Bitwise not @done(21-09-09 12:15)
+    ✔ Logical not @done(21-09-09 12:15)
 Binary operators:
     ☐ Arithmetic
     ☐ Concatenation

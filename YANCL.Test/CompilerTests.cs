@@ -757,5 +757,61 @@ namespace YANCL.Test
             );
         }
 
+        [Fact]
+        public void Length()
+        {
+            DoCompilerTest(
+                "local a = #x",
+                new LuaValue[] { "x" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2(LEN, 0, 0)
+                },
+                1, 0
+            );
+        }
+
+        [Fact]
+        public void LogicalNot()
+        {
+            DoCompilerTest(
+                "local a = not x",
+                new LuaValue[] { "x" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2(NOT, 0, 0)
+                },
+                1, 0
+            );
+        }
+
+        [Fact]
+        public void UnaryMinus()
+        {
+            DoCompilerTest(
+                "local a = -x",
+                new LuaValue[] { "x" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2(UNM, 0, 0)
+                },
+                1, 0
+            );
+        }
+
+        [Fact]
+        public void BitwiseNot()
+        {
+            DoCompilerTest(
+                "local a = ~x",
+                new LuaValue[] { "x" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2(BNOT, 0, 0)
+                },
+                1, 0
+            );
+        }
+
     }
 }

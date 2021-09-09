@@ -532,6 +532,7 @@ namespace YANCL
                 }
                 case TokenType.Hash: Unary(LEN); break;
                 case TokenType.Not: Unary(NOT); break;
+                case TokenType.Tilde: Unary(BNOT); break;
                 case TokenType.Minus: Unary(UNM); break;
                 case TokenType.True: Literal(LOADBOOL, 1); break;
                 case TokenType.False: Literal(LOADBOOL, 0); break;
