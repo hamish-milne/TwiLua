@@ -159,6 +159,56 @@ namespace YANCL.Test
         }
 
         [Fact]
+        public void LocalMemberAssignment()
+        {
+            DoCompilerTest(
+                "local x; x.y.z = 1",
+                new LuaValue[] { "y", "z", 1 },
+                new [] {
+                    Build2(LOADNIL, 0, 0),
+                    Build3(GETTABLE, 1, 0, 0 | KFlag),
+                    Build3(SETTABLE, 1, 1 | KFlag, 2 | KFlag),
+                },
+                1, 1
+            );
+        }
+
+        [Fact]
+        public void LocalCallAssignment()
+        {
+            DoCompilerTest(
+                "local x; x(a)[b] = 1",
+                new LuaValue[] { "a", "b", 1 },
+                new [] {
+                    Build2(LOADNIL, 0, 0),
+                    Build2(MOVE, 1, 0),
+                    Build3(GETTABUP, 2, 0, 0 | KFlag),
+                    Build3(CALL, 1, 2, 2),
+                    Build3(GETTABUP, 2, 0, 1 | KFlag),
+                    Build3(SETTABLE, 1, 2, 2 | KFlag),
+                },
+                1, 2
+            );
+        }
+
+        [Fact]
+        public void LocalIndexAssignment()
+        {
+            DoCompilerTest(
+                "local x; x[y][z] = 1",
+                new LuaValue[] { "y", "z", 1 },
+                new [] {
+                    Build2(LOADNIL, 0, 0),
+                    Build3(GETTABUP, 1, 0, 0 | KFlag),
+                    Build3(GETTABLE, 1, 0, 1),
+                    Build3(GETTABUP, 2, 0, 1 | KFlag),
+                    Build3(SETTABLE, 1, 2, 2 | KFlag),
+                },
+                1, 2
+            );
+        }
+
+        [Fact]
         public void CallAssignment()
         {
             DoCompilerTest(
@@ -601,7 +651,7 @@ namespace YANCL.Test
                     Build2(CLOSURE, 0, 0),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
                 },
-                1, 0,
+                0, 1,
                 new [] {(
                     new LuaValue[] { },
                     new int[] { },

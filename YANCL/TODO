@@ -29,9 +29,9 @@ Expressions:
 Declarations:
     ✔ Local variable @done(21-09-07 10:48)
     ✔ Local function @done(21-09-08 23:55)
-    ☐ Global function
-    ☐ Member function
-    ☐ Self function
+    ✔ Global function @done(21-09-09 11:29)
+    ✔ Member function @done(21-09-09 11:29)
+    ✔ Self function @done(21-09-09 11:29)
 Misc language features:
     ☐ Comments
     ☐ Hashbang

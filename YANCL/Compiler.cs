@@ -154,7 +154,9 @@ namespace YANCL
                     ParseLocal();
                     break;
                 case TokenType.Function:
-                    throw new NotImplementedException();
+                    Next();
+                    ParseFunctionDeclaration();
+                    return;
                 case TokenType.Return:
                     throw new NotImplementedException();
                 case TokenType.Semicolon:
@@ -162,6 +164,58 @@ namespace YANCL
                     break;
                 default:
                     throw new Exception($"Unexpected token {Peek()}");
+            }
+        }
+
+
+        void ParseFunctionDeclaration() {
+            var name = Expect(TokenType.Identifier, "function declaration")!;
+            var localIdx = locals.IndexOf(name);
+            if (localIdx >= 0) {
+                if (PeekFunctionSuffix()) {
+                    code.Add(Build2(MOVE, Push(), localIdx));
+                    ParseFunctionSuffix();
+                } else {
+                    PushFunction(hasSelf: false);
+                    code.Add(Build2(MOVE, localIdx, PopS()));
+                }
+            } else {
+                if (PeekFunctionSuffix()) {
+                    code.Add(Build3(GETTABUP, Push(), EnvUp(), Constant(name)));
+                    ParseFunctionSuffix();
+                } else {
+                    PushFunction(hasSelf: false);
+                    code.Add(Build3(SETTABUP, EnvUp(), Constant(name), PopS()));
+                }
+            }
+        }
+
+        bool PeekFunctionSuffix() {
+            switch (Peek()) {
+                case TokenType.Dot:
+                case TokenType.Colon:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        void ParseFunctionSuffix() {
+            bool hasSelf;
+            switch (Next().type) {
+                case TokenType.Dot: hasSelf = false; break;
+                case TokenType.Colon: hasSelf = true; break;
+                default: throw new Exception($"Unexpected token {Peek()}");
+            }
+            var constIdx = Constant(Expect(TokenType.Identifier, "function suffix")!);
+            if (!hasSelf && PeekFunctionSuffix()) {
+                var src = PopRK();
+                code.Add(Build3(GETTABLE, Push(), src, constIdx));
+                ParseFunctionSuffix();
+            } else {
+                PushFunction(hasSelf);
+                var func = PopS();
+                code.Add(Build3(SETTABLE, PopS(), constIdx, func));
             }
         }
 
@@ -298,7 +352,8 @@ namespace YANCL
                     var name = Expect(TokenType.Identifier, "dot")!;
                     var constIdx = Constant(name);
                     if (PeekSuffix()) {
-                        code.Add(Build3(GETTABLE, Head, Head, constIdx));
+                        var src = PopRK();
+                        code.Add(Build3(GETTABLE, Push(), src, constIdx));
                         ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment()) {
                         var result = ParseAssignment();
@@ -316,7 +371,8 @@ namespace YANCL
                     Expect(TokenType.CloseBracket, "index expression");
                     if (PeekSuffix()) {
                         var indexer = PopRK();
-                        code.Add(Build3(GETTABLE, Head, Head, indexer));
+                        var src = PopRK();
+                        code.Add(Build3(GETTABLE, Push(), src, indexer));
                         ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment()) {
                         var result = ParseAssignment();
@@ -424,9 +480,12 @@ namespace YANCL
             lexer = parent.lexer;
         }
 
-        void PushFunction() {
+        void PushFunction(bool hasSelf) {
             Expect(TokenType.OpenParen, "function");
             var scope = new Compiler(this);
+            if (hasSelf) {
+                scope.locals.Add("self");
+            }
             while (Peek() != TokenType.CloseParen) {
                 scope.locals.Add(Expect(TokenType.Identifier, "function argument")!);
                 if (Peek() == TokenType.Comma) {
@@ -486,7 +545,7 @@ namespace YANCL
                 case TokenType.TripleDot:
                     code.Add(Build2(VARARG, Push(), 2));
                     break;
-                case TokenType.Function: PushFunction(); break;
+                case TokenType.Function: PushFunction(hasSelf: false); break;
                 default:
                     throw new Exception($"Unexpected token {token.type}");
             }
@@ -580,6 +639,7 @@ namespace YANCL
                     } else {
                         if (PeekSuffix()) {
                             code.Add(Build2(MOVE, Push(), localIdx));
+                            ParseVarSuffix(resultIdx);
                         } else if (PeekAssignment()) {
                             var result = ParseAssignment();
                             if ((result & KFlag) != 0) {
@@ -633,7 +693,7 @@ namespace YANCL
             if (Peek() == TokenType.Function) {
                 Next();
                 var name = Expect(TokenType.Identifier, "function name")!;
-                PushFunction();
+                PushFunction(hasSelf: false);
                 locals.Add(name);
                 return;
             }
