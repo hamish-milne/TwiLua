@@ -221,5 +221,13 @@ namespace YANCL
             }
             return token.text;
         }
+
+        public bool TryTake(TokenType type) {
+            if (Peek() == type) {
+                Next();
+                return true;
+            }
+            return false;
+        }
     }
 }

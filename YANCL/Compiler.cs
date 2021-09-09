@@ -62,16 +62,16 @@ namespace YANCL
             return --Top;
         }
 
-        int? TryPopRK() {
-            void Shrink() {
-                code.RemoveAt(code.Count - 1);
-                if (code.Count == pcAtMaxStack && maxStack == Top) {
-                    maxStack--;
-                    pcAtMaxStack--;
-                }
-                Top--;
+        void Shrink() {
+            code.RemoveAt(code.Count - 1);
+            if (code.Count == pcAtMaxStack && maxStack == Top) {
+                maxStack--;
+                pcAtMaxStack--;
             }
+            Top--;
+        }
 
+        int? TryPopRK() {
             Debug.Assert(Top > 0);
             Debug.Assert(code.Count > 0);
             var inst = code[code.Count - 1];
@@ -112,6 +112,7 @@ namespace YANCL
         TokenType Peek() => lexer.Peek();
         string? Expect(TokenType type, string after) => lexer.Expect(type, after);
         string ParseString(char term) => lexer.ParseString(term);
+        bool TryTake(TokenType type) => lexer.TryTake(type);
 
 
         public static LuaFunction Compile(string str) {
@@ -249,21 +250,9 @@ namespace YANCL
             }
         }
 
-        bool PeekAssignment() {
-            if (Peek() == TokenType.Equal) {
-                Next();
-                return true;
-            }
-            return false;
-        }
+        bool PeekAssignment() => TryTake(TokenType.Equal);
 
-        bool PeekComma() {
-            if (Peek() == TokenType.Comma) {
-                Next();
-                return true;
-            }
-            return false;
-        }
+        bool PeekComma() => TryTake(TokenType.Comma);
 
         int ParseArgs(bool hasSelf) {
             var nArgs = hasSelf ? 1 : 0;
@@ -304,7 +293,7 @@ namespace YANCL
             return false;
         }
 
-        int ParseAssignment(bool forceStack = false) {
+        void ParseAssignment(out bool allowPopRK) {
             firstResult = Top;
             nResults = 0;
             while (true) {
@@ -316,7 +305,6 @@ namespace YANCL
                     break;
                 }
             }
-            int result;
             if (nResults != nSlots) {
                 if (nResults < nSlots) {
                     if (ExtendVararg(nSlots - nResults + 2)) {
@@ -328,11 +316,15 @@ namespace YANCL
                 }
                 nResults = nSlots;
                 SetTop(firstResult + nSlots);
-                // PopRK() would be valid here, but the reference implementation doesn't do it.
-                result = PopS();
+                allowPopRK = false; // PopRK is normally allowed here, but the reference implementation doesn't do it
             } else {
-                result = forceStack ? PopS() : PopRK();
+                allowPopRK = true;
             }
+        }
+
+        int ParseAssignmentWithResult() {
+            ParseAssignment(out var allowPopRK);
+            var result = allowPopRK ? PopRK() : PopS();
             SetTop(firstResult);
             return result;
         }
@@ -387,7 +379,7 @@ namespace YANCL
                         code.Add(Build3(GETTABLE, Push(), src, constIdx));
                         ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment()) {
-                        var result = ParseAssignment();
+                        var result = ParseAssignmentWithResult();
                         code.Add(Build3(SETTABLE, PopS(), constIdx, result));
                     } else if (PeekComma()) {
                         ParseVarAdditional(resultIdx);
@@ -408,7 +400,9 @@ namespace YANCL
                         code.Add(Build3(GETTABLE, Push(), src, indexer));
                         ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment()) {
-                        var result = ParseAssignment();
+                        ParseAssignment(out var allowPopRK);
+                        var result = allowPopRK ? PopRK() : PopS();
+                        SetTop(firstResult);
                         var indexer = PopRK();
                         code.Add(Build3(SETTABLE, PopS(), indexer, result));
                     } else if (PeekComma()) {
@@ -471,7 +465,7 @@ namespace YANCL
         }
 
         void PushExpression() {
-            PushTerm();
+            PushConcatSequence();
         }
 
         Compiler(Compiler parent) {
@@ -551,6 +545,18 @@ namespace YANCL
             }
         }
 
+        void PushConcatSequence() {
+            var start = Top;
+            do {
+                PushTerm();
+            } while (TryTake(TokenType.DoubleDot));
+            var end = Head;
+            if (start != end) {
+                SetTop(start);
+                code.Add(Build3(CONCAT, Push(), start, end));
+            }
+        }
+
         void PushTableConstructor() {
             var opIdx = code.Count;
             var table = Push();
@@ -615,6 +621,51 @@ namespace YANCL
             ParseVar(resultIdx + 1);
         }
 
+        void AdjustLHS(int result, int dst) {
+            if (result == dst) {
+                return;
+            }
+            if ((result & KFlag) != 0) {
+                code.Add(Build2x(LOADK, dst, result & ~KFlag));
+                return;
+            }
+            var inst = code[code.Count - 1];
+            switch (GetOpCode(inst)) {
+                case ADD:
+                case SUB:
+                case MUL:
+                case DIV:
+                case MOD:
+                case POW:
+                case BAND:
+                case BOR:
+                case BXOR:
+                case SHL:
+                case SHR:
+                case UNM:
+                case BNOT:
+                case NOT:
+                case CONCAT:
+                case GETTABLE:
+                case GETTABUP:
+                case GETUPVAL:
+                case NEWTABLE:
+                case LEN:
+                case CLOSURE:
+                case LOADK:
+                case MOVE:
+                    var a = GetA(inst);
+                    if (a == result) {
+                        Shrink();
+                        code.Add(Build2x(GetOpCode(inst), dst, GetBx(inst)));
+                    }
+                    break;
+                default:
+                    code.Add(Build2(MOVE, dst, result));
+                    break;
+            }
+        }
+
         void ParseVar(int resultIdx) {
             nSlots++;
             var token = Next();
@@ -628,7 +679,7 @@ namespace YANCL
                             code.Add(Build3(GETTABUP, Push(), EnvUp(), constIdx));
                             ParseVarSuffix(resultIdx);
                         } else if (PeekAssignment()) {
-                            var result = ParseAssignment();
+                            var result = ParseAssignmentWithResult();
                             code.Add(Build3(SETTABUP, EnvUp(), constIdx, result));
                         } else if (PeekComma()) {
                             ParseVarAdditional(resultIdx);
@@ -641,12 +692,9 @@ namespace YANCL
                             code.Add(Build2(MOVE, Push(), localIdx));
                             ParseVarSuffix(resultIdx);
                         } else if (PeekAssignment()) {
-                            var result = ParseAssignment();
-                            if ((result & KFlag) != 0) {
-                                code.Add(Build2x(LOADK, localIdx, result & ~KFlag));
-                            } else if (result != localIdx) {
-                                code.Add(Build2(MOVE, localIdx, result));
-                            }
+                            ParseAssignment(out var _);
+                            AdjustLHS(Head, localIdx);
+                            SetTop(firstResult);
                         } else if (PeekComma()) {
                             ParseVarAdditional(resultIdx);
                             code.Add(Build2(MOVE, localIdx, firstResult + resultIdx));
@@ -697,17 +745,13 @@ namespace YANCL
                 locals.Add(name);
                 return;
             }
-            while (true) {
+            do {
                 tmpLocals.Add(Expect(TokenType.Identifier, "local declaration")!);
-                if (Peek() != TokenType.Comma) {
-                    break;
-                }
-                Next();
-            }
+            } while (TryTake(TokenType.Comma));
             nSlots = tmpLocals.Count;
             if (Peek() == TokenType.Equal) {
                 Next();
-                ParseAssignment(forceStack: true);
+                ParseAssignment(out var _);
             } else {
                 code.Add(Build2(LOADNIL, Top, Top + tmpLocals.Count - 1));
             }

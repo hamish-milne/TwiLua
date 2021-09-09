@@ -56,6 +56,20 @@ namespace YANCL.Test
         }
 
         [Fact]
+        public void LocalAssignment()
+        {
+            DoCompilerTest(
+                "local x; x = y",
+                new LuaValue[] { "y" },
+                new [] {
+                    Build2(LOADNIL, 0, 0),
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                },
+                1, 0
+            );
+        }
+
+        [Fact]
         public void MultipleStatements()
         {
             DoCompilerTest(
