@@ -14,6 +14,8 @@ Function call:
     ✔ String syntax @done(21-09-05 22:26)
     ✔ Self call @done(21-09-09 11:56)
     ☐ C functions
+    ✔ Return statement @done(21-09-09 15:01)
+    ☐ Tail call
 Expressions:
     ✔ True, false, nil @done(21-09-07 10:16)
     ✔ Number literals @done(21-09-07 11:44)
@@ -36,6 +38,7 @@ Misc language features:
     ☐ Comments
     ☐ Hashbang
     ☐ Compile error handling
+    ☐ Stack overflow check
 Upvalues:
     ☐ _ENV
     ☐ In-stack

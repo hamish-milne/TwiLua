@@ -164,7 +164,7 @@ namespace YANCL
                 case '+': return TokenType.Plus;
                 case '-': return TokenType.Minus;
                 case '*': return TokenType.Star;
-                case '/': return TokenType.Slash;
+                case '/': return TwoCharToken(TokenType.Slash, '/', TokenType.DoubleSlash);
                 case '%': return TokenType.Percent;
                 case '^': return TokenType.Caret;
                 case '~': return TwoCharToken(TokenType.Tilde, '=', TokenType.NotEqual);
@@ -172,6 +172,8 @@ namespace YANCL
                 case '<': return TwoCharToken(TokenType.LessThan, '=', TokenType.LessThanEqual);
                 case '>': return TwoCharToken(TokenType.GreaterThan, '=', TokenType.GreaterThanEqual);
                 case '#': return TokenType.Hash;
+                case '&': return TokenType.Ampersand;
+                case '|': return TokenType.Pipe;
                 default:
                     throw new Exception($"Unexpected character '{c}' at position {position}");
             }

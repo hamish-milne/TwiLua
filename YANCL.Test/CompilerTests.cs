@@ -945,5 +945,48 @@ namespace YANCL.Test
                 8, 4
             );
         }
+
+        [Fact]
+        public void ReturnValues()
+        {
+            DoCompilerTest(
+                "return a, b",
+                new LuaValue[] { "a", "b" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(GETTABUP, 1, 0, 1 | KFlag),
+                    Build2(RETURN, 0, 3),
+                },
+                0, 2
+            );
+        }
+
+        [Fact]
+        public void ReturnNothing()
+        {
+            DoCompilerTest(
+                "return",
+                new LuaValue[] { },
+                new [] {
+                    Build2(RETURN, 0, 1),
+                },
+                0, 0
+            );
+        }
+
+        [Fact]
+        public void ReturnVararg()
+        {
+            DoCompilerTest(
+                "return 1, ...",
+                new LuaValue[] { 1 },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                    Build2(VARARG, 1, 0),
+                    Build2(RETURN, 0, 0),
+                },
+                0, 2
+            );
+        }
     }
 }

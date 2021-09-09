@@ -161,7 +161,9 @@ namespace YANCL
                     ParseFunctionDeclaration();
                     return;
                 case TokenType.Return:
-                    throw new NotImplementedException();
+                    Next();
+                    ParseReturn();
+                    break;
                 case TokenType.Semicolon:
                     Next();
                     break;
@@ -201,6 +203,21 @@ namespace YANCL
                 default:
                     return false;
             }
+        }
+
+        void ParseReturn() {
+            var start = Top;
+            int nArgs = 0;
+            switch (Peek()) {
+                case TokenType.End:
+                case TokenType.Eof:
+                case TokenType.Semicolon:
+                    break;
+                default:
+                    nArgs = ParseArgs(0);
+                    break;
+            }
+            code.Add(Build2(RETURN, start, nArgs + 1));
         }
 
         void ParseFunctionSuffix() {
@@ -254,21 +271,11 @@ namespace YANCL
 
         bool PeekComma() => TryTake(TokenType.Comma);
 
-        int ParseArgs(bool hasSelf) {
-            var nArgs = hasSelf ? 1 : 0;
-            if (hasSelf) {
-                Push();
-            }
-            while (Peek() != TokenType.CloseParen) {
+        int ParseArgs(int nArgs) {
+            do {
                 nArgs++;
                 PushExpression();
-                if (Peek() == TokenType.Comma) {
-                    Next();
-                } else if (Peek() != TokenType.CloseParen) {
-                    throw new Exception($"Expected ',' or ')' but got {Peek()}");
-                }
-            }
-            Next();
+            } while (TryTake(TokenType.Comma));
             if (ExtendVararg(0)) {
                 nArgs = -1;
             }
@@ -334,7 +341,8 @@ namespace YANCL
             switch (token.type) {
                 case TokenType.OpenParen: {
                     func = Head;
-                    nArgs = ParseArgs(hasSelf: false);
+                    nArgs = Peek() == TokenType.CloseParen ? 0 : ParseArgs(0);
+                    Expect(TokenType.CloseParen, "arguments");
                     return true;
                 }
                 case TokenType.SingleQuote:
@@ -356,7 +364,9 @@ namespace YANCL
                     Expect(TokenType.OpenParen, "self call");
                     func = Push();
                     code.Add(Build3(SELF, func, src, Constant(name)));
-                    nArgs = ParseArgs(hasSelf: true);
+                    Push(); // push self
+                    nArgs = Peek() == TokenType.CloseParen ? 1 : ParseArgs(1);
+                    Expect(TokenType.CloseParen, "arguments");
                     return true;
                 }
                 default:

@@ -22,6 +22,9 @@ namespace YANCL
         Minus,
         Star,
         Slash,
+        DoubleSlash,
+        Pipe,
+        Ampersand,
         Percent,
         Caret,
         Tilde,
@@ -32,6 +35,8 @@ namespace YANCL
         GreaterThan,
         LessThanEqual,
         GreaterThanEqual,
+        ShiftLeft,
+        ShiftRight,
         Hash,
 
         // Keywords
