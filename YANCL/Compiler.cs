@@ -62,7 +62,7 @@ namespace YANCL
             return --Top;
         }
 
-        int PopRK() {
+        int? TryPopRK() {
             void Shrink() {
                 code.RemoveAt(code.Count - 1);
                 if (code.Count == pcAtMaxStack && maxStack == Top) {
@@ -103,8 +103,10 @@ namespace YANCL
                 default:
                     break;
             }
-            return PopS();
+            return null;
         }
+
+        int PopRK() => TryPopRK() ?? PopS();
 
         Token Next() => lexer.Next();
         TokenType Peek() => lexer.Peek();
@@ -397,11 +399,12 @@ namespace YANCL
                 }
                 case TokenType.OpenBracket: {
                     Next();
+                    var _src = TryPopRK();
                     PushExpression();
                     Expect(TokenType.CloseBracket, "index expression");
                     if (PeekSuffix()) {
                         var indexer = PopRK();
-                        var src = PopRK();
+                        var src = _src ?? PopS();
                         code.Add(Build3(GETTABLE, Push(), src, indexer));
                         ParseVarSuffix(resultIdx);
                     } else if (PeekAssignment()) {
@@ -448,10 +451,11 @@ namespace YANCL
                 }
                 case TokenType.OpenBracket: {
                     Next();
+                    var _src = TryPopRK();
                     PushExpression();
                     Expect(TokenType.CloseBracket, "index expression");
                     var indexer = PopRK();
-                    var src = PopRK();
+                    var src = _src ?? PopS();
                     code.Add(Build3(GETTABLE, Push(), src, indexer));
                     PushExpressionSuffix();
                     break;

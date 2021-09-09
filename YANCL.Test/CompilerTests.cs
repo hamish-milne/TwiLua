@@ -191,7 +191,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "luac has a little optimization here for locals")]
+        [Fact]
         public void LocalIndexAssignment()
         {
             DoCompilerTest(
@@ -224,7 +224,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "luac has a little optimization here for locals")]
+        [Fact]
         public void LocalIndexRead()
         {
             DoCompilerTest(
@@ -238,7 +238,7 @@ namespace YANCL.Test
                     Build3(GETTABLE, 1, 1, 2),
                     Build3(SETTABUP, 0, 0 | KFlag, 1),
                 },
-                1, 1
+                1, 2
             );
         }
 
@@ -813,5 +813,123 @@ namespace YANCL.Test
             );
         }
 
+        [Fact(Skip = "TODO")]
+        public void SimpleMath()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,e; a = b * c / d + e",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(MUL, 5, 1, 2),
+                    Build3(DIV, 5, 5, 3),
+                    Build3(ADD, 0, 5, 4),
+                },
+                5, 1
+            );
+        }
+
+        [Fact(Skip = "TODO")]
+        public void OperatorPrecedence()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,e; a = b + c / d * e",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(DIV, 5, 2, 3),
+                    Build3(MUL, 5, 5, 4),
+                    Build3(ADD, 0, 1, 5),
+                },
+                5, 1
+            );
+        }
+
+        [Fact(Skip = "TODO")]
+        public void BitwiseOperators()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,e; a = b & c ~ d | e",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(BAND, 5, 1, 2),
+                    Build3(BXOR, 5, 5, 3),
+                    Build3(BOR, 0, 5, 4),
+                },
+                5, 1
+            );
+        }
+
+        [Fact(Skip = "TODO")]
+        public void ShiftOperators()
+        {
+            DoCompilerTest(
+                "local a,b,c,d; a = b << c >> d",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 3),
+                    Build3(SHL, 4, 1, 2),
+                    Build3(SHR, 0, 4, 3),
+                },
+                4, 1
+            );
+        }
+
+        [Fact(Skip = "TODO")]
+        public void ComparisonOperators()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,e,f,g,h; a = b < c > d <= e >= f == g != h",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 8),
+                    Build3(LT, 1, 1, 2),
+                    Build2x(JMP, 0, 1),
+                    Build3(LOADBOOL, 8, 0, 1),
+                    Build3(LOADBOOL, 8, 1, 0),
+                    Build3(LT, 1, 3, 8),
+                    Build2x(JMP, 0, 1),
+                    Build3(LOADBOOL, 8, 0, 1),
+                    Build3(LOADBOOL, 8, 1, 0),
+                    Build3(LE, 1, 8, 4),
+                    Build2x(JMP, 0, 1),
+                    Build3(LOADBOOL, 8, 0, 1),
+                    Build3(LOADBOOL, 8, 1, 0),
+                    Build3(LE, 1, 5, 8),
+                    Build2x(JMP, 0, 1),
+                    Build3(LOADBOOL, 8, 0, 1),
+                    Build3(LOADBOOL, 8, 1, 0),
+                    Build3(EQ, 1, 8, 6),
+                    Build2x(JMP, 0, 1),
+                    Build3(LOADBOOL, 8, 0, 1),
+                    Build3(LOADBOOL, 8, 1, 0),
+                    Build3(EQ, 0, 8, 7),
+                    Build2x(JMP, 0, 1),
+                    Build3(LOADBOOL, 0, 0, 1),
+                    Build3(LOADBOOL, 0, 1, 0),
+                },
+                8, 1
+            );
+        }
+
+        [Fact(Skip = "TODO")]
+        public void Concatenation()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,e,f,g; a = b..c..d + e..f..g",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 6),
+                    Build2(MOVE, 7, 1),
+                    Build2(MOVE, 8, 2),
+                    Build3(ADD, 9, 3, 4),
+                    Build2(MOVE, 10, 5),
+                    Build2(MOVE, 11, 6),
+                    Build3(CONCAT, 0, 7, 11),
+                },
+                8, 4
+            );
+        }
     }
 }
