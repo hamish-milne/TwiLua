@@ -827,7 +827,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void SimpleMath()
         {
             DoCompilerTest(
@@ -843,8 +843,8 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
-        public void OperatorPrecedence()
+        [Fact]
+        public void OperatorPrecedence1()
         {
             DoCompilerTest(
                 "local a,b,c,d,e; a = b + c / d * e",
@@ -859,7 +859,39 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
+        public void OperatorPrecedence2()
+        {
+            DoCompilerTest(
+                "local a, b, c; a = #b^c",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 2),
+                    Build3(POW, 3, 1, 2),
+                    Build2(LEN, 0, 3),
+                },
+                3, 1
+            );
+        }
+
+        
+        [Fact]
+        public void MixedStackOperations()
+        {
+            DoCompilerTest(
+                "local a, c; a = #b^c",
+                new LuaValue[] { "b" },
+                new [] {
+                    Build2(LOADNIL, 0, 1),
+                    Build3(GETTABUP, 2, 0, 0 | KFlag),
+                    Build3(POW, 2, 2, 1),
+                    Build2(LEN, 0, 2),
+                },
+                2, 1
+            );
+        }
+
+        [Fact]
         public void BitwiseOperators()
         {
             DoCompilerTest(
@@ -875,7 +907,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void ShiftOperators()
         {
             DoCompilerTest(
@@ -894,7 +926,7 @@ namespace YANCL.Test
         public void ComparisonOperators()
         {
             DoCompilerTest(
-                "local a,b,c,d,e,f,g,h; a = b < c > d <= e >= f == g != h",
+                "local a,b,c,d,e,f,g,h; a = b < c > d <= e >= f == g ~= h",
                 new LuaValue[] { },
                 new [] {
                     Build2(LOADNIL, 0, 8),

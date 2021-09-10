@@ -17,6 +17,26 @@ namespace YANCL
 
         public void PushBack(Token token) => tokens.Push(token);
 
+        TokenType TwoCharToken(TokenType token, char c, TokenType token2) {
+            if (position < str.Length && str[position] == c) {
+                position++;
+                return token2;
+            }
+            return token;
+        }
+
+        TokenType TwoCharToken2(TokenType token, char c2, TokenType token2, char c3, TokenType token3) {
+            if (position < str.Length && str[position] == c2) {
+                position++;
+                return token2;
+            }
+            if (position < str.Length && str[position] == c3) {
+                position++;
+                return token3;
+            }
+            return token;
+        }
+
         public Token Next() {
             if (tokens.Count > 0) {
                 return tokens.Pop();
@@ -130,15 +150,6 @@ namespace YANCL
                 };
             }
 
-            TokenType TwoCharToken(TokenType token, char c, TokenType token2) {
-                if (position < str.Length && str[position] == c) {
-                    position++;
-                    return token2;
-                }
-                return token;
-            }
-
-
             switch (c) {
                 case '\'': return TokenType.SingleQuote;
                 case '"': return TokenType.DoubleQuote;
@@ -169,8 +180,8 @@ namespace YANCL
                 case '^': return TokenType.Caret;
                 case '~': return TwoCharToken(TokenType.Tilde, '=', TokenType.NotEqual);
                 case '=': return TwoCharToken(TokenType.Equal, '=', TokenType.DoubleEqual);
-                case '<': return TwoCharToken(TokenType.LessThan, '=', TokenType.LessThanEqual);
-                case '>': return TwoCharToken(TokenType.GreaterThan, '=', TokenType.GreaterThanEqual);
+                case '<': return TwoCharToken2(TokenType.LessThan, '=', TokenType.LessThanEqual, '<', TokenType.ShiftLeft);
+                case '>': return TwoCharToken2(TokenType.GreaterThan, '=', TokenType.GreaterThanEqual, '>', TokenType.ShiftRight);
                 case '#': return TokenType.Hash;
                 case '&': return TokenType.Ampersand;
                 case '|': return TokenType.Pipe;

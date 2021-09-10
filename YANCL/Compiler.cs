@@ -475,7 +475,126 @@ namespace YANCL
         }
 
         void PushExpression() {
-            PushConcatSequence();
+            PushOperationSequence();
+        }
+
+        OpCode? GetBOp(out bool invert, out int order) {
+            invert = false;
+            order = -1;
+            switch (Peek()) {
+                case TokenType.Or: order = 0; return TEST;
+                case TokenType.And: order = 1; return TEST;
+                case TokenType.LessThan: order = 2; return LT;
+                case TokenType.GreaterThan: order = 2; invert = true; return LT;
+                case TokenType.LessThanEqual: order = 2; return LE;
+                case TokenType.GreaterThanEqual: order = 2; order = 2; invert = true; return LE;
+                case TokenType.DoubleEqual: order = 2; return EQ;
+                case TokenType.NotEqual: order = 2; invert = true; return EQ;
+                case TokenType.Pipe: order = 3; return BOR;
+                case TokenType.Tilde: order = 4; return BXOR;
+                case TokenType.Ampersand: order = 5; return BAND;
+                case TokenType.ShiftLeft: order = 6; return SHL;
+                case TokenType.ShiftRight: order = 6; return SHR;
+                case TokenType.DoubleDot: order = 7; return CONCAT;
+                case TokenType.Plus: order = 8; return ADD;
+                case TokenType.Minus: order = 8; return SUB;
+                case TokenType.Star: order = 9; return MUL;
+                case TokenType.Slash: order = 9; return DIV;
+                case TokenType.DoubleSlash: order = 9; return IDIV;
+                case TokenType.Percent: order = 9; return MOD;
+                case TokenType.Caret: order = 11; return POW;
+                default: return null;
+            }
+        }
+
+        OpCode? GetUOp(out int order) {
+            order = -1;
+            switch (Peek()) {
+                case TokenType.Not: order = 10; return NOT;
+                case TokenType.Hash: order = 10; return LEN;
+                case TokenType.Minus: order = 10; return UNM;
+                case TokenType.Tilde: order = 10; return BNOT;
+                default: return null;
+            }
+        }
+
+        struct Operation {
+            public OpCode opcode;
+            public int order;
+            public bool invert;
+            public bool isUnary;
+        }
+
+        readonly Stack<Operation> ops = new Stack<Operation>();
+        readonly Stack<int?> operands = new Stack<int?>();
+
+        void PushOperationSequence() {
+            void Resolve(int order) {
+                while (ops.Count > 0 && ops.Peek().order >= order) {
+                    var op = ops.Pop();
+                    if (op.isUnary) {
+                        var left = operands.Pop() ?? PopS();
+                        code.Add(Build2(op.opcode, Push(), left));
+                        operands.Push(null);
+                    } else {
+                        var right = operands.Pop() ?? PopS();
+                        var left = operands.Pop() ?? PopS();
+                        code.Add(Build3(op.opcode, Push(), left, right));
+                        operands.Push(null);
+                    }
+                }
+            }
+
+            bool wasPushed = false;
+
+            while (true) {
+                var uop = GetUOp(out var order);
+                if (uop != null) {
+                    Next();
+                }
+                PushTerm();
+                if (uop != null) {
+                    operands.Push(TryPopRK());
+                    wasPushed = true;
+                    Resolve(order);
+                    ops.Push(new Operation {
+                        opcode = uop.Value,
+                        order = order,
+                        invert = false,
+                        isUnary = true
+                    });
+                } else {
+                    wasPushed = false;
+                }
+                var bop = GetBOp(out var invert, out order);
+                if (bop == null) break;
+                Next();
+                if (!wasPushed) {
+                    operands.Push(TryPopRK());
+                    wasPushed = true;
+                }
+                Resolve(order);
+                ops.Push(new Operation {
+                    opcode = bop.Value,
+                    order = order,
+                    invert = invert,
+                    isUnary = false
+                });
+            }
+            if (ops.Count > 0) {
+                if (!wasPushed) {
+                    operands.Push(TryPopRK());
+                }
+                Resolve(-1);
+            }
+            Debug.Assert(ops.Count == 0);
+            Debug.Assert(operands.Count <= 1);
+            if (operands.Count == 1) {
+                var result = operands.Pop();
+                if (result != null) {
+                    AdjustLHS(result.Value, Push());
+                }
+            }
         }
 
         Compiler(Compiler parent) {
@@ -505,11 +624,11 @@ namespace YANCL
         }
 
         void PushTerm() {
-            void Unary(OpCode op) {
-                PushTerm();
-                var expr = PopS();
-                code.Add(Build2(op, Push(), expr));
-            }
+            // void Unary(OpCode op) {
+            //     PushTerm();
+            //     var expr = PopS();
+            //     code.Add(Build2(op, Push(), expr));
+            // }
 
             void Literal(OpCode op, int arg) {
                 code.Add(Build2(op, Push(), arg));
@@ -538,10 +657,10 @@ namespace YANCL
                     PushExpressionSuffix();
                     break;
                 }
-                case TokenType.Hash: Unary(LEN); break;
-                case TokenType.Not: Unary(NOT); break;
-                case TokenType.Tilde: Unary(BNOT); break;
-                case TokenType.Minus: Unary(UNM); break;
+                // case TokenType.Hash: Unary(LEN); break;
+                // case TokenType.Not: Unary(NOT); break;
+                // case TokenType.Tilde: Unary(BNOT); break;
+                // case TokenType.Minus: Unary(UNM); break;
                 case TokenType.True: Literal(LOADBOOL, 1); break;
                 case TokenType.False: Literal(LOADBOOL, 0); break;
                 case TokenType.Nil: Literal(LOADNIL, 0); break;
