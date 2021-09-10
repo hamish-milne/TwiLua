@@ -922,14 +922,14 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void ComparisonOperators()
         {
             DoCompilerTest(
                 "local a,b,c,d,e,f,g,h; a = b < c > d <= e >= f == g ~= h",
                 new LuaValue[] { },
                 new [] {
-                    Build2(LOADNIL, 0, 8),
+                    Build2(LOADNIL, 0, 7),
                     Build3(LT, 1, 1, 2),
                     Build2x(JMP, 0, 1),
                     Build3(LOADBOOL, 8, 0, 1),

@@ -478,16 +478,17 @@ namespace YANCL
             PushOperationSequence();
         }
 
-        OpCode? GetBOp(out bool invert, out int order) {
+        OpCode? GetBOp(out bool swap, out bool invert, out int order) {
+            swap = false;
             invert = false;
             order = -1;
             switch (Peek()) {
                 case TokenType.Or: order = 0; return TEST;
                 case TokenType.And: order = 1; return TEST;
                 case TokenType.LessThan: order = 2; return LT;
-                case TokenType.GreaterThan: order = 2; invert = true; return LT;
+                case TokenType.GreaterThan: order = 2; swap = true; return LT;
                 case TokenType.LessThanEqual: order = 2; return LE;
-                case TokenType.GreaterThanEqual: order = 2; order = 2; invert = true; return LE;
+                case TokenType.GreaterThanEqual: order = 2; order = 2; swap = true; return LE;
                 case TokenType.DoubleEqual: order = 2; return EQ;
                 case TokenType.NotEqual: order = 2; invert = true; return EQ;
                 case TokenType.Pipe: order = 3; return BOR;
@@ -521,6 +522,7 @@ namespace YANCL
         struct Operation {
             public OpCode opcode;
             public int order;
+            public bool swap;
             public bool invert;
             public bool isUnary;
         }
@@ -539,7 +541,26 @@ namespace YANCL
                     } else {
                         var right = operands.Pop() ?? PopS();
                         var left = operands.Pop() ?? PopS();
-                        code.Add(Build3(op.opcode, Push(), left, right));
+                        if (op.swap) {
+                            var x = right;
+                            right = left;
+                            left = x;
+                        }
+                        switch (op.opcode) {
+                            case LT:
+                            case LE:
+                            case EQ: {
+                                code.Add(Build3(op.opcode, op.invert ? 0 : 1, left, right));
+                                code.Add(Build2x(JMP, 0, 1));
+                                var idx = Push();
+                                code.Add(Build3(LOADBOOL, idx, 0, 1));
+                                code.Add(Build3(LOADBOOL, idx, 1, 0));
+                                break;
+                            }
+                            default:
+                                code.Add(Build3(op.opcode, Push(), left, right));
+                                break;
+                        }
                         operands.Push(null);
                     }
                 }
@@ -560,13 +581,12 @@ namespace YANCL
                     ops.Push(new Operation {
                         opcode = uop.Value,
                         order = order,
-                        invert = false,
                         isUnary = true
                     });
                 } else {
                     wasPushed = false;
                 }
-                var bop = GetBOp(out var invert, out order);
+                var bop = GetBOp(out var swap, out var invert, out order);
                 if (bop == null) break;
                 Next();
                 if (!wasPushed) {
@@ -577,6 +597,7 @@ namespace YANCL
                 ops.Push(new Operation {
                     opcode = bop.Value,
                     order = order,
+                    swap = swap,
                     invert = invert,
                     isUnary = false
                 });
@@ -624,11 +645,6 @@ namespace YANCL
         }
 
         void PushTerm() {
-            // void Unary(OpCode op) {
-            //     PushTerm();
-            //     var expr = PopS();
-            //     code.Add(Build2(op, Push(), expr));
-            // }
 
             void Literal(OpCode op, int arg) {
                 code.Add(Build2(op, Push(), arg));
@@ -657,10 +673,6 @@ namespace YANCL
                     PushExpressionSuffix();
                     break;
                 }
-                // case TokenType.Hash: Unary(LEN); break;
-                // case TokenType.Not: Unary(NOT); break;
-                // case TokenType.Tilde: Unary(BNOT); break;
-                // case TokenType.Minus: Unary(UNM); break;
                 case TokenType.True: Literal(LOADBOOL, 1); break;
                 case TokenType.False: Literal(LOADBOOL, 0); break;
                 case TokenType.Nil: Literal(LOADNIL, 0); break;
@@ -758,6 +770,7 @@ namespace YANCL
                 code.Add(Build2x(LOADK, dst, result & ~KFlag));
                 return;
             }
+            Debug.Assert(result == Head);
             var inst = code[code.Count - 1];
             switch (GetOpCode(inst)) {
                 case ADD:
@@ -782,13 +795,35 @@ namespace YANCL
                 case LEN:
                 case CLOSURE:
                 case LOADK:
-                case MOVE:
+                case MOVE: {
                     var a = GetA(inst);
                     if (a == result) {
                         Shrink();
                         code.Add(Build2x(GetOpCode(inst), dst, GetBx(inst)));
                     }
                     break;
+                }
+                case LOADNIL: {
+                    var a = GetA(inst);
+                    var b = GetB(inst);
+                    if (a == result && b == 0) {
+                        Shrink();
+                        code.Add(Build2(LOADNIL, dst, 0));
+                    }
+                    break;
+                }
+                case LOADBOOL: {
+                    var a = GetA(inst);
+                    var prev = code.Count > 1 ? code[code.Count - 2] : 0;
+                    if (a == result) {
+                        Shrink();
+                        code.Add(Build3(LOADBOOL, dst, GetB(inst), GetC(inst)));
+                        if (GetOpCode(prev) == LOADBOOL && GetA(prev) == a) {
+                            code[code.Count - 2] = Build3(LOADBOOL, dst, GetB(prev), GetC(prev));
+                        }
+                    }
+                    break;
+                }
                 default:
                     code.Add(Build2(MOVE, dst, result));
                     break;

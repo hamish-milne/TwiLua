@@ -53,7 +53,7 @@ Unary operators:
 Binary operators:
     ✔ Arithmetic @done(21-09-10 13:33)
     ☐ Concatenation
-    ☐ Comparison
+    ✔ Comparison @done(21-09-10 14:05)
     ✔ Bitwise @done(21-09-10 13:34)
     ☐ Logical
     ✔ Precedence @done(21-09-10 13:34)
