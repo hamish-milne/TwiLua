@@ -43,8 +43,32 @@ namespace YANCL
         public int closureCount;
     }
 
+    public class LuaCallState {
+        private readonly LuaValue[] stack;
+
+        internal LuaCallState(LuaValue[] stack)
+        {
+            this.stack = stack;
+        }
+
+        internal int Base;
+        public int Count;
+        public LuaValue this[int idx] {
+            get => stack[Base + idx];
+            set => stack[Base + idx] = value;
+        }
+        public double Number(int idx = 1) => this[idx].Number;
+        public long Integer(int idx = 1) => (long)this[idx].Number;
+        public string String(int idx = 1) => this[idx].ToString();
+        public void Return(LuaValue v) {
+            stack[Base] = v;
+            Count = 1;
+        }
+    }
+
     public class LuaState {
 
+        readonly LuaCallState callState;
         readonly LuaValue[] stack;
         readonly CallInfo[] callStack;
         int callStackPtr;
@@ -61,6 +85,7 @@ namespace YANCL
         public LuaState(int stackSize, int callStackSize) {
             stack = new LuaValue[stackSize];
             callStack = new CallInfo[callStackSize];
+            callState = new LuaCallState(stack);
         }
 
         public LuaValue[] Execute(LuaFunction function, params LuaValue[] args) {
@@ -107,21 +132,52 @@ namespace YANCL
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void Call(int op) {
-            func = GetA(op);
-            closure = stack[func].Function!;
+            func = baseR + GetA(op);
+            baseR = func + 1;
             int nArgs = GetB(op);
             if (nArgs == 0) {
                 nArgs = top - func - 1;
             } else {
                 nArgs--;
             }
-            while (nArgs < closure.Function.nParams) {
-                stack[func + nArgs++] = LuaValue.Nil;
-            }
             expectedResults = GetC(op);
-            pc = closure.Function.entry;
-            top = func + nArgs + closure.Function.nLocals + closure.Function.nSlots + 1;
-            baseR = top - closure.Function.StackSize;
+            switch (stack[func].Type) {
+            case LuaType.FUNCTION:
+                closure = stack[func].Function!;
+                while (nArgs < closure.Function.nParams) {
+                    stack[func + nArgs++] = LuaValue.Nil;
+                }
+                pc = closure.Function.entry;
+                top = func + nArgs + closure.Function.nLocals + closure.Function.nSlots + 1;
+                break;
+            case LuaType.CFUNCTION:
+                callState.Base = func;
+                callState.Count = nArgs;
+                top = func + nArgs + 1;
+                stack[func].CFunction!.Invoke(callState);
+                Return(callState.Count);
+                break;
+            default:
+                throw new Exception("Tried to call a thing that isn't a function");
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Return(int nResults) {
+            for (int i = func + nResults; i < top; i++) {
+                stack[i] = LuaValue.Nil;
+            }
+            pc = callStack[--callStackPtr].pc;
+            func = callStack[callStackPtr].func;
+            closure = stack[func].Function!;
+            baseR = callStack[callStackPtr].baseR;
+            if (expectedResults == 0) {
+                top = func + nResults;
+            } else {
+                top = callStack[callStackPtr].top;
+            }
+            expectedResults = callStack[callStackPtr].expectedResults;
+            closureCount = callStack[callStackPtr].closureCount;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -138,7 +194,7 @@ namespace YANCL
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void Execute()
         {
             closure = stack[func].Function!;
@@ -182,7 +238,7 @@ namespace YANCL
                         RK(GetA(op))[RK(GetB(op))] = RK(GetC(op));
                         break;
                     case OpCode.NEWTABLE:
-                        R(GetA(op)) = LuaValue.NewTable();
+                        R(GetA(op)) = new LuaTable();
                         break;
                     case OpCode.SELF:
                         R(GetA(op)) = R(GetB(op))[RK(GetC(op))];
@@ -302,20 +358,7 @@ namespace YANCL
                         for (int i = 0; i < nResults; i++) {
                             stack[func + i] = stack[returns + i];
                         }
-                        for (int i = func + nResults; i < top; i++) {
-                            stack[i] = LuaValue.Nil;
-                        }
-                        pc = callStack[--callStackPtr].pc;
-                        func = callStack[callStackPtr].func;
-                        closure = stack[func].Function!;
-                        baseR = callStack[callStackPtr].baseR;
-                        if (expectedResults == 0) {
-                            top = func + nResults;
-                        } else {
-                            top = callStack[callStackPtr].top;
-                        }
-                        expectedResults = callStack[callStackPtr].expectedResults;
-                        closureCount = callStack[callStackPtr].closureCount;
+                        Return(nResults);
                         if (callStackPtr == 0) {
                             return;
                         }
@@ -337,7 +380,7 @@ namespace YANCL
                         pc += GetSbx(op);
                         break;
                     case OpCode.SETLIST: {
-                        var list = R(GetB(op)).Array!;
+                        var list = R(GetB(op)).Table!;
                         var n = GetB(op);
                         if ( n > 0 ) {
                             n = top - GetA(op);
