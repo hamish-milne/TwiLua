@@ -60,6 +60,7 @@ namespace YANCL
         public double Number(int idx = 1) => this[idx].Number;
         public long Integer(int idx = 1) => (long)this[idx].Number;
         public string String(int idx = 1) => this[idx].ToString();
+        public LuaTable Table(int idx = 1) => this[idx].Table!;
         public void Return(LuaValue v) {
             stack[Base] = v;
             Count = 1;
@@ -88,10 +89,12 @@ namespace YANCL
             callState = new LuaCallState(stack);
         }
 
-        public LuaValue[] Execute(LuaFunction function, params LuaValue[] args) {
+        public LuaValue[] Execute(LuaFunction function, LuaValue env, params LuaValue[] args) {
             func = 0;
             pc = function.entry;
-            stack[0] = new LuaClosure(function, null);
+            stack[0] = new LuaClosure(function, null) {
+                Stack = new LuaValue[]{env}
+            };
             for (int i = 0; i < args.Length; i++) {
                 stack[i + 1] = args[i];
             }
@@ -122,7 +125,7 @@ namespace YANCL
             var c = closure;
             do {
                 if (c.Function.upvalues[i].InStack) {
-                    return ref stack[c.Function.upvalues[i].Index];
+                    return ref c.Stack![c.Function.upvalues[i].Index];
                 }
                 i = c.Function.upvalues[i].Index;
                 c = c.Parent!;
@@ -201,7 +204,8 @@ namespace YANCL
 
             while (true) {
                 int op = closure.Function.code[pc++];
-                switch (GetOpCode(op)) {
+                var opcode = GetOpCode(op);
+                switch (opcode) {
                     case OpCode.MOVE:
                         R(GetA(op)) = R(GetB(op));
                         break;

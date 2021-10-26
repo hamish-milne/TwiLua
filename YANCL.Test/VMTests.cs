@@ -51,7 +51,7 @@ namespace YANCL.Test
                 nSlots = 0,
             };
             var state = new LuaState(3, 1);
-            var results = state.Execute(function, a);
+            var results = state.Execute(function, new LuaTable(), a);
             Assert.Equal(new []{expected}, results);
         }
 
@@ -101,7 +101,7 @@ namespace YANCL.Test
                 nSlots = 0,
             };
             var state = new LuaState(4, 1);
-            var results = state.Execute(function, new LuaValue("a"), new LuaValue("b"), new LuaValue("c"));
+            var results = state.Execute(function, new LuaTable(), new LuaValue("a"), new LuaValue("b"), new LuaValue("c"));
             Assert.Equal(new []{new LuaValue("abc")}, results);
         }
 
@@ -128,7 +128,7 @@ namespace YANCL.Test
                 nSlots = 0,
             };
             var state = new LuaState(3, 2);
-            var results = state.Execute(function);
+            var results = state.Execute(function, new LuaTable());
             Assert.Equal(new LuaValue[]{"bar"}, results);
         }
     }

@@ -84,6 +84,25 @@ namespace YANCL
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => Array?.Count ?? 0;
         }
+
+        public void Insert(int pos, LuaValue value) {
+            if (Array == null) {
+                Array = new List<LuaValue>();
+            }
+            while (pos > Array.Count) {
+                Array.Add(LuaValue.Nil);
+            }
+            Array.Insert(pos, value);
+        }
+
+        public LuaValue RemoveAt(int pos) {
+            if (Array == null || pos >= Array.Count) {
+                return LuaValue.Nil;
+            }
+            var ret = Array[pos];
+            Array.RemoveAt(pos);
+            return ret;
+        }
     }
 
     class WrongNumberOfArguments : Exception { }
