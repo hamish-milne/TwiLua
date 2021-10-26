@@ -13,7 +13,7 @@ Function call:
     ✔ Table syntax @done(21-09-08 17:39)
     ✔ String syntax @done(21-09-05 22:26)
     ✔ Self call @done(21-09-09 11:56)
-    ☐ C functions
+    ✔ C functions @done(21-10-26 14:13)
     ✔ Return statement @done(21-09-09 15:01)
     ☐ Tail call
 Expressions:
@@ -120,23 +120,23 @@ Modules:
     ☐ package.searchers
     ☐ package.searchpath
 Strings:
-    ☐ string.byte
-    ☐ string.char
+    ✔ string.byte @done(21-10-26 14:39)
+    ✔ string.char @done(21-10-26 14:39)
     ☐ string.dump
     ☐ string.find
     ☐ string.format
     ☐ string.gmatch
     ☐ string.gsub
-    ☐ string.len
-    ☐ string.lower
+    ✔ string.len @done(21-10-26 14:39)
+    ✔ string.lower @done(21-10-26 14:39)
     ☐ string.match
     ☐ string.pack
     ☐ string.packsize
-    ☐ string.rep
-    ☐ string.reverse
+    ✔ string.rep @done(21-10-26 14:39)
+    ✔ string.reverse @done(21-10-26 14:39)
     ☐ string.sub
     ☐ string.unpack
-    ☐ string.upper
+    ✔ string.upper @done(21-10-26 14:39)
 UTF-8:
     ☐ utf8.char
     ☐ utf8.charpattern
@@ -153,33 +153,33 @@ Tables:
     ☐ table.sort
     ☐ table.unpack
 Math:
-    ☐ math.abs
-    ☐ math.acos
-    ☐ math.asin
-    ☐ math.atan
-    ☐ math.ceil
-    ☐ math.cos
-    ☐ math.deg
-    ☐ math.exp
-    ☐ math.floor
-    ☐ math.fmod
-    ☐ math.huge
-    ☐ math.log
-    ☐ math.max
-    ☐ math.maxinteger
-    ☐ math.min
-    ☐ math.mininteger
-    ☐ math.modf
-    ☐ math.pi
-    ☐ math.rad
-    ☐ math.random
-    ☐ math.randomseed
-    ☐ math.sin
-    ☐ math.sqrt
-    ☐ math.tan
-    ☐ math.tointeger
-    ☐ math.type
-    ☐ math.ult
+    ✔ math.abs @done(21-10-26 14:14)
+    ✔ math.acos @done(21-10-26 14:14)
+    ✔ math.asin @done(21-10-26 14:14)
+    ✔ math.atan @done(21-10-26 14:14)
+    ✔ math.ceil @done(21-10-26 14:14)
+    ✔ math.cos @done(21-10-26 14:14)
+    ✔ math.deg @done(21-10-26 14:14)
+    ✔ math.exp @done(21-10-26 14:14)
+    ✔ math.floor @done(21-10-26 14:14)
+    ✔ math.fmod @done(21-10-26 14:14)
+    ✔ math.huge @done(21-10-26 14:14)
+    ✔ math.log @done(21-10-26 14:14)
+    ✔ math.max @done(21-10-26 14:14)
+    ✔ math.maxinteger @done(21-10-26 14:14)
+    ✔ math.min @done(21-10-26 14:14)
+    ✔ math.mininteger @done(21-10-26 14:14)
+    ✔ math.modf @done(21-10-26 14:14)
+    ✔ math.pi @done(21-10-26 14:14)
+    ✔ math.rad @done(21-10-26 14:14)
+    ✔ math.random @done(21-10-26 14:14)
+    ✔ math.randomseed @done(21-10-26 14:14)
+    ✔ math.sin @done(21-10-26 14:14)
+    ✔ math.sqrt @done(21-10-26 14:14)
+    ✔ math.tan @done(21-10-26 14:14)
+    ✔ math.tointeger @done(21-10-26 14:14)
+    ✔ math.type @done(21-10-26 14:14)
+    ✔ math.ult @done(21-10-26 14:14)
 IO:
     ☐ io.close
     ☐ io.flush
