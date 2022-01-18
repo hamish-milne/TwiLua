@@ -15,12 +15,18 @@ namespace YANCL
         readonly List<LuaValue> constants = new List<LuaValue>();
         readonly List<string> locals = new List<string>();
         readonly List<LuaFunction> prototypes = new List<LuaFunction>();
+        readonly List<LuaUpValue> upValues = new List<LuaUpValue> {
+            new LuaUpValue {
+                InStack = true,
+                Index = 0
+            }
+        };
 
         LuaFunction MakeFunction() {
             return new LuaFunction {
                 code = code.ToArray(),
                 constants = constants.ToArray(),
-                upvalues = Array.Empty<LuaUpValue>(),
+                upvalues = upValues.ToArray(),
                 prototypes = prototypes.ToArray(),
                 nLocals = locals.Count,
                 nSlots = maxStack - locals.Count,
@@ -551,7 +557,7 @@ namespace YANCL
                             case LE:
                             case EQ: {
                                 code.Add(Build3(op.opcode, op.invert ? 0 : 1, left, right));
-                                code.Add(Build2x(JMP, 0, 1));
+                                code.Add(Build2sx(JMP, 0, 1));
                                 var idx = Push();
                                 code.Add(Build3(LOADBOOL, idx, 0, 1));
                                 code.Add(Build3(LOADBOOL, idx, 1, 0));

@@ -51,7 +51,7 @@ namespace YANCL.Test
                 nSlots = 0,
             };
             var state = new LuaState(3, 1);
-            var results = state.Execute(function, a);
+            var results = state.Execute(function, new LuaTable(), a);
             Assert.Equal(new []{expected}, results);
         }
 
@@ -101,8 +101,35 @@ namespace YANCL.Test
                 nSlots = 0,
             };
             var state = new LuaState(4, 1);
-            var results = state.Execute(function, new LuaValue("a"), new LuaValue("b"), new LuaValue("c"));
+            var results = state.Execute(function, new LuaTable(), new LuaValue("a"), new LuaValue("b"), new LuaValue("c"));
             Assert.Equal(new []{new LuaValue("abc")}, results);
+        }
+
+        [Fact]
+        public void CallCFunction() {
+            
+            LuaCFunction cf = s => {
+                Assert.Equal("foo", s.String());
+                s.Return("bar");
+            };
+            var function = new LuaFunction{
+                code = new int[] {
+                    Instruction.Build2x(OpCode.LOADK, 0, 0),
+                    Instruction.Build2x(OpCode.LOADK, 1, 1),
+                    Instruction.Build3(OpCode.CALL, 0, 2, 2),
+                    Instruction.Build2(OpCode.RETURN, 0, 2),
+                },
+                constants = new LuaValue[] {cf, "foo"},
+                upvalues = Array.Empty<LuaUpValue>(),
+                prototypes = Array.Empty<LuaFunction>(),
+                entry = 0,
+                nParams = 0,
+                nLocals = 2,
+                nSlots = 0,
+            };
+            var state = new LuaState(3, 2);
+            var results = state.Execute(function, new LuaTable());
+            Assert.Equal(new LuaValue[]{"bar"}, results);
         }
     }
 }

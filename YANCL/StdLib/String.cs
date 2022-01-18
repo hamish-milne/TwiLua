@@ -1,0 +1,55 @@
+namespace YANCL.StdLib {
+    public static class String {
+        public static void Load(LuaTable globals) {
+            globals["string"] = new LuaTable {
+                {"byte", s => {
+                    var t = s.String(1);
+                    var i = 1;
+                    var j = 1;
+                    switch (s.Count) {
+                        case 1: break;
+                        case 2: i = (int)s.Integer(2); break;
+                        case 3: i = (int)s.Integer(2); j = (int)s.Integer(3); break;
+                        default: throw new WrongNumberOfArguments();
+                    }
+                    i--;
+                    j--;
+                    var c = 0;
+                    for (; i <= j && i < t.Length; i++) {
+                        s[c++] = (int)t[i];
+                    }
+                    s.Count = c;
+                }},
+                {"char", s => {
+                    var buf = new char[s.Count];
+                    for (int i = 1; i <= s.Count; i++) {
+                        buf[i-1] = (char)s.Integer(i);
+                    }
+                    s.Return(new string(buf));
+                }},
+                {"len", s => s.Return(s.String().Length)},
+                {"reverse", s => {
+                    var buf = s.String().ToCharArray();
+                    System.Array.Reverse(buf);
+                    s.Return(new string(buf));
+                }},
+                {"rep", s => {
+                    var sb = new System.Text.StringBuilder();
+                    var t = s.String(1);
+                    var n = s.Integer(2);
+                    var sep = s.Count >= 3 ? s.String(3) : "";
+                    for (int i = 0; i < n; i++) {
+                        if (i > 0) {
+                            sb.Append(sep);
+                        }
+                        sb.Append(t);
+                    }
+                    s.Return(sb.ToString());
+                }},
+                {"lower", s => s.Return(s.String().ToLowerInvariant())},
+                {"upper", s => s.Return(s.String().ToUpperInvariant())},
+            };
+        }
+    }
+
+}

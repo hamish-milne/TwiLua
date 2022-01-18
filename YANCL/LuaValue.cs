@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using System.Runtime.CompilerServices;
+using System.Collections;
 
 namespace YANCL
 {
@@ -11,15 +12,112 @@ namespace YANCL
         STRING = 4,
         TABLE = 5,
         FUNCTION = 6,
+        CFUNCTION = 7,
     }
+
+    public sealed class LuaTable : IEnumerable<LuaValue> {
+        
+        private Dictionary<LuaValue, LuaValue>? Map;
+        private List<LuaValue>? Array;
+
+        public LuaValue this[LuaValue key] {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get {
+                if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
+                    var idx = (int)key.Number - 1;
+                    if (idx < Array!.Count) {
+                        return Array[idx];
+                    } else {
+                        return LuaValue.Nil;
+                    }
+                } else if (Map == null) {
+                    return LuaValue.Nil;
+                } else {
+                    Map!.TryGetValue(key, out var val);
+                    return val;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set {
+                if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
+                    if (Array == null) {
+                        Array = new List<LuaValue>();
+                    }
+                    var idx = (int)key.Number - 1;
+                    while (idx >= Array!.Count) {
+                        Array.Add(LuaValue.Nil);
+                    }
+                    Array[idx] = value;
+                } else {
+                    if (Map == null) {
+                        Map = new Dictionary<LuaValue, LuaValue>();
+                    }
+                    Map[key] = value;
+                }
+            }
+        }
+
+        public IEnumerator<LuaValue> GetEnumerator()
+        {
+            return ((IEnumerable<LuaValue>?)Array ?? System.Array.Empty<LuaValue>()).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(LuaValue key, LuaValue value) {
+            this[key] = value;
+        }
+
+        // This prevents the need for explicit casts for standard library definitions
+        public void Add(LuaValue key, LuaCFunction value) {
+            this[key] = value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(LuaValue value) {
+            this[Count + 1] = value;
+        }
+
+        public int Count {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Array?.Count ?? 0;
+        }
+
+        public void Insert(int pos, LuaValue value) {
+            if (Array == null) {
+                Array = new List<LuaValue>();
+            }
+            while (pos > Array.Count) {
+                Array.Add(LuaValue.Nil);
+            }
+            Array.Insert(pos, value);
+        }
+
+        public LuaValue RemoveAt(int pos) {
+            if (Array == null || pos >= Array.Count) {
+                return LuaValue.Nil;
+            }
+            var ret = Array[pos];
+            Array.RemoveAt(pos);
+            return ret;
+        }
+    }
+
+    class WrongNumberOfArguments : Exception { }
+    class NoIntegerRepresentation : Exception { }
+
+    public delegate void LuaCFunction(LuaCallState s);
 
     public struct LuaValue : IEquatable<LuaValue> {
         public readonly LuaType Type;
         public readonly double Number;
         public readonly string? String;
-        public readonly Dictionary<LuaValue, LuaValue>? Table;
-        public readonly List<LuaValue>? Array;
+        public readonly LuaTable? Table;
         public readonly LuaClosure? Function;
+        public readonly LuaCFunction? CFunction;
+
         public bool Boolean {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
@@ -33,7 +131,7 @@ namespace YANCL
                 if (Type == LuaType.STRING) {
                     return String!.Length;
                 } else if (Type == LuaType.TABLE) {
-                    return Array!.Count;
+                    return Table!.Count;
                 } else {
                     throw new Exception("Not a string or table");
                 }
@@ -43,40 +141,22 @@ namespace YANCL
         public LuaValue this[LuaValue key] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if (Type != LuaType.TABLE) {
+                if (Table == null) {
                     throw new Exception("Not a table");
                 }
-                if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
-                    var idx = (int)key.Number - 1;
-                    if (idx < Array!.Count) {
-                        return Array[idx];
-                    } else {
-                        return LuaValue.Nil;
-                    }
-                } else {
-                    Table!.TryGetValue(key, out var val);
-                    return val;
-                }
+                return Table[key];
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
-                if (Type != LuaType.TABLE) {
+                if (Table == null) {
                     throw new Exception("Not a table");
                 }
-                if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
-                    var idx = (int)key.Number - 1;
-                    while (idx >= Array!.Count) {
-                        Array.Add(LuaValue.Nil);
-                    }
-                    Array[idx] = value;
-                } else {
-                    Table![key] = value;
-                }
+                Table[key] = value;
             }
         }
 
-        public static LuaValue Nil = new LuaValue();
+        public static readonly LuaValue Nil = new LuaValue();
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -85,8 +165,8 @@ namespace YANCL
             Number = value ? 1 : 0;
             String = null;
             Table = null;
-            Array = null;
             Function = null;
+            CFunction = null;
         }
 
         
@@ -96,8 +176,8 @@ namespace YANCL
             Number = value;
             String = null;
             Table = null;
-            Array = null;
             Function = null;
+            CFunction = null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -106,22 +186,18 @@ namespace YANCL
             Number = 0;
             String = value;
             Table = null;
-            Array = null;
             Function = null;
+            CFunction = null;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LuaValue(Dictionary<LuaValue, LuaValue> table, List<LuaValue> array) {
+        public LuaValue(LuaTable table) {
             Type = LuaType.TABLE;
             Number = 0;
             String = null;
             Table = table;
-            Array = array;
             Function = null;
-        }
-
-        public static LuaValue NewTable() {
-            return new LuaValue(new Dictionary<LuaValue, LuaValue>(), new List<LuaValue>());
+            CFunction = null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -130,8 +206,18 @@ namespace YANCL
             Number = 0;
             String = null;
             Table = null;
-            Array = null;
             Function = function;
+            CFunction = null;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LuaValue(LuaCFunction function) {
+            Type = LuaType.CFUNCTION;
+            Number = 0;
+            String = null;
+            Table = null;
+            Function = null;
+            CFunction = function;
         }
 
         public bool Equals(LuaValue other) {
@@ -148,6 +234,8 @@ namespace YANCL
                     return Table == other.Table;
                 case LuaType.FUNCTION:
                     return Function == other.Function;
+                case LuaType.CFUNCTION:
+                    return CFunction == other.CFunction;
                 default:
                     throw new Exception("Invalid LuaType");
             }
@@ -170,6 +258,8 @@ namespace YANCL
                     return Table!.GetHashCode();
                 case LuaType.FUNCTION:
                     return Function!.GetHashCode();
+                case LuaType.CFUNCTION:
+                    return CFunction!.GetHashCode();
                 default:
                     throw new Exception("Invalid LuaType");
             }
@@ -188,6 +278,7 @@ namespace YANCL
                     return String!;
                 case LuaType.TABLE:
                     return "<table>";
+                case LuaType.CFUNCTION:
                 case LuaType.FUNCTION:
                     return "<function>";
                 default:
@@ -223,6 +314,14 @@ namespace YANCL
         }
 
         public static implicit operator LuaValue(LuaClosure value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(LuaTable value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(LuaCFunction value) {
             return new LuaValue(value);
         }
     }
