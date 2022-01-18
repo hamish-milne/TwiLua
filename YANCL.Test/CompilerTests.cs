@@ -959,6 +959,66 @@ namespace YANCL.Test
             );
         }
 
+        [Fact]
+        public void LogicalOperators1()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,x; x = a and b + c or d",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build2(TEST, 0, 0),
+                    Build2x(JMP, 0, 3),
+                    Build3(ADD, 5, 1, 2),
+                    Build3(TESTSET, 4, 5, 1),
+                    Build2x(JMP, 0, 1),
+                    Build2(MOVE, 4, 3),
+                },
+                5, 1
+            );
+        }
+
+        [Fact]
+        public void LogicalOperators2()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,x; x = a or b + c and d",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(TESTSET, 4, 0, 1),
+                    Build2x(JMP, 0, 4),
+                    Build3(ADD, 5, 1, 2),
+                    Build3(TESTSET, 4, 5, 0),
+                    Build2x(JMP, 0, 1),
+                    Build2(MOVE, 4, 3),
+                },
+                5, 1
+            );
+        }
+
+        [Fact]
+        public void LogicalOperators3()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,x; x = a or b < c and d",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(TESTSET, 4, 0, 1),
+                    Build2x(JMP, 0, 6),
+                    Build3(LT, 0, 1, 2),
+                    Build2x(JMP, 0, 2),
+                    Build2(MOVE, 4, 3),
+                    Build2x(JMP, 0, 2),
+                    Build3(LOADBOOL, 4, 0, 1),
+                    Build3(LOADBOOL, 4, 1, 0),
+                    Build2(MOVE, 4, 3),
+                },
+                5, 1
+            );
+        }
+
         [Fact(Skip = "TODO")]
         public void Concatenation()
         {

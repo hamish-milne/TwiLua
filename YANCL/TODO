@@ -26,6 +26,7 @@ Expressions:
     ✔ Index suffix @done(21-09-05 21:55)
     ✔ Call suffix @done(21-09-05 21:55)
     ✔ Table constructor @done(21-09-08 17:19)
+    ☐ Tables: Fields per flush
     ✔ Function expression @done(21-09-08 23:08)
     ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:
@@ -34,6 +35,7 @@ Declarations:
     ✔ Global function @done(21-09-09 11:29)
     ✔ Member function @done(21-09-09 11:29)
     ✔ Self function @done(21-09-09 11:29)
+    ☐ Local variable scoping
 Misc language features:
     ☐ Comments
     ☐ Hashbang
