@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using static YANCL.OpCode;
 
 namespace YANCL
 {
@@ -12,9 +11,8 @@ namespace YANCL
         readonly Parser? parent;
         readonly Lexer lexer;
         readonly List<string> locals = new List<string>();
-        readonly List<LuaValue> constants = new List<LuaValue>();
         readonly List<LuaFunction> prototypes = new List<LuaFunction>();
-        readonly Compiler2 C = new Compiler2();
+        readonly ICompiler2 C = new Compiler22();
 
         Token Next() => lexer.Next();
         TokenType Peek() => lexer.Peek();
@@ -84,6 +82,38 @@ namespace YANCL
                 case TokenType.Semicolon:
                     Next();
                     break;
+                case TokenType.Function:
+                    Next();
+                    var name = Expect(TokenType.Identifier, "function name")!;
+                    C.Upvalue(0);
+                    C.Constant(name);
+                    C.Index();
+                    ParseFunction(hasSelf: false);
+                    C.Assign();
+                    break;
+                case TokenType.Return:
+                    Next();
+                    switch (Peek()) {
+                        case TokenType.Eof:
+                        case TokenType.Semicolon:
+                        case TokenType.End:
+                            break;
+                        default:
+                            ParseArgumentList();
+                            break;
+                    }
+                    C.Return();
+                    while (Peek() == TokenType.Semicolon) {
+                        Next();
+                    }
+                    switch (Peek()) {
+                        case TokenType.End:
+                        case TokenType.Eof:
+                            break;
+                        default:
+                            throw new Exception($"Unexpected {Peek()} after return");
+                    }
+                    break;
                 default:
                     throw new Exception($"Unexpected token {Peek()}");
             }
@@ -135,12 +165,10 @@ namespace YANCL
             var token = Next();
             switch (token.type) {
                 case TokenType.Equal:
-                    C.PushTarget();
                     ParseArgumentList();
                     C.Assign();
                     break;
                 case TokenType.Comma:
-                    C.PushTarget();
                     ParseVar(nSlots + 1);
                     break;
                 default:
@@ -314,7 +342,6 @@ namespace YANCL
                         if (TryTake(TokenType.Equal)) {
                             C.Constant(key.text!);
                             C.Index();
-                            C.PushTarget();
                             ParseExpression();
                             C.Assign();
                         } else {
@@ -329,7 +356,6 @@ namespace YANCL
                         Expect(TokenType.CloseBracket, "table index expression");
                         Expect(TokenType.Equal, "table index");
                         C.Index();
-                        C.PushTarget();
                         ParseExpression();
                         C.Assign();
                         break;
@@ -361,7 +387,6 @@ namespace YANCL
             } while (TryTake(TokenType.Comma));
             if (TryTake(TokenType.Equal)) {
                 ParseArgumentList();
-                C.PushArg();
             }
             C.InitLocals(tmpLocals.Count);
             locals.AddRange(tmpLocals);
@@ -392,7 +417,7 @@ namespace YANCL
         void ParseArgumentList() {
             ParseExpression();
             while (TryTake(TokenType.Comma)) {
-                C.PushArg();
+                C.Argument();
                 ParseExpression();
             }
         }

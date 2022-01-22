@@ -20,7 +20,7 @@ namespace YANCL
 
         struct Operand {
             public OperandType Type;
-            public int A, B;
+            public int A, B, Slots;
             public LuaValue Value;
         }
 
@@ -42,7 +42,11 @@ namespace YANCL
                 case OperandType.Upvalue:
                     return Build2(GETUPVAL, dst, op.A);
                 case OperandType.Constant:
-                    return Build2x(LOADK, dst, K(op.Value));
+                    if (op.Value.Type == LuaType.BOOLEAN) {
+                        return Build3(LOADBOOL, dst, op.Value.Boolean ? 1 : 0, 0);
+                    } else {
+                        return Build2x(LOADK, dst, K(op.Value));
+                    }
                 case OperandType.Expression:
                     return Build2x(GetOpCode(op.A), dst, GetBx(op.A));
                 case OperandType.Vararg:
@@ -105,9 +109,33 @@ namespace YANCL
 
         public void Assign()
         {
-            var target = Peek(1);
-            code.Add(StoreInst(target, PopRK()));
-            Pop();
+            if (arguments + 2 == operands.Count) {
+                var target = Peek(1);
+                switch (target.Type) {
+                    case OperandType.Local:
+                        code.Add(LoadInst(Pop(), target.A));
+                        break;
+                    default:
+                        var slots = 0;
+                        code.Add(StoreInst(target, PopRK(ref slots)));
+                        top -= slots;
+                        break;
+                }
+                Pop();
+            } else {
+                Argument();
+                while (arguments < operands.Count) {
+                    Constant(LuaValue.Nil);
+                    Argument();
+                }
+            }
+            while (arguments > operands.Count) {
+                arguments--;
+                top--;
+            }
+            while (operands.Count > 0) {
+                code.Add(StoreInst(Pop(), --top));
+            }
         }
 
         public void Binary(TokenType token)
@@ -141,22 +169,26 @@ namespace YANCL
                     TokenType.Caret => POW,
                     _ => throw new System.NotImplementedException()
                 };
-                var b = PopRK();
-                var a = PopRK();
+                var slots = 0;
+                var b = PopRK(ref slots);
+                var a = PopRK(ref slots);
                 operands.Add(new Operand {
                     Type = OperandType.Expression,
                     A = Build3(inst, 0, a, b),
                     B = -1,
+                    Slots = slots,
                 });
             }
         }
 
         public void Call()
         {
+            var slots = 0;
             operands.Add(new Operand {
                 Type = OperandType.Call,
-                A = PopRK(),
-                B = arguments,
+                A = PopRK(ref slots),
+                B = arguments + 1,
+                Slots = slots,
             });
             arguments = 0;
         }
@@ -170,17 +202,18 @@ namespace YANCL
             code.Add(Build3(CALL, op.A, op.B, 1));
         }
 
-        private int PopRK()
+        private int PopRK(ref int slots)
         {
             var op = Pop();
             switch (op.Type) {
                 case OperandType.Nil:
-                    return K(LuaValue.Nil);
+                    return K(LuaValue.Nil) | KFlag;
                 case OperandType.Local:
                     return op.A;
                 case OperandType.Constant:
                     return K(op.Value) | KFlag;
                 default:
+                    slots++;
                     var slot = PushS();
                     code.Add(LoadInst(op, slot));
                     return slot;
@@ -189,6 +222,7 @@ namespace YANCL
 
         Operand Pop() {
             var op = operands[operands.Count - 1];
+            top -= op.Slots;
             operands.RemoveAt(operands.Count - 1);
             return op;
         }
@@ -199,19 +233,23 @@ namespace YANCL
 
         public void Index()
         {
-            var indexer = PopRK();
-            if (Peek(1).Type == OperandType.Upvalue) {
+            var slots = 0;
+            var indexer = PopRK(ref slots);
+            if (Peek(0).Type == OperandType.Upvalue) {
+                var upval = Pop().A;
                 operands.Add(new Operand {
                     Type = OperandType.Expression,
-                    A = Build3(GETTABUP, 0, Peek(0).A, indexer),
-                    B = Build3(SETTABUP, Peek(0).A, indexer, 0),
+                    A = Build3(GETTABUP, 0, upval, indexer),
+                    B = Build3(SETTABUP, upval, indexer, 0),
+                    Slots = slots,
                 });
             } else {
-                var table = PopRK();
+                var table = PopRK(ref slots);
                 operands.Add(new Operand {
                     Type = OperandType.Expression,
                     A = Build3(GETTABLE, 0, table, indexer),
                     B = Build3(SETTABLE, table, indexer, 0),
+                    Slots = slots,
                 });
             }
         }
@@ -224,6 +262,20 @@ namespace YANCL
             });
         }
 
+        public void Return()
+        {
+            var op = Pop();
+            switch (op.Type) {
+                case OperandType.Vararg:
+                    code.Add(Build2(VARARG, PushS(), 0));
+                    break;
+                default:
+                    Argument();
+                    break;
+            }
+            arguments = 0;
+        }
+
         public void Upvalue(int idx)
         {
             operands.Add(new Operand {
@@ -234,10 +286,18 @@ namespace YANCL
 
         public void InitLocals(int count)
         {
-            var op = Pop();
-            switch (op.Type) {
+            if (operands.Count == 0) {
+                Constant(LuaValue.Nil);
+            }
+            switch (Peek(0).Type) {
                 case OperandType.Vararg:
-                    code.Add(Build2(VARARG, PushS(), Math.Max(1, count - arguments)));
+                    Pop();
+                    code.Add(Build2(VARARG, PushS(), Math.Max(0, count - arguments) + 1));
+                    arguments++;
+                    while (arguments < count) {
+                        arguments++;
+                        PushS();
+                    }
                     break;
                 default:
                     Argument();
@@ -280,6 +340,38 @@ namespace YANCL
             operands.Add(new Operand {
                 Type = OperandType.Vararg,
             });
+        }
+
+        public void NewTable()
+        {
+            operands.Add(new Operand {
+                Type = OperandType.Expression,
+                A = Build3(NEWTABLE, 0, 0, 0),
+                B = -1
+            });
+        }
+
+        public void Closure(LuaFunction function)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetList()
+        {
+            throw new NotImplementedException();
+        }
+
+        public LuaFunction MakeFunction()
+        {
+            return new LuaFunction {
+                code = code.ToArray(),
+                constants = constants.ToArray(),
+                upvalues = Array.Empty<LuaUpValue>(),
+                entry = 0,
+                nParams = 0,
+                nLocals = top,
+                nSlots = maxStack - top,
+            };
         }
     }
 }

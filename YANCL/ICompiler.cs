@@ -6,6 +6,8 @@ namespace YANCL
     {
         void Constant(LuaValue value);
         void Vararg();
+        void NewTable();
+        void Closure(LuaFunction function);
         
         void Local(int idx);
         void Upvalue(int idx);
@@ -17,12 +19,16 @@ namespace YANCL
 
         void InitLocals(int count);
         void Assign();
+        void SetList();
         void Discard();
         void Argument();
+        void Return();
         
         int Label();
         void Mark(int label);
         void Jump(int label);
         void JumpIf(int label, bool condition);
+
+        LuaFunction MakeFunction();
     }
 }
