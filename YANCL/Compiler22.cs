@@ -233,6 +233,16 @@ namespace YANCL
 
         public void Index()
         {
+            if (Peek(1).Type == OperandType.Expression) {
+                top -= Peek(1).Slots;
+                var slot = PushS();
+                code.Add(LoadInst(Peek(1), slot));
+                operands[operands.Count - 2] = new Operand {
+                    Type = OperandType.Local,
+                    A = slot,
+                    Slots = 1
+                };
+            }
             var slots = 0;
             var indexer = PopRK(ref slots);
             if (Peek(0).Type == OperandType.Upvalue) {
