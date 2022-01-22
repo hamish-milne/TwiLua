@@ -189,6 +189,7 @@ namespace YANCL
                     var name = Expect(TokenType.Identifier, "dot")!;
                     C.Constant(name);
                     C.Index();
+                    endsInCall = false;
                     ParseSuffix(ref endsInCall);
                     break;
                 case TokenType.OpenBracket:
@@ -197,6 +198,7 @@ namespace YANCL
                     ParseExpression();
                     Expect(TokenType.CloseBracket, "index expression");
                     C.Index();
+                    endsInCall = false;
                     ParseSuffix(ref endsInCall);
                     break;
                 case TokenType.OpenParen:
@@ -209,6 +211,14 @@ namespace YANCL
                     C.Call();
                     endsInCall = true;
                     ParseSuffix(ref endsInCall);
+                    break;
+                case TokenType.DoubleQuote:
+                case TokenType.SingleQuote:
+                case TokenType.OpenBrace:
+                    C.Callee();
+                    ParseTerm();
+                    C.Call();
+                    endsInCall = true;
                     break;
                 default:
                     break;

@@ -65,6 +65,8 @@ namespace YANCL
                     return Build2x(GetOpCode(op.A), dst, GetBx(op.A));
                 case OperandType.Vararg:
                     return Build2(VARARG, dst, 2);
+                case OperandType.Call:
+                    return Build3(CALL, op.A, op.B, 2);
                 default:
                     throw new System.NotImplementedException(op.Type.ToString());
             }
@@ -89,6 +91,7 @@ namespace YANCL
         private readonly List<LuaValue> constants = new List<LuaValue>();
         private readonly List<int> code = new List<int>();
         private readonly List<Operand> operands = new List<Operand>();
+        private readonly Stack<int> callees = new Stack<int>();
 
         private int top;
         private int arguments;
@@ -197,13 +200,31 @@ namespace YANCL
 
         public void Call()
         {
+            if ((operands.Count - callees.Peek()) > 0) {
+                var lastArg = Peek(0);
+                switch (lastArg.Type) {
+                    case OperandType.Vararg:
+                        code.Add(Build2(VARARG, PushS(), 0));
+                        Pop();
+                        break;
+                    case OperandType.Call:
+                        code.Add(Build3(CALL, lastArg.A, lastArg.B, 0));
+                        Pop();
+                        break;
+                    default:
+                        Argument();
+                        break;
+                }
+            }
             var slots = 0;
             operands.Add(new Operand {
                 Type = OperandType.Call,
-                A = PopRK(ref slots),
-                B = arguments + 1,
+                A = top-arguments,
+                B = arguments,
                 Slots = slots,
             });
+            callees.Pop();
+            top -= arguments;
             arguments = 0;
         }
 
@@ -263,7 +284,9 @@ namespace YANCL
         }
 
         public void Callee() {
-            EmitOperand(0, keepUpvalues: false);
+            Argument();
+            // EmitOperand(0, keepUpvalues: false);
+            callees.Push(operands.Count);
         }
 
         // public void Indexee() {
