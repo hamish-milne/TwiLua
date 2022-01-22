@@ -184,6 +184,7 @@ namespace YANCL
         void ParseSuffix(ref bool endsInCall) {
             switch (Peek()) {
                 case TokenType.Dot:
+                    // C.Indexee();
                     Next();
                     var name = Expect(TokenType.Identifier, "dot")!;
                     C.Constant(name);
@@ -191,6 +192,7 @@ namespace YANCL
                     ParseSuffix(ref endsInCall);
                     break;
                 case TokenType.OpenBracket:
+                    // C.Indexee();
                     Next();
                     ParseExpression();
                     Expect(TokenType.CloseBracket, "index expression");
@@ -198,6 +200,7 @@ namespace YANCL
                     ParseSuffix(ref endsInCall);
                     break;
                 case TokenType.OpenParen:
+                    C.Callee();
                     Next();
                     if (!TryTake(TokenType.CloseParen)) {
                         ParseArgumentList();

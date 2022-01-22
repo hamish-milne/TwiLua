@@ -22,6 +22,20 @@ namespace YANCL
             public OperandType Type;
             public int A, B, Slots;
             public LuaValue Value;
+
+            public override string ToString()
+            {
+                return Type switch {
+                    OperandType.Nil => "nil",
+                    OperandType.Local => $"local {A}",
+                    OperandType.Constant => $"constant {Value}",
+                    OperandType.Upvalue => $"upvalue {A}",
+                    OperandType.Call => $"call {A}",
+                    OperandType.Vararg => "vararg",
+                    OperandType.Expression => $"expression {Stringify(A)}",
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
         }
 
         private int K(LuaValue value) {
@@ -50,7 +64,7 @@ namespace YANCL
                 case OperandType.Expression:
                     return Build2x(GetOpCode(op.A), dst, GetBx(op.A));
                 case OperandType.Vararg:
-                    return Build2(VARARG, dst, 1);
+                    return Build2(VARARG, dst, 2);
                 default:
                     throw new System.NotImplementedException(op.Type.ToString());
             }
@@ -209,6 +223,9 @@ namespace YANCL
                 case OperandType.Nil:
                     return K(LuaValue.Nil) | KFlag;
                 case OperandType.Local:
+                    slots += op.Slots;
+                    top += op.Slots;
+                    maxStack = Math.Max(maxStack, top);
                     return op.A;
                 case OperandType.Constant:
                     return K(op.Value) | KFlag;
@@ -231,18 +248,31 @@ namespace YANCL
             return operands[operands.Count - index - 1];
         }
 
-        public void Index()
-        {
-            if (Peek(1).Type == OperandType.Expression) {
-                top -= Peek(1).Slots;
+        private void EmitOperand(int idx, bool keepUpvalues) {
+            var op = Peek(idx);
+            if (op.Type == OperandType.Expression || op.Type == OperandType.Vararg || (!keepUpvalues && op.Type == OperandType.Upvalue)) {
+                top -= op.Slots;
                 var slot = PushS();
-                code.Add(LoadInst(Peek(1), slot));
-                operands[operands.Count - 2] = new Operand {
+                code.Add(LoadInst(op, slot));
+                operands[operands.Count - 1 - idx] = new Operand {
                     Type = OperandType.Local,
                     A = slot,
                     Slots = 1
                 };
             }
+        }
+
+        public void Callee() {
+            EmitOperand(0, keepUpvalues: false);
+        }
+
+        // public void Indexee() {
+        //     // EmitOperand(0, keepUpvalues: true);
+        // }
+
+        public void Index()
+        {
+            EmitOperand(1, keepUpvalues: true);
             var slots = 0;
             var indexer = PopRK(ref slots);
             if (Peek(0).Type == OperandType.Upvalue) {

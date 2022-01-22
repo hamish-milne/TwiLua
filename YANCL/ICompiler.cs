@@ -23,6 +23,8 @@ namespace YANCL
         void Discard();
         void Argument();
         void Return();
+        void Callee();
+        // void Indexee();
         
         int Label();
         void Mark(int label);
