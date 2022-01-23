@@ -89,20 +89,21 @@ namespace YANCL
                     C.Constant(name);
                     C.Index();
                     ParseFunction(hasSelf: false);
-                    C.Assign();
+                    C.Assign(1);
                     break;
                 case TokenType.Return:
                     Next();
+                    int argc = 0;
                     switch (Peek()) {
                         case TokenType.Eof:
                         case TokenType.Semicolon:
                         case TokenType.End:
                             break;
                         default:
-                            ParseArgumentList();
+                            argc = ParseArgumentList();
                             break;
                     }
-                    C.Return();
+                    C.Return(argc);
                     while (Peek() == TokenType.Semicolon) {
                         Next();
                     }
@@ -165,8 +166,8 @@ namespace YANCL
             var token = Next();
             switch (token.type) {
                 case TokenType.Equal:
-                    ParseArgumentList();
-                    C.Assign();
+                    int argc = ParseArgumentList();
+                    C.Assign(argc);
                     break;
                 case TokenType.Comma:
                     ParseVar(nSlots + 1);
@@ -204,11 +205,12 @@ namespace YANCL
                 case TokenType.OpenParen:
                     C.Callee();
                     Next();
+                    int argc = 0;
                     if (!TryTake(TokenType.CloseParen)) {
-                        ParseArgumentList();
+                        argc = ParseArgumentList();
                         Expect(TokenType.CloseParen, "argument list");
                     }
-                    C.Call();
+                    C.Call(argc);
                     endsInCall = true;
                     ParseSuffix(ref endsInCall);
                     break;
@@ -217,7 +219,7 @@ namespace YANCL
                 case TokenType.OpenBrace:
                     C.Callee();
                     ParseTerm();
-                    C.Call();
+                    C.Call(1);
                     endsInCall = true;
                     break;
                 default:
@@ -356,7 +358,7 @@ namespace YANCL
                             C.Constant(key.text!);
                             C.Index();
                             ParseExpression();
-                            C.Assign();
+                            C.Assign(1);
                         } else {
                             lexer.PushBack(key);
                             ParseExpression();
@@ -370,7 +372,7 @@ namespace YANCL
                         Expect(TokenType.Equal, "table index");
                         C.Index();
                         ParseExpression();
-                        C.Assign();
+                        C.Assign(1);
                         break;
                     }
                     default:
@@ -388,7 +390,7 @@ namespace YANCL
             if (TryTake(TokenType.Function)) {
                 var name = Expect(TokenType.Identifier, "function name")!;
                 ParseFunction(hasSelf: false);
-                C.InitLocals(1);
+                C.InitLocals(1, 1);
                 locals.Add(name);
                 return;
             }
@@ -398,10 +400,11 @@ namespace YANCL
                     throw new Exception("Local re-declaration");
                 }
             } while (TryTake(TokenType.Comma));
+            int argc = 0;
             if (TryTake(TokenType.Equal)) {
-                ParseArgumentList();
+                argc = ParseArgumentList();
             }
-            C.InitLocals(tmpLocals.Count);
+            C.InitLocals(tmpLocals.Count, argc);
             locals.AddRange(tmpLocals);
             tmpLocals.Clear();
         }
@@ -427,12 +430,15 @@ namespace YANCL
 
         LuaFunction MakeFunction() => C.MakeFunction();
 
-        void ParseArgumentList() {
+        int ParseArgumentList() {
             ParseExpression();
+            int argc = 1;
             while (TryTake(TokenType.Comma)) {
                 C.Argument();
                 ParseExpression();
+                argc++;
             }
+            return argc;
         }
 
         public static LuaFunction Compile(string str) {

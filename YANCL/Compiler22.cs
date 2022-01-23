@@ -20,7 +20,7 @@ namespace YANCL
 
         struct Operand {
             public OperandType Type;
-            public int A, B, Slots;
+            public int A, B, ArgsOnStack;
             public LuaValue Value;
 
             public override string ToString()
@@ -91,10 +91,10 @@ namespace YANCL
         private readonly List<LuaValue> constants = new List<LuaValue>();
         private readonly List<int> code = new List<int>();
         private readonly List<Operand> operands = new List<Operand>();
-        private readonly Stack<int> callees = new Stack<int>();
+        // private readonly Stack<int> callees = new Stack<int>();
 
         private int top;
-        private int arguments;
+        // private int arguments;
         private int maxStack;
 
         private int PushS() {
@@ -121,12 +121,12 @@ namespace YANCL
         {
             var op = Pop();
             code.Add(LoadInst(op, PushS()));
-            arguments++;
+            // arguments++;
         }
 
-        public void Assign()
+        public void Assign(int arguments)
         {
-            if (arguments + 2 == operands.Count) {
+            if (arguments + 1 == operands.Count) {
                 var target = Peek(1);
                 switch (target.Type) {
                     case OperandType.Local:
@@ -142,13 +142,14 @@ namespace YANCL
             } else {
                 Argument();
                 while (arguments < operands.Count) {
+                    arguments++;
                     Constant(LuaValue.Nil);
                     Argument();
                 }
-            }
-            while (arguments > operands.Count) {
-                arguments--;
-                top--;
+                while (arguments > operands.Count) {
+                    arguments--;
+                    top--;
+                }
             }
             while (operands.Count > 0) {
                 code.Add(StoreInst(Pop(), --top));
@@ -193,39 +194,20 @@ namespace YANCL
                     Type = OperandType.Expression,
                     A = Build3(inst, 0, a, b),
                     B = -1,
-                    Slots = slots,
+                    ArgsOnStack = slots,
                 });
             }
         }
 
-        public void Call()
+        public void Call(int arguments)
         {
-            if ((operands.Count - callees.Peek()) > 0) {
-                var lastArg = Peek(0);
-                switch (lastArg.Type) {
-                    case OperandType.Vararg:
-                        code.Add(Build2(VARARG, PushS(), 0));
-                        Pop();
-                        break;
-                    case OperandType.Call:
-                        code.Add(Build3(CALL, lastArg.A, lastArg.B, 0));
-                        Pop();
-                        break;
-                    default:
-                        Argument();
-                        break;
-                }
-            }
-            var slots = 0;
+            bool hasDispatch = arguments > 0 && PushVarargs(0);
             operands.Add(new Operand {
                 Type = OperandType.Call,
-                A = top-arguments,
-                B = arguments,
-                Slots = slots,
+                A = top-arguments-1,
+                B = hasDispatch ? 0 : arguments+1,
+                ArgsOnStack = arguments + 1,
             });
-            callees.Pop();
-            top -= arguments;
-            arguments = 0;
         }
 
         public void Discard()
@@ -237,21 +219,21 @@ namespace YANCL
             code.Add(Build3(CALL, op.A, op.B, 1));
         }
 
-        private int PopRK(ref int slots)
+        private int PopRK(ref int argsOnStack)
         {
             var op = Pop();
             switch (op.Type) {
                 case OperandType.Nil:
                     return K(LuaValue.Nil) | KFlag;
                 case OperandType.Local:
-                    slots += op.Slots;
-                    top += op.Slots;
+                    argsOnStack += op.ArgsOnStack;
+                    top += op.ArgsOnStack;
                     maxStack = Math.Max(maxStack, top);
                     return op.A;
                 case OperandType.Constant:
                     return K(op.Value) | KFlag;
                 default:
-                    slots++;
+                    argsOnStack++;
                     var slot = PushS();
                     code.Add(LoadInst(op, slot));
                     return slot;
@@ -260,7 +242,7 @@ namespace YANCL
 
         Operand Pop() {
             var op = operands[operands.Count - 1];
-            top -= op.Slots;
+            top -= op.ArgsOnStack;
             operands.RemoveAt(operands.Count - 1);
             return op;
         }
@@ -272,13 +254,13 @@ namespace YANCL
         private void EmitOperand(int idx, bool keepUpvalues) {
             var op = Peek(idx);
             if (op.Type == OperandType.Expression || op.Type == OperandType.Vararg || (!keepUpvalues && op.Type == OperandType.Upvalue)) {
-                top -= op.Slots;
+                top -= op.ArgsOnStack;
                 var slot = PushS();
                 code.Add(LoadInst(op, slot));
                 operands[operands.Count - 1 - idx] = new Operand {
                     Type = OperandType.Local,
                     A = slot,
-                    Slots = 1
+                    ArgsOnStack = 1
                 };
             }
         }
@@ -286,7 +268,7 @@ namespace YANCL
         public void Callee() {
             Argument();
             // EmitOperand(0, keepUpvalues: false);
-            callees.Push(operands.Count);
+            // callees.Push(operands.Count);
         }
 
         // public void Indexee() {
@@ -296,25 +278,25 @@ namespace YANCL
         public void Index()
         {
             EmitOperand(1, keepUpvalues: true);
-            var slots = 0;
-            var indexer = PopRK(ref slots);
+            var argsOnStack = 0;
+            var indexer = PopRK(ref argsOnStack);
+            int table;
+            OpCode getter, setter;
             if (Peek(0).Type == OperandType.Upvalue) {
-                var upval = Pop().A;
-                operands.Add(new Operand {
-                    Type = OperandType.Expression,
-                    A = Build3(GETTABUP, 0, upval, indexer),
-                    B = Build3(SETTABUP, upval, indexer, 0),
-                    Slots = slots,
-                });
+                table = Pop().A;
+                getter = GETTABUP;
+                setter = SETTABUP;
             } else {
-                var table = PopRK(ref slots);
-                operands.Add(new Operand {
-                    Type = OperandType.Expression,
-                    A = Build3(GETTABLE, 0, table, indexer),
-                    B = Build3(SETTABLE, table, indexer, 0),
-                    Slots = slots,
-                });
+                table = PopRK(ref argsOnStack);
+                getter = GETTABLE;
+                setter = SETTABLE;
             }
+            operands.Add(new Operand {
+                Type = OperandType.Expression,
+                A = Build3(getter, 0, table, indexer),
+                B = Build3(setter, table, indexer, 0),
+                ArgsOnStack = argsOnStack,
+            });
         }
 
         public void Local(int idx)
@@ -325,18 +307,32 @@ namespace YANCL
             });
         }
 
-        public void Return()
+        private bool PushVarargs(int limit)
         {
-            var op = Pop();
+            var op = Peek(0);
             switch (op.Type) {
                 case OperandType.Vararg:
-                    code.Add(Build2(VARARG, PushS(), 0));
-                    break;
+                    Pop();
+                    code.Add(Build2(VARARG, PushS(), limit));
+                    return true;
+                case OperandType.Call:
+                    Pop();
+                    code.Add(Build3(CALL, op.A, op.B, limit));
+                    PushS();
+                    return true;
                 default:
                     Argument();
-                    break;
+                    return false;
             }
-            arguments = 0;
+        }
+
+        public void Return(int arguments)
+        {
+            if (PushVarargs(0)) {
+                code.Add(Build2(RETURN, top-arguments-1, 0));
+            } else {
+                code.Add(Build2(RETURN, top-arguments-1, arguments));
+            }
         }
 
         public void Upvalue(int idx)
@@ -347,30 +343,21 @@ namespace YANCL
             });
         }
 
-        public void InitLocals(int count)
+        public void InitLocals(int count, int arguments)
         {
-            if (operands.Count == 0) {
-                Constant(LuaValue.Nil);
-            }
-            switch (Peek(0).Type) {
-                case OperandType.Vararg:
-                    Pop();
-                    code.Add(Build2(VARARG, PushS(), Math.Max(0, count - arguments) + 1));
+            if (arguments > 0 && PushVarargs(Math.Max(0, count - arguments) + 1)) {
+                arguments++;
+                while (arguments < count) {
                     arguments++;
-                    while (arguments < count) {
-                        arguments++;
-                        PushS();
-                    }
-                    break;
-                default:
+                    PushS();
+                }
+            } else {
+                while (arguments < count) {
+                    arguments++;
+                    Constant(LuaValue.Nil);
                     Argument();
-                    while (arguments < count) {
-                        Constant(LuaValue.Nil);
-                        Argument();
-                    }
-                    break;
+                }
             }
-            arguments = 0;
         }
 
         public void Jump(int label)

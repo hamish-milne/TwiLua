@@ -15,14 +15,14 @@ namespace YANCL
 
         void Binary(TokenType token);
         void Unary(TokenType token);
-        void Call();
+        void Call(int arguments);
 
-        void InitLocals(int count);
-        void Assign();
+        void InitLocals(int count, int arguments);
+        void Assign(int arguments);
         void SetList();
         void Discard();
         void Argument();
-        void Return();
+        void Return(int arguments);
         void Callee();
         // void Indexee();
         
