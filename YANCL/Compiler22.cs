@@ -9,13 +9,13 @@ namespace YANCL
     {
 
         enum OperandType {
-            Nil,
             Local,
             Constant,
             Upvalue,
             Call,
             Vararg,
-            Expression
+            Expression,
+            NewTable,
         }
 
         struct Operand {
@@ -26,13 +26,13 @@ namespace YANCL
             public override string ToString()
             {
                 return Type switch {
-                    OperandType.Nil => "nil",
                     OperandType.Local => $"local {A}",
                     OperandType.Constant => $"constant {Value}",
                     OperandType.Upvalue => $"upvalue {A}",
                     OperandType.Call => $"call {A}",
                     OperandType.Vararg => "vararg",
                     OperandType.Expression => $"expression {Stringify(A)}",
+                    OperandType.NewTable => $"new table",
                     _ => throw new ArgumentOutOfRangeException()
                 };
             }
@@ -55,21 +55,22 @@ namespace YANCL
                 }
                 return;
             }
+            // TODO: Don't look at previously emitted code
             if (code.Count > 0) {
                 var prev = code[code.Count - 1];
-                if (op.Type == OperandType.Nil && GetOpCode(prev) == LOADNIL && GetA(prev)+GetB(prev)+1 == dst) {
+                if (op.Type == OperandType.Constant && op.Value == LuaValue.Nil && GetOpCode(prev) == LOADNIL && GetA(prev)+GetB(prev)+1 == dst) {
                     code[code.Count - 1] = Build2(LOADNIL, GetA(prev), GetB(prev) + 1);
                     return;
                 }
             }
             var inst = op.Type switch {
-                OperandType.Nil => Build2(LOADNIL, dst, 0),
                 OperandType.Local => Build2(MOVE, dst, op.A),
                 OperandType.Upvalue => Build2(GETUPVAL, dst, op.A),
-                OperandType.Constant => 
-                    (op.Value.Type == LuaType.BOOLEAN)
-                        ? Build3(LOADBOOL, dst, op.Value.Boolean ? 1 : 0, 0)
-                        : Build2x(LOADK, dst, K(op.Value)),
+                OperandType.Constant => op.Value.Type switch {
+                    LuaType.NIL => Build2(LOADNIL, dst, 0),
+                    LuaType.BOOLEAN =>Build3(LOADBOOL, dst, op.Value.Boolean ? 1 : 0, 0),
+                    _ => Build2x(LOADK, dst, K(op.Value))
+                },
                 OperandType.Expression => Build2x(GetOpCode(op.A), dst, GetBx(op.A)),
                 OperandType.Vararg => Build2(VARARG, dst, 2),
                 _ => throw new System.NotSupportedException(op.Type.ToString())
@@ -106,16 +107,10 @@ namespace YANCL
 
         public void Constant(LuaValue value)
         {
-            if (value == LuaValue.Nil) {
-                operands.Add(new Operand {
-                    Type = OperandType.Nil
-                });
-            } else {
-                operands.Add(new Operand {
-                    Type = OperandType.Constant,
-                    Value = value,
-                });
-            }
+            operands.Add(new Operand {
+                Type = OperandType.Constant,
+                Value = value,
+            });
         }
 
         public void Argument()
@@ -231,8 +226,6 @@ namespace YANCL
         {
             var op = Pop();
             switch (op.Type) {
-                case OperandType.Nil:
-                    return K(LuaValue.Nil) | KFlag;
                 case OperandType.Local:
                     argsOnStack += op.ArgsOnStack;
                     top += op.ArgsOnStack;

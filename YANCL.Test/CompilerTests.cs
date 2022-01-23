@@ -861,6 +861,19 @@ namespace YANCL.Test
         }
 
         [Fact]
+        public void ConstantFolding()
+        {
+            DoCompilerTest(
+                "local a = 1 + 2 * 3 - 4",
+                new LuaValue[] { 3 },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                },
+                1, 0
+            );
+        }
+
+        [Fact]
         public void OperatorPrecedence2()
         {
             DoCompilerTest(
@@ -960,7 +973,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void Concatenation()
         {
             DoCompilerTest(

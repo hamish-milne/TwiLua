@@ -350,7 +350,10 @@ namespace YANCL
 
         void ParseTableConstructor() {
             C.NewTable();
-            while (Peek() != TokenType.CloseBrace) {
+            if (TryTake(TokenType.CloseBrace)) {
+                return;
+            }
+            do {
                 switch (Peek()) {
                     case TokenType.Identifier: {
                         var key = Next();
@@ -377,9 +380,11 @@ namespace YANCL
                     }
                     default:
                         ParseExpression();
+                        C.Argument();
                         break;
                 }
-            }
+            } while (TryTake(TokenType.Comma) && Peek() != TokenType.CloseBrace);
+            Expect(TokenType.CloseBrace, "table constructor");
             C.SetList();
         }
 
