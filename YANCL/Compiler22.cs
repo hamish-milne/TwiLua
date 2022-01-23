@@ -47,45 +47,39 @@ namespace YANCL
             return idx;
         }
 
-        private int LoadInst(Operand op, int dst) {
-            switch (op.Type) {
-                case OperandType.Nil:
-                    return Build2(LOADNIL, dst, 0);
-                case OperandType.Local:
-                    return Build2(MOVE, dst, op.A);
-                case OperandType.Upvalue:
-                    return Build2(GETUPVAL, dst, op.A);
-                case OperandType.Constant:
-                    if (op.Value.Type == LuaType.BOOLEAN) {
-                        return Build3(LOADBOOL, dst, op.Value.Boolean ? 1 : 0, 0);
-                    } else {
-                        return Build2x(LOADK, dst, K(op.Value));
-                    }
-                case OperandType.Expression:
-                    return Build2x(GetOpCode(op.A), dst, GetBx(op.A));
-                case OperandType.Vararg:
-                    return Build2(VARARG, dst, 2);
-                case OperandType.Call:
-                    return Build3(CALL, op.A, op.B, 2);
-                default:
-                    throw new System.NotImplementedException(op.Type.ToString());
+        private void LoadInst(Operand op, int dst) {
+            if (op.Type == OperandType.Call) {
+                code.Add(Build3(CALL, op.A, op.B, 2));
+                if (dst != top-1) {
+                    code.Add(Build2(MOVE, dst, top-1));
+                }
+                return;
             }
+            var inst = op.Type switch {
+                OperandType.Nil => Build2(LOADNIL, dst, 0),
+                OperandType.Local => Build2(MOVE, dst, op.A),
+                OperandType.Upvalue => Build2(GETUPVAL, dst, op.A),
+                OperandType.Constant => 
+                    (op.Value.Type == LuaType.BOOLEAN)
+                        ? Build3(LOADBOOL, dst, op.Value.Boolean ? 1 : 0, 0)
+                        : Build2x(LOADK, dst, K(op.Value)),
+                OperandType.Expression => Build2x(GetOpCode(op.A), dst, GetBx(op.A)),
+                OperandType.Vararg => Build2(VARARG, dst, 2),
+                _ => throw new System.NotSupportedException(op.Type.ToString())
+            };
+            code.Add(inst);
         }
 
-        private int StoreInst(Operand op, int src) {
-            switch (op.Type) {
-                case OperandType.Local:
-                    return Build2(MOVE, op.A, src);
-                case OperandType.Upvalue:
-                    return Build2(SETUPVAL, op.A, src);
-                case OperandType.Expression:
-                    if (op.B == -1) {
-                        throw new System.NotImplementedException("Assignment to expression");
-                    }
-                    return Build3(GetOpCode(op.B), GetA(op.B), GetB(op.B), src);
-                default:
-                    throw new System.NotImplementedException(op.Type.ToString());
-            }
+        private void StoreInst(Operand op, int src) {
+            var inst = op.Type switch {
+                OperandType.Local => Build2(MOVE, op.A, src),
+                OperandType.Upvalue => Build2(SETUPVAL, op.A, src),
+                OperandType.Expression => (op.B == -1)
+                    ? throw new System.NotImplementedException("Assignment to expression")
+                    : Build3(GetOpCode(op.B), GetA(op.B), GetB(op.B), src),
+                _ => throw new System.NotSupportedException(op.Type.ToString())
+            };
+            code.Add(inst);
         }
 
         private readonly List<LuaValue> constants = new List<LuaValue>();
@@ -120,7 +114,7 @@ namespace YANCL
         public void Argument()
         {
             var op = Pop();
-            code.Add(LoadInst(op, PushS()));
+            LoadInst(op, PushS());
             // arguments++;
         }
 
@@ -130,11 +124,11 @@ namespace YANCL
                 var target = Peek(1);
                 switch (target.Type) {
                     case OperandType.Local:
-                        code.Add(LoadInst(Pop(), target.A));
+                        LoadInst(Pop(), target.A);
                         break;
                     default:
                         var slots = 0;
-                        code.Add(StoreInst(target, PopRK(ref slots)));
+                        StoreInst(target, PopRK(ref slots));
                         top -= slots;
                         break;
                 }
@@ -152,7 +146,7 @@ namespace YANCL
                 }
             }
             while (operands.Count > 0) {
-                code.Add(StoreInst(Pop(), --top));
+                StoreInst(Pop(), --top);
             }
         }
 
@@ -235,7 +229,7 @@ namespace YANCL
                 default:
                     argsOnStack++;
                     var slot = PushS();
-                    code.Add(LoadInst(op, slot));
+                    LoadInst(op, slot);
                     return slot;
             }
         }
@@ -253,15 +247,24 @@ namespace YANCL
 
         private void EmitOperand(int idx, bool keepUpvalues) {
             var op = Peek(idx);
-            if (op.Type == OperandType.Expression || op.Type == OperandType.Vararg || (!keepUpvalues && op.Type == OperandType.Upvalue)) {
-                top -= op.ArgsOnStack;
-                var slot = PushS();
-                code.Add(LoadInst(op, slot));
-                operands[operands.Count - 1 - idx] = new Operand {
-                    Type = OperandType.Local,
-                    A = slot,
-                    ArgsOnStack = 1
-                };
+            switch (op.Type) {
+                case OperandType.Upvalue:
+                    if (!keepUpvalues) {
+                        goto case OperandType.Expression;
+                    }
+                    break;
+                case OperandType.Expression:
+                case OperandType.Vararg:
+                case OperandType.Call:
+                    top -= op.ArgsOnStack;
+                    var slot = PushS();
+                    LoadInst(op, slot);
+                    operands[operands.Count - 1 - idx] = new Operand {
+                        Type = OperandType.Local,
+                        A = slot,
+                        ArgsOnStack = 1
+                    };
+                    break;
             }
         }
 
