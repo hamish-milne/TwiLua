@@ -120,29 +120,36 @@ namespace YANCL
 
         public void Assign(int arguments)
         {
-            if (arguments + 1 == operands.Count) {
-                var target = Peek(1);
-                switch (target.Type) {
-                    case OperandType.Local:
-                        LoadInst(Pop(), target.A);
-                        break;
-                    default:
-                        var slots = 0;
-                        StoreInst(target, PopRK(ref slots));
-                        top -= slots;
-                        break;
-                }
-                Pop();
-            } else {
-                Argument();
+            if (arguments > 0 && PushVarargs(operands.Count - arguments + 1)) {
                 while (arguments < operands.Count) {
                     arguments++;
-                    Constant(LuaValue.Nil);
-                    Argument();
+                    PushS();
                 }
-                while (arguments > operands.Count) {
-                    arguments--;
-                    top--;
+            } else {
+                if (arguments + 1 == operands.Count) {
+                    var target = Peek(1);
+                    switch (target.Type) {
+                        case OperandType.Local:
+                            LoadInst(Pop(), target.A);
+                            break;
+                        default:
+                            var slots = 0;
+                            StoreInst(target, PopRK(ref slots));
+                            top -= slots;
+                            break;
+                    }
+                    Pop();
+                } else {
+                    Argument();
+                    while (arguments < operands.Count) {
+                        arguments++;
+                        Constant(LuaValue.Nil);
+                        Argument();
+                    }
+                    while (arguments > operands.Count) {
+                        arguments--;
+                        top--;
+                    }
                 }
             }
             while (operands.Count > 0) {
@@ -194,12 +201,12 @@ namespace YANCL
         }
 
         public void Call(int arguments)
-        {
-            bool hasDispatch = arguments > 0 && PushVarargs(0);
+        {   
+            var b = Dispatch(arguments, 0);
             operands.Add(new Operand {
                 Type = OperandType.Call,
                 A = top-arguments-1,
-                B = hasDispatch ? 0 : arguments+1,
+                B = b,
                 ArgsOnStack = arguments + 1,
             });
         }
@@ -324,18 +331,27 @@ namespace YANCL
                     PushS();
                     return true;
                 default:
-                    Argument();
                     return false;
             }
         }
 
+        private int Dispatch(int arguments, int limit) {
+            bool hasDispatch = false;
+            if (arguments > 0) {
+                if (!PushVarargs(limit)) {
+                    Argument();
+                } else {
+                    hasDispatch = true;
+                }
+            }
+            return hasDispatch ? 0 : arguments+1;
+        }
+
         public void Return(int arguments)
         {
-            if (PushVarargs(0)) {
-                code.Add(Build2(RETURN, top-arguments-1, 0));
-            } else {
-                code.Add(Build2(RETURN, top-arguments-1, arguments));
-            }
+            var b = Dispatch(arguments, 0);
+            code.Add(Build2(RETURN, top-arguments, b));
+            top -= arguments;
         }
 
         public void Upvalue(int idx)
@@ -348,13 +364,15 @@ namespace YANCL
 
         public void InitLocals(int count, int arguments)
         {
-            if (arguments > 0 && PushVarargs(Math.Max(0, count - arguments) + 1)) {
-                arguments++;
+            if (arguments > 0 && PushVarargs(count - arguments + 2)) {
                 while (arguments < count) {
                     arguments++;
                     PushS();
                 }
             } else {
+                if (arguments > 0) {
+                    Argument();
+                }
                 while (arguments < count) {
                     arguments++;
                     Constant(LuaValue.Nil);
