@@ -55,6 +55,13 @@ namespace YANCL
                 }
                 return;
             }
+            if (code.Count > 0) {
+                var prev = code[code.Count - 1];
+                if (op.Type == OperandType.Nil && GetOpCode(prev) == LOADNIL && GetA(prev)+GetB(prev)+1 == dst) {
+                    code[code.Count - 1] = Build2(LOADNIL, GetA(prev), GetB(prev) + 1);
+                    return;
+                }
+            }
             var inst = op.Type switch {
                 OperandType.Nil => Build2(LOADNIL, dst, 0),
                 OperandType.Local => Build2(MOVE, dst, op.A),
