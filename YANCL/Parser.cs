@@ -89,7 +89,7 @@ namespace YANCL
                     C.Constant(name);
                     C.Index();
                     ParseFunction(hasSelf: false);
-                    C.Assign(1);
+                    C.Assign(1, 1);
                     break;
                 case TokenType.Return:
                     Next();
@@ -132,12 +132,12 @@ namespace YANCL
             }
         }
 
-        void ParseVar(int nSlots) {
+        void ParseVar(int nTargets) {
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {
                     ParseIdentifier(token);
-                    ContinueParseVar(nSlots);
+                    ContinueParseVar(nTargets);
                     break;
                 }
                 case TokenType.OpenParen:
@@ -146,16 +146,16 @@ namespace YANCL
                     if (!PeekSuffix()) {
                         throw new Exception("Expected a token after expression");
                     }
-                    ContinueParseVar(nSlots);
+                    ContinueParseVar(nTargets);
                     break;
             }
         }
 
-        void ContinueParseVar(int nSlots) {
+        void ContinueParseVar(int nTargets) {
             var endsInCall = false;
             ParseSuffix(ref endsInCall);
             if (endsInCall) {
-                if (nSlots == 1) {
+                if (nTargets == 1) {
                     // Call statement
                     C.Discard();
                     return;
@@ -167,10 +167,10 @@ namespace YANCL
             switch (token.type) {
                 case TokenType.Equal:
                     int argc = ParseArgumentList();
-                    C.Assign(argc);
+                    C.Assign(argc, nTargets);
                     break;
                 case TokenType.Comma:
-                    ParseVar(nSlots + 1);
+                    ParseVar(nTargets + 1);
                     break;
                 default:
                     throw new Exception($"Unexpected token {token}");
@@ -349,6 +349,8 @@ namespace YANCL
         }
 
         void ParseTableConstructor() {
+            int nArray = 0;
+            int nHash = 0;
             C.NewTable();
             if (TryTake(TokenType.CloseBrace)) {
                 return;
@@ -361,10 +363,13 @@ namespace YANCL
                             C.Constant(key.text!);
                             C.Index();
                             ParseExpression();
-                            C.Assign(1);
+                            C.Assign(1, 1);
+                            nHash++;
                         } else {
                             lexer.PushBack(key);
                             ParseExpression();
+                            C.Argument();
+                            nArray++;
                         }
                         break;
                     }
@@ -375,17 +380,19 @@ namespace YANCL
                         Expect(TokenType.Equal, "table index");
                         C.Index();
                         ParseExpression();
-                        C.Assign(1);
+                        C.Assign(1, 1);
+                        nHash++;
                         break;
                     }
                     default:
                         ParseExpression();
                         C.Argument();
+                        nArray++;
                         break;
                 }
             } while (TryTake(TokenType.Comma) && Peek() != TokenType.CloseBrace);
             Expect(TokenType.CloseBrace, "table constructor");
-            C.SetList();
+            C.SetList(nArray, nHash);
         }
 
         readonly List<string> tmpLocals = new List<string>();
