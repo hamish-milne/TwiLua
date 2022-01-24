@@ -237,6 +237,15 @@ namespace YANCL
 
         private int PopRK(ref int argsOnStack)
         {
+            if (Peek(0).Type == OperandType.Constant) {
+                return K(Pop().Value) | KFlag;
+            } else {
+                return PopR(ref argsOnStack);
+            }
+        }
+
+        private int PopR(ref int argsOnStack)
+        {
             var op = Pop();
             switch (op.Type) {
                 case OperandType.Local:
@@ -244,8 +253,6 @@ namespace YANCL
                     top += op.ArgsOnStack;
                     maxStack = Math.Max(maxStack, top);
                     return op.A;
-                case OperandType.Constant:
-                    return K(op.Value) | KFlag;
                 default:
                     argsOnStack++;
                     var slot = PushS();
@@ -315,7 +322,7 @@ namespace YANCL
                     table = Peek(0).A;
                     break;
                 default:
-                    table = PopRK(ref argsOnStack);
+                    table = PopR(ref argsOnStack);
                     break;
             }
             operands.Add(new Operand {
@@ -419,7 +426,34 @@ namespace YANCL
 
         public void Unary(TokenType token)
         {
-            throw new System.NotImplementedException();
+            if (Peek(0).Type == OperandType.Constant) {
+                LuaValue? cValue = token switch {
+                    TokenType.Not => !Pop().Value.Boolean,
+                    TokenType.Minus => Peek(0).Value.Type switch {
+                        LuaType.NUMBER => (LuaValue?)(-Pop().Value.Number),
+                        _ => null
+                    },
+                    TokenType.Tilde => Peek(0).Value.Number % 1 == 0 ? (LuaValue?)(~(long)Pop().Value.Number) : null,
+                    _ => null,
+                };
+                if (cValue != null) {
+                    Constant(cValue.Value);
+                }
+            }
+            var slots = 0;
+            var b = PopR(ref slots);
+            operands.Add(new Operand {
+                Type = OperandType.Expression,
+                A = Build2(token switch {
+                    TokenType.Not => NOT,
+                    TokenType.Minus => UNM,
+                    TokenType.Tilde => BNOT,
+                    TokenType.Hash => LEN,
+                    _ => throw new InvalidOperationException(),
+                }, 0, b),
+                B = -1,
+                ArgsOnStack = slots,
+            });
         }
 
         public void Vararg()
