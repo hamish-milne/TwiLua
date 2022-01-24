@@ -31,6 +31,7 @@ namespace YANCL
         void Jump(int label);
         void JumpIf(int label, bool condition);
 
+        void SetParameters(int count);
         LuaFunction MakeFunction();
     }
 }

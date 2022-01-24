@@ -99,11 +99,14 @@ namespace YANCL
         private readonly List<LuaValue> constants = new List<LuaValue>();
         private readonly List<int> code = new List<int>();
         private readonly List<Operand> operands = new List<Operand>();
-        // private readonly Stack<int> callees = new Stack<int>();
+        private readonly List<LuaFunction> closures = new List<LuaFunction>();
 
         private int top;
-        // private int arguments;
         private int maxStack;
+
+        public void SetParameters(int count) {
+            AdjustTop(count);
+        }
 
         private int PushS() {
             var r = top++;
@@ -128,7 +131,6 @@ namespace YANCL
         {
             var op = Pop();
             LoadInst(op, PushS());
-            // arguments++;
         }
 
         public void Assign(int arguments, int targets)
@@ -288,8 +290,6 @@ namespace YANCL
 
         public void Callee() {
             Argument();
-            // EmitOperand(0, keepUpvalues: false);
-            // callees.Push(operands.Count);
         }
 
         // public void Indexee() {
@@ -442,7 +442,12 @@ namespace YANCL
 
         public void Closure(LuaFunction function)
         {
-            throw new NotImplementedException();
+            operands.Add(new Operand {
+                Type = OperandType.Expression,
+                A = Build2(CLOSURE, 0, closures.Count),
+                B = -1
+            });
+            closures.Add(function);
         }
 
         public void SetList(int array, int hash)
@@ -469,6 +474,7 @@ namespace YANCL
                 code = code.ToArray(),
                 constants = constants.ToArray(),
                 upvalues = Array.Empty<LuaUpValue>(),
+                prototypes = closures.ToArray(),
                 entry = 0,
                 nParams = 0,
                 nLocals = top,

@@ -352,10 +352,7 @@ namespace YANCL
             int nArray = 0;
             int nHash = 0;
             C.NewTable();
-            if (TryTake(TokenType.CloseBrace)) {
-                return;
-            }
-            do {
+            while (Peek() != TokenType.CloseBrace) {
                 switch (Peek()) {
                     case TokenType.Identifier: {
                         var key = Next();
@@ -390,7 +387,10 @@ namespace YANCL
                         nArray++;
                         break;
                 }
-            } while (TryTake(TokenType.Comma) && Peek() != TokenType.CloseBrace);
+                if (!TryTake(TokenType.Comma)) {
+                    break;
+                }
+            }
             Expect(TokenType.CloseBrace, "table constructor");
             C.SetList(nArray, nHash);
         }
@@ -436,6 +436,7 @@ namespace YANCL
                 }
             }
             Next();
+            scope.C.SetParameters(scope.locals.Count);
             scope.ParseBlock();
             C.Closure(scope.MakeFunction());
         }
