@@ -567,17 +567,21 @@ namespace YANCL
             closures.Add(function);
         }
 
-        public void SetList(int array, int hash)
+        public void SetList(int array, int hash, bool argPending)
         {
+            bool hasDispatch = false;
+            if (argPending) {
+                hasDispatch = Dispatch(array, hash) == 0;
+            }
             var op = Pop();
             if (op.Type != OperandType.NewTable) {
                 throw new InvalidOperationException();
             }
             if (array > 0) {
-                code.Add(Build3(SETLIST, op.A, array, 1));
+                code.Add(Build3(SETLIST, op.A, hasDispatch ? array-1 : array, 1));
                 top -= array;
             }
-            code[op.B] = Build3(NEWTABLE, op.A, array, hash);
+            code[op.B] = Build3(NEWTABLE, op.A, hasDispatch ? array-1 : array, hash);
             operands.Add(new Operand {
                 Type = OperandType.Local,
                 A = op.A,

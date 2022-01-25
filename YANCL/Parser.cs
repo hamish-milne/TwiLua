@@ -374,8 +374,13 @@ namespace YANCL
         void ParseTableConstructor() {
             int nArray = 0;
             int nHash = 0;
+            bool argPending = false;
             C.NewTable();
             while (Peek() != TokenType.CloseBrace) {
+                if (argPending) {
+                    C.Argument();
+                    argPending = false;
+                }
                 switch (Peek()) {
                     case TokenType.Identifier: {
                         var key = Next();
@@ -388,7 +393,7 @@ namespace YANCL
                         } else {
                             lexer.PushBack(key);
                             ParseExpression();
-                            C.Argument();
+                            argPending = true;
                             nArray++;
                         }
                         break;
@@ -406,7 +411,7 @@ namespace YANCL
                     }
                     default:
                         ParseExpression();
-                        C.Argument();
+                        argPending = true;
                         nArray++;
                         break;
                 }
@@ -415,7 +420,7 @@ namespace YANCL
                 }
             }
             Expect(TokenType.CloseBrace, "table constructor");
-            C.SetList(nArray, nHash);
+            C.SetList(nArray, nHash, argPending);
         }
 
         readonly List<string> tmpLocals = new List<string>();

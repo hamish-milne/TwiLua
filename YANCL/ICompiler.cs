@@ -20,7 +20,7 @@ namespace YANCL
         void InitLocals(int count, int arguments);
         void AddUpvalue(int index, bool inStack);
         void Assign(int arguments, int targets);
-        void SetList(int array, int hash);
+        void SetList(int array, int hash, bool argPending);
         void Discard();
         void Argument();
         void Return(int arguments);
