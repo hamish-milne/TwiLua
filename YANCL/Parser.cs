@@ -12,7 +12,7 @@ namespace YANCL
         readonly Lexer lexer;
         readonly List<string> locals = new List<string>();
         readonly List<LuaFunction> prototypes = new List<LuaFunction>();
-        readonly ICompiler2 C = new Compiler22();
+        readonly ICompiler C = new Compiler();
 
         Token Next() => lexer.Next();
         TokenType Peek() => lexer.Peek();

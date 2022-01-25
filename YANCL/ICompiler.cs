@@ -2,7 +2,7 @@
 
 namespace YANCL
 {
-    interface ICompiler2
+    interface ICompiler
     {
         void Constant(LuaValue value);
         void Vararg();
