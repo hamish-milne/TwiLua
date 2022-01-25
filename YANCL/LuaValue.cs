@@ -20,7 +20,7 @@ namespace YANCL
         private Dictionary<LuaValue, LuaValue>? Map;
         private List<LuaValue>? Array;
 
-        public LuaValue this[LuaValue key] {
+        public LuaValue this[in LuaValue key] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
@@ -66,17 +66,17 @@ namespace YANCL
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(LuaValue key, LuaValue value) {
+        public void Add(in LuaValue key, in LuaValue value) {
             this[key] = value;
         }
 
         // This prevents the need for explicit casts for standard library definitions
-        public void Add(LuaValue key, LuaCFunction value) {
+        public void Add(in LuaValue key, LuaCFunction value) {
             this[key] = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(LuaValue value) {
+        public void Add(in LuaValue value) {
             this[Count + 1] = value;
         }
 
@@ -85,7 +85,7 @@ namespace YANCL
             get => Array?.Count ?? 0;
         }
 
-        public void Insert(int pos, LuaValue value) {
+        public void Insert(int pos, in LuaValue value) {
             if (Array == null) {
                 Array = new List<LuaValue>();
             }
@@ -110,7 +110,7 @@ namespace YANCL
 
     public delegate void LuaCFunction(LuaCallState s);
 
-    public struct LuaValue : IEquatable<LuaValue> {
+    public readonly struct LuaValue : IEquatable<LuaValue> {
         public readonly LuaType Type;
         public readonly double Number;
         public readonly string? String;
@@ -138,7 +138,7 @@ namespace YANCL
             }
         }
 
-        public LuaValue this[LuaValue key] {
+        public LuaValue this[in LuaValue key] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 if (Table == null) {
@@ -220,7 +220,9 @@ namespace YANCL
             CFunction = function;
         }
 
-        public bool Equals(LuaValue other) {
+        bool IEquatable<LuaValue>.Equals(LuaValue other) => Equals(other);
+
+        public bool Equals(in LuaValue other) {
             if (Type != other.Type) return false;
             switch (Type) {
                 case LuaType.NIL:
@@ -286,10 +288,10 @@ namespace YANCL
             }
         }
 
-        public static bool operator ==(LuaValue left, LuaValue right) {
+        public static bool operator ==(in LuaValue left, in LuaValue right) {
             return left.Equals(right);
         }
-        public static bool operator !=(LuaValue left, LuaValue right) {
+        public static bool operator !=(in LuaValue left, in LuaValue right) {
             return !left.Equals(right);
         }
 

@@ -103,6 +103,7 @@ namespace YANCL
         private readonly List<int> code = new List<int>();
         private readonly List<Operand> operands = new List<Operand>();
         private readonly List<LuaFunction> closures = new List<LuaFunction>();
+        private readonly List<LuaUpValue> upValues = new List<LuaUpValue>();
 
         private int top;
         private int maxStack;
@@ -543,13 +544,20 @@ namespace YANCL
             return new LuaFunction {
                 code = code.ToArray(),
                 constants = constants.ToArray(),
-                upvalues = Array.Empty<LuaUpValue>(),
+                upvalues = upValues.ToArray(),
                 prototypes = closures.ToArray(),
                 entry = 0,
                 nParams = 0,
                 nLocals = top,
                 nSlots = maxStack - top,
             };
+        }
+
+        public void AddUpvalue(int index, bool inStack) {
+            upValues.Add(new LuaUpValue {
+                Index = index,
+                InStack = inStack,
+            });
         }
     }
 }

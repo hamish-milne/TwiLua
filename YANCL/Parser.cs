@@ -23,6 +23,7 @@ namespace YANCL
 
         Parser(string str) {
             lexer = new Lexer(str);
+            C.AddUpvalue(0, inStack: true);
         }
 
         Parser(Parser parent) {
