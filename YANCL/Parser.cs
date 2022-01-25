@@ -85,11 +85,20 @@ namespace YANCL
                     break;
                 case TokenType.Function:
                     Next();
-                    var name = Expect(TokenType.Identifier, "function name")!;
-                    C.Upvalue(0);
-                    C.Constant(name);
-                    C.Index();
-                    ParseFunction(hasSelf: false);
+                    ParseIdentifier(Expect(TokenType.Identifier, "function name")!);
+                    while (TryTake(TokenType.Dot)) {
+                        // C.Indexee();
+                        C.Constant(Expect(TokenType.Identifier, "function declaration member access")!);
+                        C.Index();
+                    }
+                    bool hasSelf = false;
+                    if (TryTake(TokenType.Colon)) {
+                        // C.Indexee();
+                        C.Constant(Expect(TokenType.Identifier, "method declaration")!);
+                        C.Index();
+                        hasSelf = true;
+                    }
+                    ParseFunction(hasSelf);
                     C.Assign(1, 1);
                     break;
                 case TokenType.Return:
@@ -121,8 +130,7 @@ namespace YANCL
             }
         }
 
-        void ParseIdentifier(Token token) {
-            var name = token.text!;
+        void ParseIdentifier(string name) {
             var localIdx = locals.IndexOf(name);
             if (localIdx < 0) { // Global
                 C.Upvalue(0);
@@ -137,7 +145,7 @@ namespace YANCL
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {
-                    ParseIdentifier(token);
+                    ParseIdentifier(token.text!);
                     ContinueParseVar(nTargets);
                     break;
                 }
@@ -245,7 +253,7 @@ namespace YANCL
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier:
-                    ParseIdentifier(token);
+                    ParseIdentifier(token.text!);
                     ParseSuffix();
                     break;
                 case TokenType.Number: C.Constant(token.number); break;
@@ -416,9 +424,9 @@ namespace YANCL
             Next();
             if (TryTake(TokenType.Function)) {
                 var name = Expect(TokenType.Identifier, "function name")!;
+                locals.Add(name); // Local functions become 'active' immediately
                 ParseFunction(hasSelf: false);
                 C.InitLocals(1, 1);
-                locals.Add(name);
                 return;
             }
             do {
