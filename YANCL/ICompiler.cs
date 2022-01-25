@@ -28,10 +28,9 @@ namespace YANCL
         // void Indexee();
         void Self();
         
-        int Label();
+        int Condition();
+        int Jump();
         void Mark(int label);
-        void Jump(int label);
-        void JumpIf(int label, bool condition);
 
         void SetParameters(int count);
         LuaFunction MakeFunction();

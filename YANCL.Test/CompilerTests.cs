@@ -1093,5 +1093,37 @@ namespace YANCL.Test
                 0, 2
             );
         }
+
+        [Fact]
+        public void IfElseifElse()
+        {
+            DoCompilerTest(
+                "if x then a() elseif y then b() elseif z then c() else d() end",
+                new LuaValue[] { "x", "a", "y", "b", "z", "c", "d" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2(TEST, 0, 0),
+                    Build2sx(JMP, 0, 3),
+                    Build3(GETTABUP, 0, 0, 1 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                    Build2sx(JMP, 0, 14),
+                    Build3(GETTABUP, 0, 0, 2 | KFlag),
+                    Build2(TEST, 0, 0),
+                    Build2sx(JMP, 0, 3),
+                    Build3(GETTABUP, 0, 0, 3 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                    Build2sx(JMP, 0, 8),
+                    Build3(GETTABUP, 0, 0, 4 | KFlag),
+                    Build2(TEST, 0, 0),
+                    Build2sx(JMP, 0, 3),
+                    Build3(GETTABUP, 0, 0, 5 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                    Build2sx(JMP, 0, 2),
+                    Build3(GETTABUP, 0, 0, 6 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                },
+                0, 2
+            );
+        }
     }
 }

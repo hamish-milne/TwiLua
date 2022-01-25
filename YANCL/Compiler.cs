@@ -487,21 +487,6 @@ namespace YANCL
             }
         }
 
-        public void Jump(int label)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void JumpIf(int label, bool condition)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public int Label()
-        {
-            throw new System.NotImplementedException();
-        }
-
         public void Mark(int label)
         {
             throw new System.NotImplementedException();
@@ -608,6 +593,16 @@ namespace YANCL
                 Index = index,
                 InStack = inStack,
             });
+        }
+
+        public int Condition()
+        {
+            throw new NotImplementedException();
+        }
+
+        public int Jump()
+        {
+            throw new NotImplementedException();
         }
     }
 }

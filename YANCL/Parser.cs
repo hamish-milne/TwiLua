@@ -125,8 +125,42 @@ namespace YANCL
                             throw new Exception($"Unexpected {Peek()} after return");
                     }
                     break;
+                case TokenType.If:
+                    ParseIfBody();
+                    break;
                 default:
                     throw new Exception($"Unexpected token {Peek()}");
+            }
+        }
+
+        void ParseIfBody() {
+            Next();
+            ParseExpression();
+            Expect(TokenType.Then, "condition");
+            var cond = C.Condition();
+            while (true) {
+                switch (Peek()) {
+                    case TokenType.End:
+                        C.Mark(cond);
+                        Next();
+                        return;
+                    case TokenType.Else: {
+                        Next();
+                        C.Mark(cond);
+                        var skip = C.Jump();
+                        ParseBlock();
+                        C.Mark(skip);
+                        return;
+                    }
+                    case TokenType.ElseIf: {
+                        C.Mark(cond);
+                        var skip = C.Jump();
+                        ParseIfBody();
+                        C.Mark(skip);
+                        return;
+                    }
+                }
+                ParseStat();
             }
         }
 
