@@ -28,8 +28,8 @@ namespace YANCL
         // void Indexee();
         void Self();
         
-        void Condition();
-        void Mark();
+        int Condition();
+        void Mark(int label);
 
         void SetParameters(int count);
         LuaFunction MakeFunction();
@@ -44,9 +44,9 @@ namespace YANCL
             C.Index();
         }
 
-        public static void Jump(this ICompiler C) {
-            C.Constant(true);
-            C.Condition();
+        public static int Jump(this ICompiler C) {
+            C.Constant(false);
+            return C.Condition();
         }
     }
 }

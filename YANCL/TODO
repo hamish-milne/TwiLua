@@ -67,9 +67,9 @@ Varargs:
     ✔ Assignment @done(21-09-08 21:35)
 Blocks:
     ☐ Do/end
-    ☐ If
-    ☐ Else
-    ☐ Elseif
+    ✔ If @done(22-01-25 21:01)
+    ✔ Else @done(22-01-25 21:01)
+    ✔ Elseif @done(22-01-25 21:01)
     ☐ While
     ☐ Repeat
     ☐ Numeric for

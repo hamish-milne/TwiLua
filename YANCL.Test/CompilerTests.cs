@@ -1122,7 +1122,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 6 | KFlag),
                     Build3(CALL, 0, 1, 1),
                 },
-                0, 2
+                0, 1
             );
         }
     }

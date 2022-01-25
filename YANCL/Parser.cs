@@ -137,26 +137,26 @@ namespace YANCL
             Next();
             ParseExpression();
             Expect(TokenType.Then, "condition");
-            C.Condition();
+            var c1 = C.Condition();
             while (true) {
                 switch (Peek()) {
                     case TokenType.End:
-                        C.Mark();
+                        C.Mark(c1);
                         Next();
                         return;
                     case TokenType.Else: {
                         Next();
-                        C.Mark();
-                        C.Jump();
+                        var c2 = C.Jump();
+                        C.Mark(c1);
                         ParseBlock();
-                        C.Mark();
+                        C.Mark(c2);
                         return;
                     }
                     case TokenType.ElseIf: {
-                        C.Mark();
-                        C.Jump();
+                        var c2 = C.Jump();
+                        C.Mark(c1);
                         ParseIfBody();
-                        C.Mark();
+                        C.Mark(c2);
                         return;
                     }
                 }

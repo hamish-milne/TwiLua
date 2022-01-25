@@ -111,7 +111,6 @@ namespace YANCL
         private readonly List<Operand> operands = new List<Operand>();
         private readonly List<LuaFunction> closures = new List<LuaFunction>();
         private readonly List<LuaUpValue> upValues = new List<LuaUpValue>();
-        private readonly List<int> labels = new List<int>();
 
         private int top;
         private int maxStack;
@@ -490,12 +489,10 @@ namespace YANCL
             }
         }
 
-        public void Mark()
+        public void Mark(int label)
         {
-            var label = labels[labels.Count - 1];
-            labels.RemoveAt(labels.Count - 1);
             if (label >= 0) {
-                code[label] = Build2sx(JMP, 0, code.Count - label);
+                code[label] = Build2sx(JMP, 0, code.Count - label - 1);
             }
         }
 
@@ -602,28 +599,25 @@ namespace YANCL
             });
         }
 
-        public void Condition()
+        public int Condition()
         {
             switch (Peek(0).Type) {
                 case OperandType.Condition:
-                    labels.Add(Pop().A);
-                    break;
+                    return Pop().A;
                 case OperandType.Constant:
                     if (Pop().Value.Boolean) {
-                        labels.Add(-1);
+                        return -1;
                     } else {
-                        labels.Add(code.Count);
                         code.Add(Build2sx(JMP, 0, 0));
+                        return code.Count-1;
                     }
-                    break;
                 default: {
                     var slots = 0;
                     var a = PopR(ref slots);
                     code.Add(Build2(TEST, 0, a));
                     top -= slots;
-                    labels.Add(code.Count);
                     code.Add(Build2sx(JMP, 0, 0));
-                    break;
+                    return code.Count-1;
                 }
             }
         }
