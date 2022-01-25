@@ -52,12 +52,12 @@ Unary operators:
     ☐ Constant folding
 Binary operators:
     ✔ Arithmetic @done(21-09-10 13:33)
-    ☐ Concatenation
+    ✔ Concatenation @done(22-01-25 01:03)
     ✔ Comparison @done(21-09-10 14:05)
     ✔ Bitwise @done(21-09-10 13:34)
     ☐ Logical
     ✔ Precedence @done(21-09-10 13:34)
-    ☐ Constant folding
+    ✔ Constant folding @done(22-01-25 01:03)
 Varargs:
     ✔ Parameter @done(21-09-08 21:35)
     ✔ Call @done(21-09-08 21:35)

@@ -988,7 +988,7 @@ namespace YANCL.Test
                     Build2(MOVE, 11, 6),
                     Build3(CONCAT, 0, 7, 11),
                 },
-                8, 4
+                7, 5
             );
         }
 

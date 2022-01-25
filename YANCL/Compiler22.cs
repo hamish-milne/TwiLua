@@ -16,11 +16,12 @@ namespace YANCL
             Vararg,
             Expression,
             NewTable,
+            Concat,
         }
 
         struct Operand {
             public OperandType Type;
-            public int A, B, C, ArgsOnStack;
+            public int A, B, ArgsOnStack;
             public LuaValue Value;
 
             public override string ToString()
@@ -33,6 +34,7 @@ namespace YANCL
                     OperandType.Vararg => "vararg",
                     OperandType.Expression => $"expression {Stringify(A)}",
                     OperandType.NewTable => $"new table",
+                    OperandType.Concat => $"concat {A} {B}",
                     _ => throw new ArgumentOutOfRangeException()
                 };
             }
@@ -76,6 +78,7 @@ namespace YANCL
                 },
                 OperandType.Expression => Build2x(GetOpCode(op.A), dst, GetBx(op.A)),
                 OperandType.Vararg => Build2(VARARG, dst, 2),
+                OperandType.Concat => Build3(CONCAT, dst, op.A, op.B),
                 _ => throw new System.NotSupportedException(op.Type.ToString())
             };
             code.Add(inst);
@@ -174,6 +177,27 @@ namespace YANCL
 
         public void Binary(TokenType token)
         {
+            if (token == TokenType.DoubleDot) {
+                if (Peek(1).Type == OperandType.Concat) {
+                    Argument();
+                    var op = operands[operands.Count - 1];
+                    op.B++;
+                    op.ArgsOnStack++;
+                    operands[operands.Count - 1] = op;
+                } else {
+                    var b = Pop();
+                    Argument();
+                    operands.Add(b);
+                    Argument();
+                    operands.Add(new Operand {
+                        Type = OperandType.Concat,
+                        A = top - 2,
+                        B = top - 1,
+                        ArgsOnStack = 2,
+                    });
+                }
+                return;
+            }
             if (Peek(0).Value.Type == LuaType.NUMBER &&
                 Peek(1).Value.Type == LuaType.NUMBER
             ) {
