@@ -25,6 +25,7 @@ namespace YANCL
         void Return(int arguments);
         void Callee();
         // void Indexee();
+        void Self();
         
         int Label();
         void Mark(int label);

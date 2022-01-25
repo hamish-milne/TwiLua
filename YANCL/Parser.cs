@@ -100,7 +100,7 @@ namespace YANCL
                         case TokenType.End:
                             break;
                         default:
-                            argc = ParseArgumentList();
+                            argc = ParseArgumentList(0);
                             break;
                     }
                     C.Return(argc);
@@ -166,7 +166,7 @@ namespace YANCL
             var token = Next();
             switch (token.type) {
                 case TokenType.Equal:
-                    int argc = ParseArgumentList();
+                    int argc = ParseArgumentList(0);
                     C.Assign(argc, nTargets);
                     break;
                 case TokenType.Comma:
@@ -205,12 +205,17 @@ namespace YANCL
                 case TokenType.OpenParen:
                     C.Callee();
                     Next();
-                    int argc = 0;
-                    if (!TryTake(TokenType.CloseParen)) {
-                        argc = ParseArgumentList();
-                        Expect(TokenType.CloseParen, "argument list");
-                    }
-                    C.Call(argc);
+                    ParseCall(0);
+                    endsInCall = true;
+                    ParseSuffix(ref endsInCall);
+                    break;
+                case TokenType.Colon:
+                    // C.Indexee();
+                    Next();
+                    C.Constant(Expect(TokenType.Identifier, "self call operator")!);
+                    C.Self();
+                    Expect(TokenType.OpenParen, "self call operator");
+                    ParseCall(1);
                     endsInCall = true;
                     ParseSuffix(ref endsInCall);
                     break;
@@ -225,6 +230,14 @@ namespace YANCL
                 default:
                     break;
             }
+        }
+
+        void ParseCall(int argc) {
+            if (!TryTake(TokenType.CloseParen)) {
+                argc = ParseArgumentList(argc);
+                Expect(TokenType.CloseParen, "argument list");
+            }
+            C.Call(argc);
         }
 
         void ParseTerm() {
@@ -414,7 +427,7 @@ namespace YANCL
             } while (TryTake(TokenType.Comma));
             int argc = 0;
             if (TryTake(TokenType.Equal)) {
-                argc = ParseArgumentList();
+                argc = ParseArgumentList(0);
             }
             C.InitLocals(tmpLocals.Count, argc);
             locals.AddRange(tmpLocals);
@@ -443,9 +456,9 @@ namespace YANCL
 
         LuaFunction MakeFunction() => C.MakeFunction();
 
-        int ParseArgumentList() {
+        int ParseArgumentList(int argc) {
             ParseExpression();
-            int argc = 1;
+            argc++;
             while (TryTake(TokenType.Comma)) {
                 C.Argument();
                 ParseExpression();

@@ -327,6 +327,18 @@ namespace YANCL
         //     // EmitOperand(0, keepUpvalues: true);
         // }
 
+        public void Self()
+        {
+            EmitOperand(1, keepUpvalues: false);
+            var argsOnStack = 0;
+            var indexer = PopRK(ref argsOnStack);
+            var table = PopR(ref argsOnStack);
+            top -= argsOnStack;
+            var slot = PushS();
+            PushS();
+            code.Add(Build3(SELF, slot, table, indexer));
+        }
+
         public void Index()
         {
             EmitOperand(1, keepUpvalues: true);

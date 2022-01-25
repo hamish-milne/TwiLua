@@ -888,7 +888,6 @@ namespace YANCL.Test
             );
         }
 
-        
         [Fact]
         public void MixedStackOperations()
         {
