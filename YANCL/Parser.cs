@@ -137,26 +137,26 @@ namespace YANCL
             Next();
             ParseExpression();
             Expect(TokenType.Then, "condition");
-            var cond = C.Condition();
+            C.Condition();
             while (true) {
                 switch (Peek()) {
                     case TokenType.End:
-                        C.Mark(cond);
+                        C.Mark();
                         Next();
                         return;
                     case TokenType.Else: {
                         Next();
-                        C.Mark(cond);
-                        var skip = C.Jump();
+                        C.Mark();
+                        C.Jump();
                         ParseBlock();
-                        C.Mark(skip);
+                        C.Mark();
                         return;
                     }
                     case TokenType.ElseIf: {
-                        C.Mark(cond);
-                        var skip = C.Jump();
+                        C.Mark();
+                        C.Jump();
                         ParseIfBody();
-                        C.Mark(skip);
+                        C.Mark();
                         return;
                     }
                 }
@@ -167,9 +167,7 @@ namespace YANCL
         void ParseIdentifier(string name) {
             var localIdx = locals.IndexOf(name);
             if (localIdx < 0) { // Global
-                C.Upvalue(0);
-                C.Constant(name);
-                C.Index();
+                C.Global(name);
             } else {
                 C.Local(localIdx);
             }

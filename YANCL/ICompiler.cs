@@ -28,11 +28,25 @@ namespace YANCL
         // void Indexee();
         void Self();
         
-        int Condition();
-        int Jump();
-        void Mark(int label);
+        void Condition();
+        void Mark();
 
         void SetParameters(int count);
         LuaFunction MakeFunction();
+    }
+
+    internal static class CompilerExtensions
+    {
+        public static void Global(this ICompiler C, string name) {
+            C.Upvalue(0);
+            // C.Indexee();
+            C.Constant(name);
+            C.Index();
+        }
+
+        public static void Jump(this ICompiler C) {
+            C.Constant(true);
+            C.Condition();
+        }
     }
 }
