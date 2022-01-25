@@ -5,7 +5,7 @@ using static YANCL.OpCode;
 
 namespace YANCL
 {
-    sealed class Compiler22 : ICompiler2
+    sealed class Compiler : ICompiler
     {
 
         enum OperandType {
