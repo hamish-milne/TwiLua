@@ -6,7 +6,7 @@ namespace YANCL.Test
     public class MathTests
     {
         void AssertEqual(string str, double expected) {
-            var f = Compiler.Compile("return " + str);
+            var f = Parser.Compile("return " + str);
             var s = new LuaState(16, 2);
             var g = new LuaTable();
             StdLib.Math.Load(g);
@@ -14,7 +14,7 @@ namespace YANCL.Test
         }
 
         [Fact]
-        public void Abs() => AssertEqual("math.abs(0-2.3)", 2.3);
+        public void Abs() => AssertEqual("math.abs(-2.3)", 2.3);
 
         [Fact]
         public void Acos() => AssertEqual("math.deg(math.acos(0.5))", 60);

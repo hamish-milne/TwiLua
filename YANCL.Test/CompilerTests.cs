@@ -15,8 +15,9 @@ namespace YANCL.Test
             int nLocals, int nSlots,
             (LuaValue[] constants, int[] instructions, int nLocals, int nSlots)[] functions = null
         ) {
-            var result = Compiler.Compile(source);
+            var result = Parser.Compile(source);
             Assert.Equal(expectedConstants, result.constants);
+            Assert.Equal(expectedInstructions.Length, result.code.Length);
             if (!expectedInstructions.SequenceEqual(result.code)) {
                 foreach (var pair in expectedInstructions.Zip(result.code)) {
                     if (pair.Item1 != pair.Item2) {
@@ -860,6 +861,19 @@ namespace YANCL.Test
         }
 
         [Fact]
+        public void ConstantFolding()
+        {
+            DoCompilerTest(
+                "local a = 1 + 2 * 3 - 4",
+                new LuaValue[] { 3 },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                },
+                1, 0
+            );
+        }
+
+        [Fact]
         public void OperatorPrecedence2()
         {
             DoCompilerTest(
@@ -874,7 +888,6 @@ namespace YANCL.Test
             );
         }
 
-        
         [Fact]
         public void MixedStackOperations()
         {
@@ -1019,7 +1032,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void Concatenation()
         {
             DoCompilerTest(
@@ -1034,7 +1047,7 @@ namespace YANCL.Test
                     Build2(MOVE, 11, 6),
                     Build3(CONCAT, 0, 7, 11),
                 },
-                8, 4
+                7, 5
             );
         }
 
