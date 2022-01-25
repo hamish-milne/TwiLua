@@ -17,6 +17,7 @@ namespace YANCL
             Expression,
             NewTable,
             Concat,
+            Condition,
         }
 
         struct Operand {
@@ -58,6 +59,12 @@ namespace YANCL
                 if (dst != top-1) {
                     code.Add(Build2(MOVE, dst, top-1));
                 }
+                return;
+            }
+            if (op.Type == OperandType.Condition) {
+                code.Add(Build2sx(JMP, 0, 1));
+                code.Add(Build3(LOADBOOL, dst, 0, 1));
+                code.Add(Build3(LOADBOOL, dst, 1, 0));
                 return;
             }
             // TODO: Don't look at previously emitted code
@@ -234,6 +241,27 @@ namespace YANCL
                     return;
                 }
             }
+            var slots = 0;
+            var b = PopRK(ref slots);
+            var a = PopRK(ref slots);
+
+            var comp = token switch {
+                TokenType.DoubleEqual => (op: EQ, invert: false, swap: false),
+                TokenType.NotEqual => (op: EQ, invert: true, swap: false),
+                TokenType.LessThan => (op: LT, invert: false, swap: false),
+                TokenType.LessThanEqual => (op: LE, invert: false, swap: false),
+                TokenType.GreaterThan => (op: LT, invert: false, swap: true),
+                TokenType.GreaterThanEqual => (op: LE, invert: false, swap: true),
+                _ => default
+            };
+            if (comp != default) {
+                code.Add(Build3(comp.op, comp.invert ? 0 : 1, comp.swap ? b : a, comp.swap ? a : b));
+                top -= slots;
+                operands.Add(new Operand {
+                    Type = OperandType.Condition
+                });
+                return;
+            }
             var inst = token switch {
                 TokenType.Plus => ADD,
                 TokenType.Minus => SUB,
@@ -249,9 +277,6 @@ namespace YANCL
                 TokenType.DoubleSlash => IDIV,
                 _ => throw new System.NotImplementedException()
             };
-            var slots = 0;
-            var b = PopRK(ref slots);
-            var a = PopRK(ref slots);
             operands.Add(new Operand {
                 Type = OperandType.Expression,
                 A = Build3(inst, 0, a, b),
@@ -322,12 +347,13 @@ namespace YANCL
             switch (op.Type) {
                 case OperandType.Upvalue:
                     if (!keepUpvalues) {
-                        goto case OperandType.Expression;
+                        goto default;
                     }
                     break;
-                case OperandType.Expression:
-                case OperandType.Vararg:
-                case OperandType.Call:
+                case OperandType.NewTable:
+                case OperandType.Local:
+                    break;
+                default:
                     top -= op.ArgsOnStack;
                     var slot = PushS();
                     LoadInst(op, slot);
