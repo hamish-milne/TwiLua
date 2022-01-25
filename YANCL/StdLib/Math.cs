@@ -1,3 +1,4 @@
+using System;
 using static System.Math;
 
 namespace YANCL.StdLib {
@@ -5,10 +6,10 @@ namespace YANCL.StdLib {
     public static class Math {
 
         public static void Load(LuaTable globals) {
-            var random = new System.Random();
+            var random = new Random();
             var rndBuf = new byte[sizeof(double)];
 
-            globals["math"] =  new LuaTable {
+            globals["math"] = new LuaTable {
                 {"abs", s => s.Return(Abs(s.Number()))},
                 {"acos", s => s.Return(Acos(s.Number()))},
                 {"asin", s => s.Return(Asin(s.Number()))},
@@ -37,7 +38,7 @@ namespace YANCL.StdLib {
                             var n = s.Integer(1);
                             if (n == 0) {
                                 random.NextBytes(rndBuf);
-                                s.Return(System.BitConverter.ToDouble(rndBuf, 0));
+                                s.Return(BitConverter.ToDouble(rndBuf, 0));
                             } else {
                                 s.Return(random.Next(1, (int)n));
                             }
@@ -52,11 +53,11 @@ namespace YANCL.StdLib {
                 {"randomseed", s => {
                     switch (s.Count) {
                         case 0:
-                            random = new System.Random();
+                            random = new Random();
                             break;
                         case 1:
                         case 2:
-                            random = new System.Random((int)s.Integer());
+                            random = new Random((int)(s.Integer(1) ^ s.Integer(2)));
                             break;
                         default:
                             throw new WrongNumberOfArguments();

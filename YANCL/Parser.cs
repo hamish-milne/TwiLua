@@ -312,6 +312,7 @@ namespace YANCL
                 TokenType.Minus => 8,
                 TokenType.Star => 9,
                 TokenType.Slash => 9,
+                TokenType.DoubleSlash => 9,
                 TokenType.Percent => 9,
                 TokenType.Caret => 11,
                 _ => -1

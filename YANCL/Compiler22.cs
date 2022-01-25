@@ -186,9 +186,9 @@ namespace YANCL
                     op.ArgsOnStack++;
                     operands[operands.Count - 1] = op;
                 } else {
-                    var b = Pop();
+                    var opb = Pop();
                     Argument();
-                    operands.Add(b);
+                    operands.Add(opb);
                     Argument();
                     operands.Add(new Operand {
                         Type = OperandType.Concat,
@@ -202,42 +202,62 @@ namespace YANCL
             if (Peek(0).Value.Type == LuaType.NUMBER &&
                 Peek(1).Value.Type == LuaType.NUMBER
             ) {
-                var b = Pop().Value.Number;
-                var a = Pop().Value.Number;
+                var cb = Pop().Value.Number;
+                var ca = Pop().Value.Number;
                 double? result = token switch {
-                    TokenType.Plus => a + b,
-                    TokenType.Minus => a - b,
-                    TokenType.Star => a * b,
-                    TokenType.Slash => a / b,
-                    TokenType.Percent => a % b,
-                    TokenType.Caret => System.Math.Pow(a, b),
+                    TokenType.Plus => ca + cb,
+                    TokenType.Minus => ca - cb,
+                    TokenType.Star => ca * cb,
+                    TokenType.Slash => ca / cb,
+                    TokenType.Percent => ca % cb,
+                    TokenType.Caret => System.Math.Pow(ca, cb),
                     _ => null
                 };
-                operands.Add(new Operand {
-                    Type = OperandType.Constant,
-                    Value = new LuaValue(result.Value),
-                });
-                return;
-            } else {
-                var inst = token switch {
-                    TokenType.Plus => ADD,
-                    TokenType.Minus => SUB,
-                    TokenType.Star => MUL,
-                    TokenType.Slash => DIV,
-                    TokenType.Percent => MOD,
-                    TokenType.Caret => POW,
-                    _ => throw new System.NotImplementedException()
-                };
-                var slots = 0;
-                var b = PopRK(ref slots);
-                var a = PopRK(ref slots);
-                operands.Add(new Operand {
-                    Type = OperandType.Expression,
-                    A = Build3(inst, 0, a, b),
-                    B = -1,
-                    ArgsOnStack = slots,
-                });
+                if (ca % 1 == 0 && cb % 1 == 0) {
+                    var ia = (long)ca;
+                    var ib = (long)cb;
+                    result = token switch {
+                        TokenType.ShiftLeft => ib < 64 && ib > -64 ? ia << (int)ib : 0,
+                        TokenType.ShiftRight => ib < 64 && ib > -64 ? ia >> (int)ib : 0,
+                        TokenType.Ampersand => ia & ib,
+                        TokenType.Pipe => ia | ib,
+                        TokenType.Tilde => ia ^ ib,
+                        TokenType.DoubleSlash => ia / ib,
+                        _ => result
+                    };
+                }
+                if (result != null) {
+                    operands.Add(new Operand {
+                        Type = OperandType.Constant,
+                        Value = new LuaValue(result.Value),
+                    });
+                    return;
+                }
             }
+            var inst = token switch {
+                TokenType.Plus => ADD,
+                TokenType.Minus => SUB,
+                TokenType.Star => MUL,
+                TokenType.Slash => DIV,
+                TokenType.Percent => MOD,
+                TokenType.Caret => POW,
+                TokenType.ShiftLeft => SHL,
+                TokenType.ShiftRight => SHR,
+                TokenType.Ampersand => BAND,
+                TokenType.Pipe => BOR,
+                TokenType.Tilde => BXOR,
+                TokenType.DoubleSlash => IDIV,
+                _ => throw new System.NotImplementedException()
+            };
+            var slots = 0;
+            var b = PopRK(ref slots);
+            var a = PopRK(ref slots);
+            operands.Add(new Operand {
+                Type = OperandType.Expression,
+                A = Build3(inst, 0, a, b),
+                B = -1,
+                ArgsOnStack = slots,
+            });
         }
 
         public void Call(int arguments)
