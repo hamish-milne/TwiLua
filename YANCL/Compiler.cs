@@ -17,7 +17,8 @@ namespace YANCL
             Expression,
             NewTable,
             Concat,
-            Condition,
+            Test,
+            Comparison,
         }
 
         struct Operand {
@@ -36,7 +37,7 @@ namespace YANCL
                     OperandType.Expression => $"expression {Stringify(A)}",
                     OperandType.NewTable => $"new table",
                     OperandType.Concat => $"concat {A} {B}",
-                    _ => throw new ArgumentOutOfRangeException()
+                    _ => base.ToString()
                 };
             }
         }
@@ -61,8 +62,9 @@ namespace YANCL
                 }
                 return;
             }
-            if (op.Type == OperandType.Condition) {
-                code[op.A] = Build2sx(JMP, 0, code.Count - op.A);
+            if (op.Type == OperandType.Test || op.Type == OperandType.Comparison) {
+                code.Add(op.A);
+                code.Add(Build2sx(JMP, 0, 1));
                 code.Add(Build3(LOADBOOL, dst, 0, 1));
                 code.Add(Build3(LOADBOOL, dst, 1, 0));
                 return;
@@ -242,6 +244,9 @@ namespace YANCL
                 }
             }
             var slots = 0;
+            if (Peek(1).Type != OperandType.Constant) {
+                EmitOperand(1);
+            }
             var b = PopRK(ref slots);
             var a = PopRK(ref slots);
 
@@ -255,12 +260,10 @@ namespace YANCL
                 _ => default
             };
             if (comp != default) {
-                code.Add(Build3(comp.op, comp.invert ? 0 : 1, comp.swap ? b : a, comp.swap ? a : b));
-                code.Add(Build2sx(JMP, 0, 0));
-                top -= slots;
                 operands.Add(new Operand {
-                    Type = OperandType.Condition,
-                    A = code.Count - 1
+                    Type = OperandType.Comparison,
+                    A = Build3(comp.op, comp.invert ? 0 : 1, comp.swap ? b: a, comp.swap ? a: b),
+                    ArgsOnStack = slots
                 });
                 return;
             }
@@ -344,14 +347,9 @@ namespace YANCL
             return operands[operands.Count - index - 1];
         }
 
-        private void EmitOperand(int idx, bool keepUpvalues) {
+        private void EmitOperand(int idx) {
             var op = Peek(idx);
             switch (op.Type) {
-                case OperandType.Upvalue:
-                    if (!keepUpvalues) {
-                        goto default;
-                    }
-                    break;
                 case OperandType.NewTable:
                 case OperandType.Local:
                     break;
@@ -378,7 +376,7 @@ namespace YANCL
 
         public void Self()
         {
-            EmitOperand(1, keepUpvalues: false);
+            EmitOperand(1);
             var argsOnStack = 0;
             var indexer = PopRK(ref argsOnStack);
             var table = PopR(ref argsOnStack);
@@ -390,7 +388,9 @@ namespace YANCL
 
         public void Index()
         {
-            EmitOperand(1, keepUpvalues: true);
+            if (Peek(1).Type != OperandType.Upvalue) {
+                EmitOperand(1);
+            }
             var argsOnStack = 0;
             var indexer = PopRK(ref argsOnStack);
             int table;
@@ -496,6 +496,17 @@ namespace YANCL
             }
         }
 
+        public int Loop() => code.Count;
+
+        public void JumpBack(int label) {
+            code.Add(Build2sx(JMP, 0, label - code.Count - 1));
+        }
+
+        public int JumpForward() {
+            code.Add(Build2sx(JMP, 0, 0));
+            return code.Count - 1;
+        }
+
         public void Unary(TokenType token)
         {
             if (Peek(0).Type == OperandType.Constant) {
@@ -510,6 +521,19 @@ namespace YANCL
                 };
                 if (cValue != null) {
                     Constant(cValue.Value);
+                }
+            }
+            if (token == TokenType.Not) {
+                var op = Peek(0);
+                switch (op.Type) {
+                    case OperandType.Comparison:
+                        op.A = Build3(GetOpCode(op.A), GetA(op.A) == 0 ? 1 : 0, GetB(op.A), GetC(op.A));
+                        operands[operands.Count - 1] = op;
+                        return;
+                    case OperandType.Test:
+                        op.A = Build3(GetOpCode(op.A), GetA(op.A), GetB(op.A), GetC(op.A) == 0 ? 1 : 0);
+                        operands[operands.Count - 1] = op;
+                        return;
                 }
             }
             var slots = 0;
@@ -602,24 +626,26 @@ namespace YANCL
         public int Condition()
         {
             switch (Peek(0).Type) {
-                case OperandType.Condition:
-                    return Pop().A;
-                case OperandType.Constant:
-                    if (Pop().Value.Boolean) {
-                        return -1;
-                    } else {
-                        code.Add(Build2sx(JMP, 0, 0));
-                        return code.Count-1;
-                    }
-                default: {
-                    var slots = 0;
-                    var a = PopR(ref slots);
-                    code.Add(Build2(TEST, 0, a));
-                    top -= slots;
+                case OperandType.Comparison:
+                case OperandType.Test:
+                    code.Add(Pop().A);
                     code.Add(Build2sx(JMP, 0, 0));
                     return code.Count-1;
-                }
+                case OperandType.Constant:
+                    if (Peek(0).Value.Boolean) {
+                        Pop();
+                        return -1;
+                    }
+                    break;
+                default:
+                    break;
             }
+            var slots = 0;
+            var a = PopR(ref slots);
+            code.Add(Build3(TEST, a, 0, 0));
+            top -= slots;
+            code.Add(Build2sx(JMP, 0, 0));
+            return code.Count-1;
         }
     }
 }

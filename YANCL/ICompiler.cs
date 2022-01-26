@@ -30,6 +30,9 @@ namespace YANCL
         
         int Condition();
         void Mark(int label);
+        int Loop();
+        void JumpBack(int label);
+        int JumpForward();
 
         void SetParameters(int count);
         LuaFunction MakeFunction();
@@ -42,11 +45,6 @@ namespace YANCL
             // C.Indexee();
             C.Constant(name);
             C.Index();
-        }
-
-        public static int Jump(this ICompiler C) {
-            C.Constant(false);
-            return C.Condition();
         }
     }
 }

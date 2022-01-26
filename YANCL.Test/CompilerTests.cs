@@ -787,7 +787,7 @@ namespace YANCL.Test
         }
 
         [Fact]
-        public void LogicalNot()
+        public void LogicalNot1()
         {
             DoCompilerTest(
                 "local a = not x",
@@ -799,6 +799,42 @@ namespace YANCL.Test
                 1, 0
             );
         }
+
+        [Fact]
+        public void LogicalNot2()
+        {
+            DoCompilerTest(
+                "local a = not (x < y)",
+                new LuaValue[] { "x", "y" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(GETTABUP, 1, 0, 1 | KFlag),
+                    Build3(LT, 0, 0, 1),
+                    Build2sx(JMP, 0, 1),
+                    Build3(LOADBOOL, 0, 0, 1),
+                    Build3(LOADBOOL, 0, 1, 0),
+                },
+                1, 1
+            );
+        }
+
+        [Fact]
+        public void LogicalNot3()
+        {
+            DoCompilerTest(
+                "if not x then y() end",
+                new LuaValue[] { "x", "y" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(TEST, 0, 0, 0),
+                    Build2sx(JMP, 0, 2),
+                    Build3(GETTABUP, 0, 0, 1 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                },
+                0, 1
+            );
+        }
+        
 
         [Fact]
         public void UnaryMinus()
@@ -980,7 +1016,7 @@ namespace YANCL.Test
                 new LuaValue[] { },
                 new [] {
                     Build2(LOADNIL, 0, 4),
-                    Build2(TEST, 0, 0),
+                    Build3(TEST, 0, 0, 0),
                     Build2x(JMP, 0, 3),
                     Build3(ADD, 5, 1, 2),
                     Build3(TESTSET, 4, 5, 1),
@@ -1102,19 +1138,19 @@ namespace YANCL.Test
                 new LuaValue[] { "x", "a", "y", "b", "z", "c", "d" },
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
-                    Build2(TEST, 0, 0),
+                    Build3(TEST, 0, 0, 0),
                     Build2sx(JMP, 0, 3),
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(CALL, 0, 1, 1),
                     Build2sx(JMP, 0, 14),
                     Build3(GETTABUP, 0, 0, 2 | KFlag),
-                    Build2(TEST, 0, 0),
+                    Build3(TEST, 0, 0, 0),
                     Build2sx(JMP, 0, 3),
                     Build3(GETTABUP, 0, 0, 3 | KFlag),
                     Build3(CALL, 0, 1, 1),
                     Build2sx(JMP, 0, 8),
                     Build3(GETTABUP, 0, 0, 4 | KFlag),
-                    Build2(TEST, 0, 0),
+                    Build3(TEST, 0, 0, 0),
                     Build2sx(JMP, 0, 3),
                     Build3(GETTABUP, 0, 0, 5 | KFlag),
                     Build3(CALL, 0, 1, 1),
@@ -1123,6 +1159,68 @@ namespace YANCL.Test
                     Build3(CALL, 0, 1, 1),
                 },
                 0, 1
+            );
+        }
+
+        [Fact]
+        public void While()
+        {
+            DoCompilerTest(
+                "while x do a() end",
+                new LuaValue[] { "x", "a" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(TEST, 0, 0, 0),
+                    Build2sx(JMP, 0, 3),
+                    Build3(GETTABUP, 0, 0, 1 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                    Build2sx(JMP, 0, -6),
+                },
+                0, 1
+            );
+        }
+
+        [Fact]
+        public void LogicalConstants1()
+        {
+            DoCompilerTest(
+                "if true then x() end",
+                new LuaValue[] { "x" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                },
+                0, 1
+            );
+        }
+
+        [Fact]
+        public void LogicalConstants2()
+        {
+            DoCompilerTest(
+                "if false then x() end",
+                new LuaValue[] { "x" },
+                new [] {
+                    Build3(LOADBOOL, 0, 0, 0),
+                    Build3(TEST, 0, 0, 0),
+                    Build2sx(JMP, 0, 2),
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                },
+                0, 1
+            );
+        }
+
+        [Fact]
+        public void LogicalConstants3()
+        {
+            DoCompilerTest(
+                "local a = true and 1",
+                new LuaValue[] { "x" },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                },
+                1, 0
             );
         }
     }

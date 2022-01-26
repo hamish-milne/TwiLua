@@ -128,6 +128,17 @@ namespace YANCL
                 case TokenType.If:
                     ParseIfBody();
                     break;
+                case TokenType.While: {
+                    Next();
+                    var c0 = C.Loop();
+                    ParseExpression(condition: true);
+                    Expect(TokenType.Do, "condition");
+                    var c1 = C.Condition();
+                    ParseBlock();
+                    C.JumpBack(c0);
+                    C.Mark(c1);
+                    break;
+                }
                 default:
                     throw new Exception($"Unexpected token {Peek()}");
             }
@@ -135,7 +146,7 @@ namespace YANCL
 
         void ParseIfBody() {
             Next();
-            ParseExpression();
+            ParseExpression(condition: true);
             Expect(TokenType.Then, "condition");
             var c1 = C.Condition();
             while (true) {
@@ -146,14 +157,14 @@ namespace YANCL
                         return;
                     case TokenType.Else: {
                         Next();
-                        var c2 = C.Jump();
+                        var c2 = C.JumpForward();
                         C.Mark(c1);
                         ParseBlock();
                         C.Mark(c2);
                         return;
                     }
                     case TokenType.ElseIf: {
-                        var c2 = C.Jump();
+                        var c2 = C.JumpForward();
                         C.Mark(c1);
                         ParseIfBody();
                         C.Mark(c2);
@@ -375,7 +386,7 @@ namespace YANCL
             }
         }
 
-        void ParseExpression() {
+        void ParseExpression(bool condition = false) {
             while (true) {
                 var uop = GetUOP(out var order);
                 ParseTerm();
