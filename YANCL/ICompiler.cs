@@ -16,6 +16,7 @@ namespace YANCL
         void Binary(TokenType token);
         void Unary(TokenType token);
         void Call(int arguments);
+        void Test();
 
         void InitLocals(int count, int arguments);
         void AddUpvalue(int index, bool inStack);

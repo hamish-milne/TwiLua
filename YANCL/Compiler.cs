@@ -63,7 +63,8 @@ namespace YANCL
                 return;
             }
             if (op.Type == OperandType.Test || op.Type == OperandType.Comparison) {
-                code.Add(op.A);
+                op.B = op.B == 0 ? 1 : 0;
+                WriteCondition(op);
                 code.Add(Build2sx(JMP, 0, 1));
                 code.Add(Build3(LOADBOOL, dst, 0, 1));
                 code.Add(Build3(LOADBOOL, dst, 1, 0));
@@ -262,7 +263,8 @@ namespace YANCL
             if (comp != default) {
                 operands.Add(new Operand {
                     Type = OperandType.Comparison,
-                    A = Build3(comp.op, comp.invert ? 0 : 1, comp.swap ? b: a, comp.swap ? a: b),
+                    A = Build3(comp.op, 0, comp.swap ? b: a, comp.swap ? a: b),
+                    B = comp.invert ? 1 : 0,
                     ArgsOnStack = slots
                 });
                 return;
@@ -526,12 +528,9 @@ namespace YANCL
             if (token == TokenType.Not) {
                 var op = Peek(0);
                 switch (op.Type) {
-                    case OperandType.Comparison:
-                        op.A = Build3(GetOpCode(op.A), GetA(op.A) == 0 ? 1 : 0, GetB(op.A), GetC(op.A));
-                        operands[operands.Count - 1] = op;
-                        return;
                     case OperandType.Test:
-                        op.A = Build3(GetOpCode(op.A), GetA(op.A), GetB(op.A), GetC(op.A) == 0 ? 1 : 0);
+                    case OperandType.Comparison:
+                        op.B = op.B == 0 ? 1 : 0;
                         operands[operands.Count - 1] = op;
                         return;
                 }
@@ -623,27 +622,44 @@ namespace YANCL
             });
         }
 
-        public int Condition()
+        public void Test()
         {
             switch (Peek(0).Type) {
                 case OperandType.Comparison:
                 case OperandType.Test:
-                    code.Add(Pop().A);
-                    code.Add(Build2sx(JMP, 0, 0));
-                    return code.Count-1;
-                case OperandType.Constant:
-                    if (Peek(0).Value.Boolean) {
-                        Pop();
-                        return -1;
-                    }
-                    break;
+                    return;
                 default:
-                    break;
+                    var slots = 0;
+                    var a = PopR(ref slots);
+                    operands.Add(new Operand {
+                        Type = OperandType.Test,
+                        A = Build3(TEST, a, 0, 0),
+                        B = 0,
+                        ArgsOnStack = slots,
+                    });
+                    return;
             }
-            var slots = 0;
-            var a = PopR(ref slots);
-            code.Add(Build3(TEST, a, 0, 0));
-            top -= slots;
+        }
+
+        private void WriteCondition(Operand op)
+        {
+            if (op.Type == OperandType.Comparison) {
+                code.Add(Build3(GetOpCode(op.A), op.B, GetB(op.A), GetC(op.A)));
+            } else {
+                code.Add(Build3(TEST, GetA(op.A), 0, op.B));
+            }
+        }
+
+        public int Condition()
+        {
+            if (Peek(0).Type == OperandType.Constant) {
+                if (Peek(0).Value.Boolean) {
+                    Pop();
+                    return -1;
+                }
+            }
+            Test();
+            WriteCondition(Pop());
             code.Add(Build2sx(JMP, 0, 0));
             return code.Count-1;
         }

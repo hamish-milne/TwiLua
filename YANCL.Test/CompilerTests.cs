@@ -826,7 +826,7 @@ namespace YANCL.Test
                 new LuaValue[] { "x", "y" },
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
-                    Build3(TEST, 0, 0, 0),
+                    Build3(TEST, 0, 0, 1),
                     Build2sx(JMP, 0, 2),
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(CALL, 0, 1, 1),

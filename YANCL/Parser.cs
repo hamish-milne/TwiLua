@@ -302,12 +302,12 @@ namespace YANCL
                 case TokenType.Number: C.Constant(token.number); break;
                 case TokenType.DoubleQuote: C.Constant(ParseString('"')); break;
                 case TokenType.SingleQuote: C.Constant(ParseString('\'')); break;
-                case TokenType.OpenParen: {
-                    ParseExpression();
-                    Expect(TokenType.CloseParen, "parenthesized expression");
-                    ParseSuffix();
-                    break;
-                }
+                // case TokenType.OpenParen: {
+                //     ParseExpression();
+                //     Expect(TokenType.CloseParen, "parenthesized expression");
+                //     ParseSuffix();
+                //     break;
+                // }
                 case TokenType.True: C.Constant(true); break;
                 case TokenType.False: C.Constant(false); break;
                 case TokenType.Nil: C.Constant(LuaValue.Nil); break;
@@ -322,9 +322,11 @@ namespace YANCL
             public bool isUnary;
             public int order;
             public TokenType token;
+            public bool? isLogical;
         }
 
         readonly Stack<Operation> operations = new Stack<Operation>();
+        private int parens;
 
         TokenType? GetUOP(out int order) {
             order = 10;
@@ -341,7 +343,7 @@ namespace YANCL
             }
         }
 
-        TokenType? GetBOP(out int order) {
+        TokenType? GetBOP(out int order, out bool isLogical) {
             order = -1;
             var token = Peek();
             order = token switch {
@@ -368,6 +370,7 @@ namespace YANCL
                 TokenType.Caret => 11,
                 _ => -1
             };
+            isLogical = order >= 0 && order <= 1;
             if (order > 0) {
                 Next();
                 return token;
@@ -375,9 +378,20 @@ namespace YANCL
             return null;
         }
 
-        void ResolveOperations(int order) {
+        void ResolveOperations(int order, bool condition) {
             while (operations.Count > 0 && operations.Peek().order >= order) {
                 var op = operations.Pop();
+                if (op.token == TokenType.CloseParen) {
+                    ResolveOperations(-1, condition);
+                    continue;
+                }
+                if (op.token == TokenType.OpenParen) {
+                    break;
+                }
+                if (condition && op.token == TokenType.Not) {
+                    C.Test();
+                }
+                condition = op.isLogical ?? condition;
                 if (op.isUnary) {
                     C.Unary(op.token);
                 } else {
@@ -389,27 +403,48 @@ namespace YANCL
         void ParseExpression(bool condition = false) {
             while (true) {
                 var uop = GetUOP(out var order);
-                ParseTerm();
                 if (uop != null) {
-                    ResolveOperations(order);
                     operations.Push(new Operation {
                         token = uop.Value,
                         isUnary = true,
-                        order = order
+                        order = order,
+                        isLogical = false,
                     });
                 }
-                var bop = GetBOP(out order);
+                if (TryTake(TokenType.OpenParen)) {
+                    parens++;
+                    operations.Push(new Operation {
+                        token = TokenType.OpenParen,
+                        order = 999
+                    });
+                }
+                ParseTerm();
+                if (parens > 0 && TryTake(TokenType.CloseParen)) {
+                    parens--;
+                    if (PeekSuffix()) {
+                        ResolveOperations(-1, condition);
+                        ParseSuffix();
+                    } else {
+                        operations.Push(new Operation {
+                            token = TokenType.CloseParen,
+                            order = 999
+                        });
+                    }
+                }
+                var bop = GetBOP(out order, out var isLogical);
                 if (bop == null) break;
-                ResolveOperations(order);
+                ResolveOperations(order, isLogical);
                 operations.Push(new Operation {
                     token = bop.Value,
                     isUnary = false,
-                    order = order
+                    order = order,
+                    isLogical = isLogical,
                 });
             }
+            if (parens > 0) throw new Exception("Unbalanced parentheses");
 
             if (operations.Count > 0) {
-                ResolveOperations(-1);
+                ResolveOperations(-1, condition);
             }
             Debug.Assert(operations.Count == 0);
         }
