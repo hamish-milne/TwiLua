@@ -238,7 +238,7 @@ namespace YANCL
                             labels.Add(opA.Last.Item1.A);
                             outputs.Add(opA.Last.Item1.B);
                             foreach (var l in opA.Labels) {
-                                Mark(l);
+                                MarkAt(l, opA.Last.Item1.A + 1);
                             }
                             break;
                         default:

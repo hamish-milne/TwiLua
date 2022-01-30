@@ -1062,7 +1062,7 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 1),
                     Build2(MOVE, 4, 3),
                 },
-                5, 1
+                5, 0
             );
         }
 
