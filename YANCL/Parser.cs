@@ -371,7 +371,7 @@ namespace YANCL
                 _ => -1
             };
             isLogical = order >= 0 && order <= 1;
-            if (order > 0) {
+            if (order >= 0) {
                 Next();
                 return token;
             }
@@ -399,6 +399,24 @@ namespace YANCL
                 }
             }
         }
+
+        // void ParseOrSequence() {
+        //     while (true) {
+        //         var labels = new List<int>();
+        //         // Parse 'and' sequence
+        //         while (true) {
+        //             ParseExpression();
+        //             if (!TryTake(TokenType.And)) {
+        //                 break;
+        //             }
+        //             labels.Add(C.TestSet(false));
+        //         }
+                
+        //         if (!TryTake(TokenType.Or)) {
+        //             break;
+        //         }
+        //     }
+        // }
 
         void ParseExpression(bool condition = false) {
             while (true) {
@@ -434,6 +452,9 @@ namespace YANCL
                 var bop = GetBOP(out order, out var isLogical);
                 if (bop == null) break;
                 ResolveOperations(order, isLogical);
+                if (isLogical) {
+                    C.Test();
+                }
                 operations.Push(new Operation {
                     token = bop.Value,
                     isUnary = false,

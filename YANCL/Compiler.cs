@@ -17,14 +17,20 @@ namespace YANCL
             Expression,
             NewTable,
             Concat,
+            
             Test,
             Comparison,
+
+            And,
+            Or,
         }
 
         struct Operand {
             public OperandType Type;
             public int A, B, ArgsOnStack;
             public LuaValue Value;
+            public List<int> Labels, Outputs;
+            public Tuple<Operand> Last;
 
             public override string ToString()
             {
@@ -63,11 +69,25 @@ namespace YANCL
                 return;
             }
             if (op.Type == OperandType.Test || op.Type == OperandType.Comparison) {
-                op.B = op.B == 0 ? 1 : 0;
-                WriteCondition(op);
-                code.Add(Build2sx(JMP, 0, 1));
+                InvertCondition(op);
                 code.Add(Build3(LOADBOOL, dst, 0, 1));
+                MarkAt(op.A, code.Count);
                 code.Add(Build3(LOADBOOL, dst, 1, 0));
+                return;
+            }
+            if (op.Type == OperandType.And || op.Type == OperandType.Or) {
+                top -= op.Last.Item1.ArgsOnStack;
+                LoadInst(op.Last.Item1, dst);
+                var jumpTo = code.Count;
+                foreach (var a in op.Labels) {
+                    MarkAt(a, jumpTo);
+                }
+                foreach (var a in op.Outputs) {
+                    var testInst = code[a];
+                    if (GetA(testInst) != dst) {
+                        code[a] = Build3(TESTSET, dst, GetA(testInst), GetC(testInst));
+                    }
+                }
                 return;
             }
             // TODO: Don't look at previously emitted code
@@ -188,6 +208,67 @@ namespace YANCL
 
         public void Binary(TokenType token)
         {
+            switch (token) {
+                case TokenType.And:
+                case TokenType.Or:
+
+                    var opB = Pop();
+                    var opA = Pop();
+
+                    var labels = new List<int>();
+                    var outputs = new List<int>();
+                    Tuple<Operand>? last = null;
+
+                    switch (opA.Type) {
+                        case OperandType.Test:
+                            if (token == TokenType.And) {
+                                InvertCondition(opA);
+                            }
+                            labels.Add(opA.A);
+                            outputs.Add(opA.B);
+                            break;
+                        case OperandType.And:
+                        case OperandType.Or:
+                            if (opA.Last.Item1.Type != OperandType.Test) {
+                                throw new InvalidOperationException();
+                            }
+                            if (token == TokenType.And) {
+                                InvertCondition(opA.Last.Item1);
+                            }
+                            labels.Add(opA.Last.Item1.A);
+                            outputs.Add(opA.Last.Item1.B);
+                            foreach (var l in opA.Labels) {
+                                Mark(l);
+                            }
+                            break;
+                        default:
+                            throw new InvalidOperationException();
+                    }
+
+                    switch (opB.Type) {
+                        case OperandType.And:
+                        case OperandType.Or:
+                            labels.AddRange(opB.Labels);
+                            outputs.AddRange(opB.Outputs);
+                            last = opB.Last;
+                            break;
+                        default:
+                            last = new Tuple<Operand>(opB);
+                            break;
+                    }
+
+                    operands.Add(new Operand {
+                        Type = token == TokenType.And ? OperandType.And : OperandType.Or,
+                        Labels = labels,
+                        Outputs = outputs,
+                        Last = last,
+                    });
+                    top += last.Item1.ArgsOnStack;
+
+                    return;
+                default:
+                    break;
+            }
             if (token == TokenType.DoubleDot) {
                 if (Peek(1).Type == OperandType.Concat) {
                     Argument();
@@ -261,10 +342,12 @@ namespace YANCL
                 _ => default
             };
             if (comp != default) {
+                code.Add(Build3(comp.op, comp.invert ? 1 : 0, comp.swap ? b: a, comp.swap ? a: b));
+                code.Add(0);
                 operands.Add(new Operand {
                     Type = OperandType.Comparison,
-                    A = Build3(comp.op, 0, comp.swap ? b: a, comp.swap ? a: b),
-                    B = comp.invert ? 1 : 0,
+                    A = code.Count - 1,
+                    B = code.Count - 2,
                     ArgsOnStack = slots
                 });
                 return;
@@ -491,10 +574,14 @@ namespace YANCL
             }
         }
 
+        private void MarkAt(int label, int dst) {
+            code[label] = Build2sx(JMP, 0, dst - label - 1);
+        }
+
         public void Mark(int label)
         {
             if (label >= 0) {
-                code[label] = Build2sx(JMP, 0, code.Count - label - 1);
+                MarkAt(label, code.Count);
             }
         }
 
@@ -507,6 +594,25 @@ namespace YANCL
         public int JumpForward() {
             code.Add(Build2sx(JMP, 0, 0));
             return code.Count - 1;
+        }
+
+        private bool InvertCondition(Operand op) {
+            switch (op.Type) {
+                case OperandType.Test: {
+                    var inst = code[op.B];
+                    code[op.B] = Build3(GetOpCode(inst), GetA(inst), GetB(inst), GetC(inst) == 0 ? 1 : 0);
+                    return true;
+                }
+                case OperandType.Comparison: {
+                    var inst = code[op.B];
+                    code[op.B] = Build3(GetOpCode(inst), GetA(inst) == 0 ? 1 : 0, GetB(inst), GetC(inst));
+                    return true;
+                }
+                case OperandType.And:
+                case OperandType.Or:
+                    throw new NotImplementedException();
+            }
+            return false;
         }
 
         public void Unary(TokenType token)
@@ -525,15 +631,8 @@ namespace YANCL
                     Constant(cValue.Value);
                 }
             }
-            if (token == TokenType.Not) {
-                var op = Peek(0);
-                switch (op.Type) {
-                    case OperandType.Test:
-                    case OperandType.Comparison:
-                        op.B = op.B == 0 ? 1 : 0;
-                        operands[operands.Count - 1] = op;
-                        return;
-                }
+            if (token == TokenType.Not && InvertCondition(Peek(0))) {
+                return;
             }
             var slots = 0;
             var b = PopR(ref slots);
@@ -628,25 +727,26 @@ namespace YANCL
                 case OperandType.Comparison:
                 case OperandType.Test:
                     return;
+                case OperandType.And:
+                case OperandType.Or:
+                    var prev = Pop();
+                    operands.Add(prev.Last.Item1);
+                    Test();
+                    prev.Last = Tuple.Create(Pop());
+                    operands.Add(prev);
+                    return;
                 default:
                     var slots = 0;
                     var a = PopR(ref slots);
+                    code.Add(Build3(TEST, a, 0, 1));
+                    code.Add(0);
                     operands.Add(new Operand {
                         Type = OperandType.Test,
-                        A = Build3(TEST, a, 0, 0),
-                        B = 0,
+                        A = code.Count - 1,
+                        B = code.Count - 2,
                         ArgsOnStack = slots,
                     });
                     return;
-            }
-        }
-
-        private void WriteCondition(Operand op)
-        {
-            if (op.Type == OperandType.Comparison) {
-                code.Add(Build3(GetOpCode(op.A), op.B, GetB(op.A), GetC(op.A)));
-            } else {
-                code.Add(Build3(TEST, GetA(op.A), 0, op.B));
             }
         }
 
@@ -659,8 +759,6 @@ namespace YANCL
                 }
             }
             Test();
-            WriteCondition(Pop());
-            code.Add(Build2sx(JMP, 0, 0));
             return code.Count-1;
         }
     }
