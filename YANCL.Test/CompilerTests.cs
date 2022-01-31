@@ -1204,10 +1204,13 @@ namespace YANCL.Test
         public void LogicalConstants1()
         {
             DoCompilerTest(
-                "if true then x() end",
-                new LuaValue[] { "x" },
+                "if true then x() else y() end",
+                new LuaValue[] { "x", "y" },
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                    Build2sx(JMP, 0, 2),
+                    Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(CALL, 0, 1, 1),
                 },
                 0, 1
@@ -1235,9 +1238,25 @@ namespace YANCL.Test
         public void LogicalConstants3()
         {
             DoCompilerTest(
-                "local a = true and 1",
-                new LuaValue[] { "x" },
+                "local a = true and 1 and 2 and 3",
+                new LuaValue[] { 3 },
                 new [] {
+                    Build2x(LOADK, 0, 0),
+                },
+                1, 0
+            );
+        }
+
+        [Fact]
+        public void LogicalConstants4()
+        {
+            DoCompilerTest(
+                "local a = true or 1",
+                new LuaValue[] { 1 },
+                new [] {
+                    Build3(LOADBOOL, 0, 1, 0),
+                    Build3(TEST, 0, 0, 1),
+                    Build2sx(JMP, 0, 1),
                     Build2x(LOADK, 0, 0),
                 },
                 1, 0

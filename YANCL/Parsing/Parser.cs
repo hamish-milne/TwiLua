@@ -12,7 +12,7 @@ namespace YANCL
         readonly Lexer lexer;
         readonly List<string> locals = new List<string>();
         readonly List<LuaFunction> prototypes = new List<LuaFunction>();
-        readonly ICompiler C = new Compiler();
+        readonly Compiler C = new Compiler();
 
         Token Next() => lexer.Next();
         TokenType Peek() => lexer.Peek();
@@ -23,7 +23,6 @@ namespace YANCL
 
         Parser(string str) {
             lexer = new Lexer(str);
-            C.AddUpvalue(0, inStack: true);
         }
 
         Parser(Parser parent) {
@@ -87,13 +86,13 @@ namespace YANCL
                     Next();
                     ParseIdentifier(Expect(TokenType.Identifier, "function name")!);
                     while (TryTake(TokenType.Dot)) {
-                        // C.Indexee();
+                        C.Indexee();
                         C.Constant(Expect(TokenType.Identifier, "function declaration member access")!);
                         C.Index();
                     }
                     bool hasSelf = false;
                     if (TryTake(TokenType.Colon)) {
-                        // C.Indexee();
+                        C.Indexee();
                         C.Constant(Expect(TokenType.Identifier, "method declaration")!);
                         C.Index();
                         hasSelf = true;
@@ -130,12 +129,14 @@ namespace YANCL
                     break;
                 case TokenType.While: {
                     Next();
-                    var c0 = C.Loop();
+                    var c0 = C.Label();
+                    C.Mark(c0);
                     ParseExpression(condition: true);
                     Expect(TokenType.Do, "condition");
-                    var c1 = C.Condition();
+                    var c1 = C.Label();
+                    C.JumpIf(false, c1);
                     ParseBlock();
-                    C.JumpBack(c0);
+                    C.Jump(c0);
                     C.Mark(c1);
                     break;
                 }
@@ -148,7 +149,8 @@ namespace YANCL
             Next();
             ParseExpression(condition: true);
             Expect(TokenType.Then, "condition");
-            var c1 = C.Condition();
+            var c1 = C.Label();
+            C.JumpIf(false, c1);
             while (true) {
                 switch (Peek()) {
                     case TokenType.End:
@@ -157,14 +159,16 @@ namespace YANCL
                         return;
                     case TokenType.Else: {
                         Next();
-                        var c2 = C.JumpForward();
+                        var c2 = C.Label();
+                        C.Jump(c2);
                         C.Mark(c1);
                         ParseBlock();
                         C.Mark(c2);
                         return;
                     }
                     case TokenType.ElseIf: {
-                        var c2 = C.JumpForward();
+                        var c2 = C.Label();
+                        C.Jump(c2);
                         C.Mark(c1);
                         ParseIfBody();
                         C.Mark(c2);
@@ -237,7 +241,7 @@ namespace YANCL
         void ParseSuffix(ref bool endsInCall) {
             switch (Peek()) {
                 case TokenType.Dot:
-                    // C.Indexee();
+                    C.Indexee();
                     Next();
                     var name = Expect(TokenType.Identifier, "dot")!;
                     C.Constant(name);
@@ -246,7 +250,7 @@ namespace YANCL
                     ParseSuffix(ref endsInCall);
                     break;
                 case TokenType.OpenBracket:
-                    // C.Indexee();
+                    C.Indexee();
                     Next();
                     ParseExpression();
                     Expect(TokenType.CloseBracket, "index expression");
@@ -262,7 +266,7 @@ namespace YANCL
                     ParseSuffix(ref endsInCall);
                     break;
                 case TokenType.Colon:
-                    // C.Indexee();
+                    C.Indexee();
                     Next();
                     C.Constant(Expect(TokenType.Identifier, "self call operator")!);
                     C.Self();
@@ -392,31 +396,46 @@ namespace YANCL
                     C.Test();
                 }
                 condition = op.isLogical ?? condition;
-                if (op.isUnary) {
-                    C.Unary(op.token);
-                } else {
-                    C.Binary(op.token);
+                switch (op.token) {
+                    case TokenType.Not: C.Not(); break;
+                    case TokenType.Hash: C.Len(); break;
+                    case TokenType.Minus:
+                        if (op.isUnary) {
+                            C.Unm();
+                        } else {
+                            C.Sub();
+                        }
+                        break;
+                    case TokenType.Or: C.Or(); break;
+                    case TokenType.And: C.And(); break;
+                    // case TokenType.LessThan: C.Lt(); break;
+                    // case TokenType.GreaterThan: C.Gt(); break;
+                    // case TokenType.LessThanEqual: C.Le(); break;
+                    // case TokenType.GreaterThanEqual: C.Ge(); break;
+                    // case TokenType.DoubleEqual: C.Eq(); break;
+                    // case TokenType.NotEqual: C.Ne(); break;
+                    case TokenType.Pipe: C.BOr(); break;
+                    case TokenType.Tilde:
+                        if (op.isUnary) {
+                            C.BNot();
+                        } else {
+                            C.BXor();
+                        }
+                        break;
+                    case TokenType.Ampersand: C.BAnd(); break;
+                    case TokenType.ShiftLeft: C.Shl(); break;
+                    case TokenType.ShiftRight: C.Shr(); break;
+                    case TokenType.DoubleDot: C.Concat(); break;
+                    case TokenType.Plus: C.Add(); break;
+                    case TokenType.Star: C.Mul(); break;
+                    case TokenType.Slash: C.Div(); break;
+                    case TokenType.DoubleSlash: C.IDiv(); break;
+                    case TokenType.Percent: C.Mod(); break;
+                    case TokenType.Caret: C.Pow(); break;
+                    default: throw new InvalidOperationException();
                 }
             }
         }
-
-        // void ParseOrSequence() {
-        //     while (true) {
-        //         var labels = new List<int>();
-        //         // Parse 'and' sequence
-        //         while (true) {
-        //             ParseExpression();
-        //             if (!TryTake(TokenType.And)) {
-        //                 break;
-        //             }
-        //             labels.Add(C.TestSet(false));
-        //         }
-                
-        //         if (!TryTake(TokenType.Or)) {
-        //             break;
-        //         }
-        //     }
-        // }
 
         void ParseExpression(bool condition = false) {
             while (true) {
@@ -453,7 +472,7 @@ namespace YANCL
                 if (bop == null) break;
                 ResolveOperations(order, isLogical);
                 if (isLogical) {
-                    C.Test();
+                    C.Test(keepConstantTrue: bop == TokenType.And);
                 }
                 operations.Push(new Operation {
                     token = bop.Value,
