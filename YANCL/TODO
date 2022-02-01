@@ -57,7 +57,7 @@ Binary operators:
     ✔ Concatenation @done(22-01-25 01:03)
     ✔ Comparison @done(21-09-10 14:05)
     ✔ Bitwise @done(21-09-10 13:34)
-    ☐ Logical
+    ✔ Logical @done(22-02-01 22:19)
     ✔ Precedence @done(21-09-10 13:34)
     ✔ Constant folding @done(22-01-25 01:03)
 Varargs:

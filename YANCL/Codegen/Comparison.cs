@@ -7,6 +7,7 @@ namespace YANCL
     {
         class TComparison : TCondition
         {
+            public override bool ForceBool => true;
             public TComparison(Compiler c, OpCode opCode, bool invert, bool swap, Operand opA, Operand opB) {
                 var a = opA.GetRK(c, ref stackSlots);
                 var b = opB.GetRK(c, ref stackSlots);

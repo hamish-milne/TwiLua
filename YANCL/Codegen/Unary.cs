@@ -29,7 +29,19 @@ namespace YANCL
 
         public void Not() {
             if (Peek(0) is TCondition cond) {
+                cond.DoForceBool();
                 cond.Invert(this);
+                return;
+            }
+            if (Peek(0) is Logical logical)
+            {
+                logical.Invert();
+                var last = logical.Last;
+                Push(last);
+                Not();
+                logical.Last = Pop();
+                logical.Update();
+                Top += logical.StackSlots;
                 return;
             }
             var op = Pop();

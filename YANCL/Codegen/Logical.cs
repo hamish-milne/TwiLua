@@ -10,6 +10,9 @@ namespace YANCL
         abstract class TCondition : Operand
         {
             public int Jump, Test;
+            private bool _doForceBool;
+            public virtual bool ForceBool => _doForceBool;
+            public void DoForceBool() => _doForceBool = true;
             public abstract void Invert(Compiler c);
 
             public override void Load(Compiler c, int dst)
@@ -32,11 +35,12 @@ namespace YANCL
         class Logical : Operand
         {
             public readonly Label Value = new Label();
-            public readonly Label True = new Label();
-            public readonly Label False = new Label();
+            public Label True = new Label();
+            public Label False = new Label();
             public readonly bool DoInvert;
             public readonly List<int> Outputs = new List<int>();
             public Operand Last;
+            public bool IsInverted;
 
             public Logical(bool doInvert) => DoInvert = doInvert;
 
@@ -72,6 +76,20 @@ namespace YANCL
                         c.code[a] = Build3(TESTSET, dst, GetA(testInst), GetC(testInst));
                     }
                 }
+            }
+
+            public void Invert()
+            {
+                if (IsInverted) {
+                    return;
+                }
+                IsInverted = true;
+                (DoInvert ? False : True).References.AddRange(Value.References);
+                var r = True;
+                True = False;
+                False = r;
+                Value.References.Clear();
+                Outputs.Clear();
             }
         }
 
@@ -123,29 +141,33 @@ namespace YANCL
             var newOp = new Logical(doInvert);
 
             if (opA is Logical logical) {
-                if (logical.DoInvert == doInvert) {
-                    newOp.Add(logical);
-                    opA = logical.Last;
-                } else if (logical.Last is TCondition lastCond) {
-                    MarkAt(logical.Value, lastCond.Jump + 1);
-                    MarkAt(logical.True, lastCond.Jump + 1);
-                    MarkAt(logical.False, lastCond.Jump + 1);
-                    opA = logical.Last;
+                if (logical.Last is TCondition lastCond) {
+                    if (logical.DoInvert == doInvert) {
+                        var toMark = doInvert ? logical.True : logical.False;
+                        MarkAt(toMark, lastCond.Jump + 1);
+                        toMark.References.Clear();
+                        newOp.Add(logical);
+                        opA = lastCond;
+                    } else {
+                        MarkAt(logical.Value, lastCond.Jump + 1);
+                        MarkAt(logical.True, lastCond.Jump + 1);
+                        MarkAt(logical.False, lastCond.Jump + 1);
+                        opA = lastCond;
+                    }
                 } else {
                     throw new InvalidOperationException();
                 }
             }
-            if (opA is TTest cond) {
+            if (opA is TCondition cond) {
                 if (doInvert) {
                     cond.Invert(this);
                 }
-                newOp.Value.References.Add(cond.Jump);
-                newOp.Outputs.Add(cond.Test);
-            } else if (opA is TComparison comp) {
-                if (doInvert) {
-                    comp.Invert(this);
+                if (cond.ForceBool) {
+                    (doInvert ? newOp.False : newOp.True).References.Add(cond.Jump);
+                } else {
+                    newOp.Value.References.Add(cond.Jump);
+                    newOp.Outputs.Add(cond.Test);
                 }
-                (doInvert ? newOp.False : newOp.True).References.Add(comp.Jump);
             } else {
                 throw new InvalidOperationException();
             }

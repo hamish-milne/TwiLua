@@ -46,16 +46,25 @@ namespace YANCL
             _ => false
         });
 
-        public void JumpIf(bool test, Label label) {
-            if (IsConstantTrue(Peek(0)) && !test) {
+        public void JumpIfFalse(Label label) {
+            if (IsConstantTrue(Peek(0))) {
                 Pop();
                 return;
             }
             Test();
-            if (Pop() is TCondition cond) {
-                if (!test) {
-                    cond.Invert(this);
+            var op = Pop();
+            if (op is Logical logical) {
+                Mark(logical.True);
+                label.References.AddRange(logical.False.References);
+                if (logical.DoInvert) {
+                    label.References.AddRange(logical.Value.References);
+                } else {
+                    Mark(logical.Value);
                 }
+                op = logical.Last;
+            }
+            if (op is TCondition cond) {
+                cond.Invert(this);
                 label.References.Add(cond.Jump);
             } else {
                 throw new InvalidOperationException("Expected condition");

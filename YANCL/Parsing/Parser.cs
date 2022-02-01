@@ -134,7 +134,7 @@ namespace YANCL
                     ParseExpression(condition: true);
                     Expect(TokenType.Do, "condition");
                     var c1 = C.Label();
-                    C.JumpIf(false, c1);
+                    C.JumpIfFalse(c1);
                     ParseBlock();
                     C.Jump(c0);
                     C.Mark(c1);
@@ -150,7 +150,7 @@ namespace YANCL
             ParseExpression(condition: true);
             Expect(TokenType.Then, "condition");
             var c1 = C.Label();
-            C.JumpIf(false, c1);
+            C.JumpIfFalse(c1);
             while (true) {
                 switch (Peek()) {
                     case TokenType.End:
