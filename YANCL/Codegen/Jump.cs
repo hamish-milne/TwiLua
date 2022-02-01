@@ -29,13 +29,17 @@ namespace YANCL
 
         public void Mark(Label label) => MarkAt(label, code.Count);
 
-        public void Jump(Label label) {
+        private void JumpAt(Label label, int inst) {
             if (label.Location < 0) {
-                label.References.Add(code.Count);
-                Emit(0);
+                label.References.Add(inst);
             } else {
-                Emit(Build2sx(JMP, 0, label.Location - code.Count - 1));
+                code[inst] = Build2sx(JMP, 0, label.Location - inst - 1);
             }
+        }
+
+        public void Jump(Label label) {
+            Emit(0);
+            JumpAt(label, code.Count - 1);
         }
 
         private bool IsConstantTrue(Operand op) => op is TConstant c && (c.Value.Type switch {
@@ -65,7 +69,7 @@ namespace YANCL
             }
             if (op is TCondition cond) {
                 cond.Invert(this);
-                label.References.Add(cond.Jump);
+                JumpAt(label, cond.Jump);
             } else {
                 throw new InvalidOperationException("Expected condition");
             }

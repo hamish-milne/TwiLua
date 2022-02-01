@@ -46,27 +46,14 @@ namespace YANCL
         }
 
         void ParseChunk() {
-            while (true) {
-                switch (Peek()) {
-                    case TokenType.Eof:
-                        return;
-                    default:
-                        ParseStat();
-                        break;
-                }
+            while (!TryTake(TokenType.Eof)) {
+                ParseStat();
             }
         }
 
         void ParseBlock() {
-            while (true) {
-                switch (Peek()) {
-                    case TokenType.End:
-                        Next();
-                        return;
-                    default:
-                        ParseStat();
-                        break;
-                }
+            while (!TryTake(TokenType.End)) {
+                ParseStat();
             }
         }
 
@@ -138,6 +125,17 @@ namespace YANCL
                     ParseBlock();
                     C.Jump(c0);
                     C.Mark(c1);
+                    break;
+                }
+                case TokenType.Repeat: {
+                    Next();
+                    var c0 = C.Label();
+                    C.Mark(c0);
+                    while (!TryTake(TokenType.Until)) {
+                        ParseStat();
+                    }
+                    ParseExpression(condition: true);
+                    C.JumpIfFalse(c0);
                     break;
                 }
                 default:

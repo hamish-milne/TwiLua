@@ -1287,6 +1287,23 @@ namespace YANCL.Test
         }
 
         [Fact]
+        public void Repeat()
+        {
+            DoCompilerTest(
+                "repeat a() until x",
+                new LuaValue[] { "a", "x" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(CALL, 0, 1, 1),
+                    Build3(GETTABUP, 0, 0, 1 | KFlag),
+                    Build3(TEST, 0, 0, 0),
+                    Build2sx(JMP, 0, -5),
+                },
+                0, 1
+            );
+        }
+
+        [Fact]
         public void LogicalConstants1()
         {
             DoCompilerTest(

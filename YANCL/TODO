@@ -71,7 +71,7 @@ Blocks:
     ✔ Else @done(22-01-25 21:01)
     ✔ Elseif @done(22-01-25 21:01)
     ✔ While @done(22-01-27 00:50)
-    ☐ Repeat
+    ✔ Repeat @done(22-02-01 22:30)
     ☐ Numeric for
     ☐ Generic for
 Metafunctions:
