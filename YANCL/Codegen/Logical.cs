@@ -12,11 +12,6 @@ namespace YANCL
             public int Jump, Test;
             public abstract void Invert(Compiler c);
 
-            public TCondition(int jump, int test) {
-                Jump = jump;
-                Test = test;
-            }
-
             public override void Load(Compiler c, int dst)
             {
                 Invert(c);
@@ -28,10 +23,6 @@ namespace YANCL
 
         class TTest : TCondition
         {
-            public TTest(int jump, int test) : base(jump, test)
-            {
-            }
-
             public override void Invert(Compiler c)
             {
                 var testInst = c.code[Test];
@@ -86,7 +77,10 @@ namespace YANCL
             Emit(Build3(TEST, a, 0, 1));
             var jump = code.Count;
             Emit(0);
-            Push(new TTest(jump, test));
+            Push(new TTest {
+                Jump = jump,
+                Test = test
+            });
         }
 
         private void LogicalOp(bool doInvert)

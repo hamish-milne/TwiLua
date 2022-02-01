@@ -306,12 +306,6 @@ namespace YANCL
                 case TokenType.Number: C.Constant(token.number); break;
                 case TokenType.DoubleQuote: C.Constant(ParseString('"')); break;
                 case TokenType.SingleQuote: C.Constant(ParseString('\'')); break;
-                // case TokenType.OpenParen: {
-                //     ParseExpression();
-                //     Expect(TokenType.CloseParen, "parenthesized expression");
-                //     ParseSuffix();
-                //     break;
-                // }
                 case TokenType.True: C.Constant(true); break;
                 case TokenType.False: C.Constant(false); break;
                 case TokenType.Nil: C.Constant(LuaValue.Nil); break;
@@ -408,12 +402,12 @@ namespace YANCL
                         break;
                     case TokenType.Or: C.Or(); break;
                     case TokenType.And: C.And(); break;
-                    // case TokenType.LessThan: C.Lt(); break;
-                    // case TokenType.GreaterThan: C.Gt(); break;
-                    // case TokenType.LessThanEqual: C.Le(); break;
-                    // case TokenType.GreaterThanEqual: C.Ge(); break;
-                    // case TokenType.DoubleEqual: C.Eq(); break;
-                    // case TokenType.NotEqual: C.Ne(); break;
+                    case TokenType.LessThan: C.Lt(); break;
+                    case TokenType.GreaterThan: C.Gt(); break;
+                    case TokenType.LessThanEqual: C.Le(); break;
+                    case TokenType.GreaterThanEqual: C.Ge(); break;
+                    case TokenType.DoubleEqual: C.Eq(); break;
+                    case TokenType.NotEqual: C.Ne(); break;
                     case TokenType.Pipe: C.BOr(); break;
                     case TokenType.Tilde:
                         if (op.isUnary) {
