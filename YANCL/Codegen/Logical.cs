@@ -32,7 +32,9 @@ namespace YANCL
 
         class Logical : Operand
         {
-            public readonly Label Label = new Label();
+            public readonly Label Value = new Label();
+            public readonly Label True = new Label();
+            public readonly Label False = new Label();
             public readonly List<int> Outputs = new List<int>();
             public Operand Last;
 
@@ -40,8 +42,21 @@ namespace YANCL
 
             public override void Load(Compiler c, int dst)
             {
-                Last.Load(c, dst);
-                c.Mark(Label);
+                if (Last is TCondition cond) {
+                    True.References.Add(cond.Jump);
+                } else {
+                    Last.Load(c, dst);
+                    if (True.Used || False.Used) {
+                        c.Emit(Build2sx(JMP, 0, 2));
+                    }
+                }
+                if (True.Used || False.Used) {
+                    c.Mark(False);
+                    c.Emit(Build3(LOADBOOL, dst, 0, 1));
+                    c.Mark(True);
+                    c.Emit(Build3(LOADBOOL, dst, 1, 0));
+                }
+                c.Mark(Value);
                 foreach (var a in Outputs) {
                     var testInst = c.code[a];
                     if (dst != GetA(testInst)) {
@@ -100,24 +115,33 @@ namespace YANCL
 
             if (opA is Logical logical) {
                 if (logical.Last is TCondition lastCond) {
-                    MarkAt(logical.Label, lastCond.Jump + 1);
+                    MarkAt(logical.Value, lastCond.Jump + 1);
+                    MarkAt(logical.True, lastCond.Jump + 1);
+                    MarkAt(logical.False, lastCond.Jump + 1);
                     opA = logical.Last;
                 } else {
                     throw new InvalidOperationException();
                 }
             }
-            if (opA is TCondition cond) {
+            if (opA is TTest cond) {
                 if (doInvert) {
                     cond.Invert(this);
                 }
-                newOp.Label.References.Add(cond.Jump);
+                newOp.Value.References.Add(cond.Jump);
                 newOp.Outputs.Add(cond.Test);
+            } else if (opA is TComparison comp) {
+                if (doInvert) {
+                    comp.Invert(this);
+                }
+                (doInvert ? newOp.False : newOp.True).References.Add(comp.Jump);
             } else {
                 throw new InvalidOperationException();
             }
 
             if (opB is Logical logical1) {
-                newOp.Label.References.AddRange(logical1.Label.References);
+                newOp.Value.References.AddRange(logical1.Value.References);
+                newOp.True.References.AddRange(logical1.True.References);
+                newOp.False.References.AddRange(logical1.False.References);
                 newOp.Outputs.AddRange(logical1.Outputs);
                 newOp.Last = logical1.Last;
             } else {

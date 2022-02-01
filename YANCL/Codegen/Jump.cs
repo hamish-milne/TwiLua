@@ -9,6 +9,7 @@ namespace YANCL
     {
         internal int Location = -1;
         internal readonly List<int> References = new List<int>();
+        internal bool Used => References.Count > 0;
     }
 
     public partial class Compiler

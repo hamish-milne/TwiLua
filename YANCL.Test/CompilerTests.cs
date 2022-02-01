@@ -1067,6 +1067,26 @@ namespace YANCL.Test
         }
 
         [Fact]
+        public void LogicalOperators4()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,x; x = a and b and c and d",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(TESTSET, 4, 0, 0),
+                    Build2sx(JMP, 0, 5),
+                    Build3(TESTSET, 4, 1, 0),
+                    Build2sx(JMP, 0, 3),
+                    Build3(TESTSET, 4, 2, 0),
+                    Build2sx(JMP, 0, 1),
+                    Build2(MOVE, 4, 3),
+                },
+                5, 0
+            );
+        }
+
+        [Fact]
         public void LogicalOperatorsWithComparison()
         {
             DoCompilerTest(
@@ -1082,7 +1102,73 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(LOADBOOL, 4, 0, 1),
                     Build3(LOADBOOL, 4, 1, 0),
+                },
+                5, 0
+            );
+        }
+
+        [Fact]
+        public void LogicalOperatorWithNot1()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,x; x = a or (not (b < c)) and d",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(TESTSET, 4, 0, 1),
+                    Build2sx(JMP, 0, 6),
+                    Build3(LT, 1, 1, 2),
+                    Build2sx(JMP, 0, 2),
                     Build2(MOVE, 4, 3),
+                    Build2sx(JMP, 0, 2),
+                    Build3(LOADBOOL, 4, 0, 1),
+                    Build3(LOADBOOL, 4, 1, 0),
+                },
+                5, 0
+            );
+        }
+
+        [Fact]
+        public void LogicalOperatorWithNot2()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,x; x = a or (not (b and c)) and d",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(TESTSET, 4, 0, 1),
+                    Build2sx(JMP, 0, 8),
+                    Build3(TEST, 1, 0, 0),
+                    Build2sx(JMP, 0, 2),
+                    Build3(TEST, 2, 0, 1),
+                    Build2sx(JMP, 0, 2),
+                    Build2(MOVE, 4, 3),
+                    Build2sx(JMP, 0, 2),
+                    Build3(LOADBOOL, 4, 0, 1),
+                    Build3(LOADBOOL, 4, 1, 0),
+                },
+                5, 0
+            );
+        }
+
+        [Fact]
+        public void LogicalOperatorCondition()
+        {
+            DoCompilerTest(
+                "local a,b,c,d,x; if a or (not (b and c)) and d then x() end",
+                new LuaValue[] { },
+                new [] {
+                    Build2(LOADNIL, 0, 4),
+                    Build3(TEST, 0, 0, 1),
+                    Build2sx(JMP, 0, 6),
+                    Build3(TEST, 1, 0, 0),
+                    Build2sx(JMP, 0, 2),
+                    Build3(TEST, 2, 0, 1),
+                    Build2sx(JMP, 0, 4),
+                    Build3(TEST, 3, 0, 0),
+                    Build2sx(JMP, 0, 2),
+                    Build2(MOVE, 5, 4),
+                    Build3(CALL, 5, 1, 1),
                 },
                 5, 1
             );
