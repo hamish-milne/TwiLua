@@ -11,7 +11,7 @@ namespace YANCL
                 var a = opA.GetRK(c, ref stackSlots);
                 var b = opB.GetRK(c, ref stackSlots);
                 Test = c.code.Count;
-                c.Emit(Build3(opCode, invert ? 1 : 0, swap ? b : a, swap ? a : b));
+                c.Emit(Build3(opCode, invert ? 0 : 1, swap ? b : a, swap ? a : b));
                 Jump = c.code.Count;
                 c.Emit(0);
             }

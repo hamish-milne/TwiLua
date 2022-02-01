@@ -14,7 +14,6 @@ namespace YANCL
 
             public override void Load(Compiler c, int dst)
             {
-                Invert(c);
                 c.Emit(Build3(LOADBOOL, dst, 0, 1));
                 c.code[Jump] = Build2sx(JMP, 0, c.code.Count - Jump - 1);
                 c.Emit(Build3(LOADBOOL, dst, 1, 0));
@@ -35,10 +34,20 @@ namespace YANCL
             public readonly Label Value = new Label();
             public readonly Label True = new Label();
             public readonly Label False = new Label();
+            public readonly bool DoInvert;
             public readonly List<int> Outputs = new List<int>();
             public Operand Last;
 
+            public Logical(bool doInvert) => DoInvert = doInvert;
+
             public void Update() => stackSlots = Last.StackSlots;
+
+            public void Add(Logical other) {
+                Value.References.AddRange(other.Value.References);
+                True.References.AddRange(other.True.References);
+                False.References.AddRange(other.False.References);
+                Outputs.AddRange(other.Outputs);
+            }
 
             public override void Load(Compiler c, int dst)
             {
@@ -111,10 +120,13 @@ namespace YANCL
             }
 
             var opA = Pop();
-            var newOp = new Logical();
+            var newOp = new Logical(doInvert);
 
             if (opA is Logical logical) {
-                if (logical.Last is TCondition lastCond) {
+                if (logical.DoInvert == doInvert) {
+                    newOp.Add(logical);
+                    opA = logical.Last;
+                } else if (logical.Last is TCondition lastCond) {
                     MarkAt(logical.Value, lastCond.Jump + 1);
                     MarkAt(logical.True, lastCond.Jump + 1);
                     MarkAt(logical.False, lastCond.Jump + 1);
@@ -139,10 +151,7 @@ namespace YANCL
             }
 
             if (opB is Logical logical1) {
-                newOp.Value.References.AddRange(logical1.Value.References);
-                newOp.True.References.AddRange(logical1.True.References);
-                newOp.False.References.AddRange(logical1.False.References);
-                newOp.Outputs.AddRange(logical1.Outputs);
+                newOp.Add(logical1);
                 newOp.Last = logical1.Last;
             } else {
                 newOp.Last = opB;

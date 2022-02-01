@@ -381,9 +381,13 @@ namespace YANCL
                 var op = operations.Pop();
                 if (op.token == TokenType.CloseParen) {
                     ResolveOperations(-1, condition);
+                    if (operations.Pop().token != TokenType.OpenParen) {
+                        throw new InvalidOperationException();
+                    }
                     continue;
                 }
                 if (op.token == TokenType.OpenParen) {
+                    operations.Push(op);
                     break;
                 }
                 if (condition && op.token == TokenType.Not) {
@@ -448,9 +452,10 @@ namespace YANCL
                         token = TokenType.OpenParen,
                         order = 999
                     });
+                    continue;
                 }
                 ParseTerm();
-                if (parens > 0 && TryTake(TokenType.CloseParen)) {
+                while (parens > 0 && TryTake(TokenType.CloseParen)) {
                     parens--;
                     if (PeekSuffix()) {
                         ResolveOperations(-1, condition);
@@ -480,7 +485,13 @@ namespace YANCL
             if (operations.Count > 0) {
                 ResolveOperations(-1, condition);
             }
-            Debug.Assert(operations.Count == 0);
+            // TODO: Tidy this up a bit?
+            while (operations.Count > 0 && operations.Peek().token == TokenType.OpenParen) {
+                operations.Pop();
+            }
+            if (operations.Count > 0) {
+                throw new InvalidOperationException("Unbalanced operations");
+            }
         }
 
         void ParseTableConstructor() {
