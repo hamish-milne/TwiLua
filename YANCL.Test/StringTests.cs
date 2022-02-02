@@ -6,7 +6,7 @@ namespace YANCL.Test
     public class StringTests
     {
         void AssertEqual(string str, params LuaValue[] expected) {
-            var f = Parser.Compile("return " + str);
+            var f = Lua.Compile("return " + str);
             var s = new LuaState(16, 2);
             var g = new LuaTable();
             StdLib.String.Load(g);

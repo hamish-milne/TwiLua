@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace YANCL
 {
-    public class Parser
+    internal class Parser
     {
         readonly Parser? parent;
         readonly Lexer lexer;
@@ -21,7 +21,7 @@ namespace YANCL
         bool TryTake(TokenType type) => lexer.TryTake(type);
 
 
-        Parser(string str) {
+        public Parser(string str) {
             lexer = new Lexer(str);
         }
 
@@ -45,7 +45,7 @@ namespace YANCL
             }
         }
 
-        void ParseChunk() {
+        public void ParseChunk() {
             while (!TryTake(TokenType.Eof)) {
                 ParseStat();
             }
@@ -590,7 +590,7 @@ namespace YANCL
             C.Closure(scope.MakeFunction());
         }
 
-        LuaFunction MakeFunction() => C.MakeFunction();
+        public LuaFunction MakeFunction() => C.MakeFunction();
 
         int ParseArgumentList(int argc) {
             ParseExpression();
@@ -601,12 +601,6 @@ namespace YANCL
                 argc++;
             }
             return argc;
-        }
-
-        public static LuaFunction Compile(string str) {
-            var c = new Parser(str);
-            c.ParseChunk();
-            return c.MakeFunction();
         }
     }
 }

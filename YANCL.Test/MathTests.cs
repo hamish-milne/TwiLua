@@ -6,7 +6,7 @@ namespace YANCL.Test
     public class MathTests
     {
         void AssertEqual(string str, double expected) {
-            var f = Parser.Compile("return " + str);
+            var f = Lua.Compile("return " + str);
             var s = new LuaState(16, 2);
             var g = new LuaTable();
             StdLib.Math.Load(g);

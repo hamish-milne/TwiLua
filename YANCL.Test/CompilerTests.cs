@@ -15,7 +15,7 @@ namespace YANCL.Test
             int nLocals, int nSlots,
             (LuaValue[] constants, int[] instructions, int nLocals, int nSlots)[] functions = null
         ) {
-            var result = Parser.Compile(source);
+            var result = Lua.Compile(source);
             Assert.Equal(expectedConstants, result.constants);
             Assert.Equal(expectedInstructions.Length, result.code.Length);
             if (!expectedInstructions.SequenceEqual(result.code)) {
