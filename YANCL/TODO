@@ -46,6 +46,7 @@ Upvalues:
     ☐ In-stack
     ☐ Out-of-stack
     ☐ Closure
+    ☐ Jump closes upvalues w/ A parameter
 Unary operators:
     ✔ Length @done(21-09-09 12:15)
     ✔ Negation @done(21-09-09 12:15)

@@ -106,6 +106,8 @@ namespace YANCL
                     switch (Peek()) {
                         case TokenType.End:
                         case TokenType.Eof:
+                        case TokenType.Else:
+                        case TokenType.ElseIf:
                             break;
                         default:
                             throw new Exception($"Unexpected {Peek()} after return");
