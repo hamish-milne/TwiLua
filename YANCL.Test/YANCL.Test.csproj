@@ -17,4 +17,8 @@
     <ProjectReference Include="..\YANCL\YANCL.csproj" />
   </ItemGroup>
 
+  <Target Name="ClearTestResults" BeforeTargets="BeforeBuild">
+    <RemoveDir Directories="TestResults" />
+  </Target>
+
 </Project>

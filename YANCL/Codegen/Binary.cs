@@ -13,10 +13,10 @@ namespace YANCL
             public readonly OpCode OpCode;
             public readonly int OpA, OpB;
 
-            public TBinary(Compiler c, OpCode opCode, Operand opA, Operand? opB) {
+            public TBinary(Compiler c, OpCode opCode, Operand opA, Operand opB) {
                 OpCode = opCode;
                 OpA = opA.GetRK(c, ref stackSlots);
-                OpB = opB?.GetRK(c, ref stackSlots) ?? 0;
+                OpB = opB.GetRK(c, ref stackSlots);
             }
 
             public override void Load(Compiler c, int dst) => c.Emit(Build3(OpCode, dst, OpA, OpB));

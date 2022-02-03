@@ -1,0 +1,9 @@
+{
+    "dotnet-test-explorer.testArguments": "--collect:\"XPlat Code Coverage\" --settings ./coverlet.runsettings",
+    "coverage-gutters.coverageBaseDir": "YANCL.Test/TestResults/*/",
+    "coverage-gutters.coverageFileNames": [
+        "coverage.info",
+    ],
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.showGutterCoverage": false
+}
