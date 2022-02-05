@@ -73,8 +73,10 @@ Blocks:
     ✔ Elseif @done(22-01-25 21:01)
     ✔ While @done(22-01-27 00:50)
     ✔ Repeat @done(22-02-01 22:30)
-    ☐ Numeric for
+    ✔ Numeric for @done(22-02-05 12:44)
     ☐ Generic for
+    ☐ continue
+    ☐ break
 Metafunctions:
     ☐ Metatable
     ☐ Index

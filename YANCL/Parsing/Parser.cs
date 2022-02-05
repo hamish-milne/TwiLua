@@ -140,6 +140,37 @@ namespace YANCL
                     C.JumpIfFalse(c0);
                     break;
                 }
+                case TokenType.For: {
+                    Next();
+                    do {
+                        var name = Expect(TokenType.Identifier, "for loop variable name")!;
+                        locals.Add(name);
+                    } while (TryTake(TokenType.Comma));
+                    Expect(TokenType.Equal, "for loop initializer");
+                    ParseExpression();
+                    C.Argument();
+                    Expect(TokenType.Comma, "for loop separator");
+                    ParseExpression();
+                    C.Argument();
+                    if (TryTake(TokenType.Comma)) {
+                        ParseExpression();
+                    } else {
+                        C.Constant(1);
+                    }
+                    Expect(TokenType.Do, "for loop body");
+                    var c0 = C.Label();
+                    var c1 = C.Label();
+
+                    // TODO: Fix this hack!
+                    for (int i = 0; i < 3; i++) {
+                        locals.Insert(locals.Count - 1, "__for_loop_var");
+                    }
+
+                    C.ForPrep(c0, c1);
+                    ParseBlock();
+                    C.ForLoop(c0, c1);
+                    break;
+                }
                 default:
                     throw new Exception($"Unexpected token {Peek()}");
             }

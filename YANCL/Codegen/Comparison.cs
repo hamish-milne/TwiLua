@@ -14,7 +14,7 @@ namespace YANCL
                 Test = c.code.Count;
                 c.Emit(Build3(opCode, invert ? 0 : 1, swap ? b : a, swap ? a : b));
                 Jump = c.code.Count;
-                c.Emit(0);
+                c.Emit(Build2sx(JMP, 0, 0));
             }
 
             public override void Invert(Compiler c)

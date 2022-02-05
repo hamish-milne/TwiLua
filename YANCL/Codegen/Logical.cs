@@ -118,7 +118,7 @@ namespace YANCL
             var test = code.Count;
             Emit(Build3(TEST, a, 0, 1));
             var jump = code.Count;
-            Emit(0);
+            Emit(Build2sx(JMP, 0, 0));
             Push(new TTest {
                 Jump = jump,
                 Test = test

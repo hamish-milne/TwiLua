@@ -79,13 +79,10 @@ namespace YANCL.Test
         [Fact]
         public void Repeat() => AssertEqual("local i = 0 repeat i = i + 1 until i == 3 return i", 3);
 
-        [Fact(Skip = "TODO")]
-        public void For() => AssertEqual("local i = 0 for i = 1, 3 do end return i", 3);
+        [Fact]
+        public void For() => AssertEqual("local x = 0 for i = 1, 3 do x = x + i end return x", 6);
 
-        [Fact(Skip = "TODO")]
-        public void For2() => AssertEqual("local i = 0 for i = 1, 3, 2 do end return i", 3);
-
-        [Fact(Skip = "TODO")]
-        public void For3() => AssertEqual("local i = 0 for i = 1, 3, 2 do i = i + 1 end return i", 3);
+        [Fact]
+        public void For2() => AssertEqual("local x = 0 for i = 1, 3, 2 do x = x + i end return x", 4);
     }
 }

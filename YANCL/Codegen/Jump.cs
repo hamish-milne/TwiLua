@@ -20,7 +20,7 @@ namespace YANCL
             if (label.Location < 0) {
                 label.Location = dst;
                 foreach (var refIdx in label.References) {
-                    code[refIdx] = Build2sx(JMP, 0, label.Location - refIdx - 1);
+                    code[refIdx] = Build2sx(GetOpCode(code[refIdx]), GetA(code[refIdx]), label.Location - refIdx - 1);
                 }
             } else {
                 throw new InvalidOperationException("Label already marked");
@@ -33,12 +33,12 @@ namespace YANCL
             if (label.Location < 0) {
                 label.References.Add(inst);
             } else {
-                code[inst] = Build2sx(JMP, 0, label.Location - inst - 1);
+                code[inst] = Build2sx(GetOpCode(code[inst]), GetA(code[inst]), label.Location - inst - 1);
             }
         }
 
         public void Jump(Label label) {
-            Emit(0);
+            Emit(Build2sx(JMP, 0, 0));
             JumpAt(label, code.Count - 1);
         }
 

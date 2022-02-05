@@ -1365,5 +1365,67 @@ namespace YANCL.Test
                 1, 0
             );
         }
+
+        [Fact]
+        public void NumericFor()
+        {
+            DoCompilerTest(
+                "for i = 1, 10 do a(i) end",
+                new LuaValue[] { 1, 10, "a" },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 0),
+                    Build2sx(FORPREP, 0, 3),
+                    Build3(GETTABUP, 4, 0, 2 | KFlag),
+                    Build2(MOVE, 5, 3),
+                    Build3(CALL,  4, 2, 1),
+                    Build2sx(FORLOOP, 0, -4),
+                },
+                0, 6
+            );
+        }
+
+        [Fact]
+        public void NumericForWithStep()
+        {
+            DoCompilerTest(
+                "for i = 1, 10, 2 do a(i) end",
+                new LuaValue[] { 1, 10, 2, "a" },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 2),
+                    Build2sx(FORPREP, 0, 3),
+                    Build3(GETTABUP, 4, 0, 3 | KFlag),
+                    Build2(MOVE, 5, 3),
+                    Build3(CALL,  4, 2, 1),
+                    Build2sx(FORLOOP, 0, -4),
+                },
+                0, 6
+            );
+        }
+
+        [Fact]
+        public void GenericFor()
+        {
+            DoCompilerTest(
+                "for k, v in pairs(t) do a(k, v) end",
+                new LuaValue[] { "pairs", "t", "a" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(GETTABUP, 1, 0, 1 | KFlag),
+                    Build3(CALL, 0, 2, 4),
+                    Build2sx(JMP, 0, 4),
+                    Build3(GETTABUP, 5, 0, 2 | KFlag),
+                    Build2(MOVE, 6, 3),
+                    Build2(MOVE, 7, 4),
+                    Build3(CALL,  5, 3, 1),
+                    Build3(TFORCALL, 0, 0, 2),
+                    Build2sx(TFORLOOP, 2, -6),
+                },
+                0, 8
+            );
+        }
     }
 }
