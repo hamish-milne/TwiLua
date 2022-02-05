@@ -28,6 +28,7 @@ namespace YANCL
         public readonly LuaTable? Table;
         public readonly LuaClosure? Function;
         public readonly LuaCFunction? CFunction;
+        public readonly int Hash;
 
         public bool Boolean {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -78,6 +79,7 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = null;
+            Hash = value.GetHashCode();
         }
 
         
@@ -89,6 +91,7 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = null;
+            Hash = value.GetHashCode();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -99,6 +102,7 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = null;
+            Hash = value.GetHashCode();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -109,6 +113,7 @@ namespace YANCL
             Table = table;
             Function = null;
             CFunction = null;
+            Hash = table.GetHashCode();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -119,6 +124,7 @@ namespace YANCL
             Table = null;
             Function = function;
             CFunction = null;
+            Hash = function.GetHashCode();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -129,6 +135,7 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = function;
+            Hash = function.GetHashCode();
         }
 
         bool IEquatable<LuaValue>.Equals(LuaValue other) => Equals(other);
@@ -158,25 +165,7 @@ namespace YANCL
             return obj is LuaValue other && Equals(other);
         }
 
-        public override int GetHashCode() {
-            switch (Type) {
-                case LuaType.NIL:
-                    return 0;
-                case LuaType.BOOLEAN:
-                case LuaType.NUMBER:
-                    return Number.GetHashCode();
-                case LuaType.STRING:
-                    return String!.GetHashCode();
-                case LuaType.TABLE:
-                    return Table!.GetHashCode();
-                case LuaType.FUNCTION:
-                    return Function!.GetHashCode();
-                case LuaType.CFUNCTION:
-                    return CFunction!.GetHashCode();
-                default:
-                    throw new Exception("Invalid LuaType");
-            }
-        }
+        public override int GetHashCode() => Hash;
 
         public override string ToString()
         {

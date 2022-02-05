@@ -14,7 +14,6 @@ namespace YANCL
 
         struct MapEntry
         {
-            public int hash;
             public LuaValue key;
             public LuaValue value;
         }
@@ -49,7 +48,7 @@ namespace YANCL
 
         private class HashComparer : IComparer<MapEntry>
         {
-            public int Compare(MapEntry x, MapEntry y) => x.hash.CompareTo(y.hash);
+            public int Compare(MapEntry x, MapEntry y) => x.key.Hash.CompareTo(y.key.Hash);
         }
         private static readonly HashComparer hashComparer = new HashComparer();
         
@@ -58,9 +57,8 @@ namespace YANCL
                 idx = 0;
                 return false;
             }
-            var hash = key.GetHashCode();
-            idx = Array.BinarySearch(map!, 0, mapCount, new MapEntry { hash = hash }, hashComparer);
-            while (idx > 0 && map![idx - 1].hash == hash) {
+            idx = Array.BinarySearch(map!, 0, mapCount, new MapEntry { key = key }, hashComparer);
+            while (idx > 0 && map![idx - 1].key.Hash == key.Hash) {
                 idx--;
             }
             if (idx >= 0) {
@@ -68,7 +66,7 @@ namespace YANCL
                     if (map![idx].key.Equals(key)) {
                         return true;
                     }
-                } while (++idx < mapCount && map![idx].hash == hash);
+                } while (++idx < mapCount && map![idx].key.Hash == key.Hash);
                 return false;
             }
             idx = ~idx;
@@ -91,7 +89,7 @@ namespace YANCL
             mapCount++;
             EnsureCapacity(ref map, mapCount);
             Array.Copy(map!, idx, map!, idx + 1, mapCount - idx - 1);
-            map![idx] = new MapEntry { hash = key.GetHashCode(), key = key, value = value };
+            map![idx] = new MapEntry { key = key, value = value };
         }
 
         private LuaValue MapGet(LuaValue key) {
