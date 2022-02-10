@@ -5,8 +5,14 @@ namespace YANCL
         private readonly LuaState state = new LuaState(1024, 256);
         public LuaTable Globals { get; } = new LuaTable();
 
+        private readonly LuaUpValue[] globalsUpValue;
+
+        public Lua() {
+            globalsUpValue = new []{ new LuaUpValue { Value = Globals } };
+        }
+
         public LuaValue[] DoString(string str) {
-            return state.Execute(Compile(str), Globals);
+            return state.Execute(new LuaClosure(Compile(str), globalsUpValue));
         }
 
         public static LuaFunction Compile(string str) {

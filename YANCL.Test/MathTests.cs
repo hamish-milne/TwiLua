@@ -10,7 +10,8 @@ namespace YANCL.Test
             var s = new LuaState(16, 2);
             var g = new LuaTable();
             StdLib.Math.Load(g);
-            Assert.True(Math.Abs(s.Execute(f, g)[0].Number - expected) < 1e-10);
+            var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});
+            Assert.True(Math.Abs(s.Execute(closure)[0].Number - expected) < 1e-10);
         }
 
         [Fact]

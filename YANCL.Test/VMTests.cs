@@ -43,46 +43,46 @@ namespace YANCL.Test
                 constants = new LuaValue[] {
                     b,
                 },
-                upvalues = Array.Empty<LuaUpValue>(),
+                upvalues = Array.Empty<UpValueInfo>(),
                 prototypes = Array.Empty<LuaFunction>(),
-                entry = 0,
                 nParams = 1,
                 nLocals = 1,
                 nSlots = 0,
             };
             var state = new LuaState(3, 1);
-            var results = state.Execute(function, new LuaTable(), a);
+            var closure = new LuaClosure(function, new []{new LuaUpValue()});
+            var results = state.Execute(closure, a);
             Assert.Equal(new []{expected}, results);
         }
 
         [Fact]
         public void Add() {
-            BinaryOperation(OpCode.ADD, new LuaValue(1), new LuaValue(2), new LuaValue(3));
+            BinaryOperation(OpCode.ADD, 1, 2, 3);
         }
 
         [Fact]
         public void Sub() {
-            BinaryOperation(OpCode.SUB, new LuaValue(3), new LuaValue(2), new LuaValue(1));
+            BinaryOperation(OpCode.SUB, 3, 1, 2);
         }
 
         [Fact]
         public void Mul() {
-            BinaryOperation(OpCode.MUL, new LuaValue(3), new LuaValue(2), new LuaValue(6));
+            BinaryOperation(OpCode.MUL, 3, 2, 6);
         }
 
         [Fact]
         public void Div() {
-            BinaryOperation(OpCode.DIV, new LuaValue(6), new LuaValue(2), new LuaValue(3));
+            BinaryOperation(OpCode.DIV, 6, 2, 3);
         }
 
         [Fact]
         public void Mod() {
-            BinaryOperation(OpCode.MOD, new LuaValue(6), new LuaValue(2), new LuaValue(0));
+            BinaryOperation(OpCode.MOD, 6, 2, 0);
         }
 
         [Fact]
         public void Pow() {
-            BinaryOperation(OpCode.POW, new LuaValue(2), new LuaValue(3), new LuaValue(8));
+            BinaryOperation(OpCode.POW, 2, 3, 8);
         }
 
         [Fact]
@@ -93,15 +93,15 @@ namespace YANCL.Test
                     Instruction.Build2(OpCode.RETURN, 0, 2),
                 },
                 constants = new LuaValue[] {},
-                upvalues = Array.Empty<LuaUpValue>(),
+                upvalues = Array.Empty<UpValueInfo>(),
                 prototypes = Array.Empty<LuaFunction>(),
-                entry = 0,
                 nParams = 3,
                 nLocals = 0,
                 nSlots = 0,
             };
             var state = new LuaState(4, 1);
-            var results = state.Execute(function, new LuaTable(), new LuaValue("a"), new LuaValue("b"), new LuaValue("c"));
+            var closure = new LuaClosure(function, new []{new LuaUpValue()});
+            var results = state.Execute(closure, "a", "b", "c");
             Assert.Equal(new []{new LuaValue("abc")}, results);
         }
 
@@ -120,15 +120,15 @@ namespace YANCL.Test
                     Instruction.Build2(OpCode.RETURN, 0, 2),
                 },
                 constants = new LuaValue[] {cf, "foo"},
-                upvalues = Array.Empty<LuaUpValue>(),
+                upvalues = Array.Empty<UpValueInfo>(),
                 prototypes = Array.Empty<LuaFunction>(),
-                entry = 0,
                 nParams = 0,
                 nLocals = 2,
                 nSlots = 0,
             };
             var state = new LuaState(3, 2);
-            var results = state.Execute(function, new LuaTable());
+            var closure = new LuaClosure(function, new []{new LuaUpValue()});
+            var results = state.Execute(closure);
             Assert.Equal(new LuaValue[]{"bar"}, results);
         }
     }

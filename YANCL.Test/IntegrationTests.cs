@@ -10,7 +10,8 @@ namespace YANCL.Test
             var s = new LuaState(16, 2);
             var g = new LuaTable();
             StdLib.Math.Load(g);
-            Assert.Equal(expected, s.Execute(f, g)[0]);
+            var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});
+            Assert.Equal(expected, s.Execute(closure)[0]);
         }
 
         [Fact]

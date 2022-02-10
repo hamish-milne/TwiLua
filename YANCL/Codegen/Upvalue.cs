@@ -7,7 +7,7 @@ namespace YANCL
 {
     public partial class Compiler
     {
-        private readonly List<LuaUpValue> upValues = new List<LuaUpValue>();
+        private readonly List<UpValueInfo> upValues = new List<UpValueInfo>();
 
         class TUpvalue : Operand
         {
@@ -18,10 +18,7 @@ namespace YANCL
         }
 
         public void Upvalue(int index, bool inStack) {
-            var upValue = new LuaUpValue {
-                Index = index,
-                InStack = inStack
-            };
+            var upValue = new UpValueInfo("", inStack, index);
             var idx = upValues.IndexOf(upValue);
             if (idx == -1) {
                 idx = upValues.Count;

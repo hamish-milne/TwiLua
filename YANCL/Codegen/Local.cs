@@ -27,5 +27,21 @@ namespace YANCL
         }
 
         public void Local(int index) => Push(new TLocal(index, isVar: true));
+
+        class Scope
+        {
+            public readonly int Start;
+            public readonly List<string> Locals = new List<string>();
+
+            public Scope(int start) {
+                Start = start;
+            }
+        }
+
+        private readonly Stack<Scope> scopes = new Stack<Scope>();
+
+        public void PushScope() => scopes.Push(new Scope(code.Count));
+
+        public void PopScope() {}
     }
 }

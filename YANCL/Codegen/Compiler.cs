@@ -106,7 +106,6 @@ namespace YANCL
                 constants = constants.ToArray(),
                 upvalues = upValues.ToArray(),
                 prototypes = closures.ToArray(),
-                entry = 0,
                 nParams = 0,
                 nLocals = Top,
                 nSlots = maxStack - Top,
