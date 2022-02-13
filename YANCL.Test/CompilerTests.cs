@@ -1714,6 +1714,36 @@ namespace YANCL.Test
             );
         }
 
+
+
+        [Fact]
+        public void NumericFor2()
+        {
+            DoCompilerTest(
+                "local x = 0 for i = 1, 5 do x = x + i end return x",
+                new LuaValue[] { 0, 1, 5 },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 2),
+                    Build2x(LOADK, 3, 1),
+                    Build2sx(FORPREP, 1, 1),
+                    Build3(ADD, 0, 0, 4),
+                    Build2sx(FORLOOP, 1, -2),
+                    Build2(RETURN, 0, 2),
+                    Build2(RETURN, 0, 1),
+                },
+                new [] {
+                    new LocalVarInfo("x", 1, 9),
+                    new LocalVarInfo("(for index)", 4, 7),
+                    new LocalVarInfo("(for limit)", 4, 7),
+                    new LocalVarInfo("(for step)", 4, 7),
+                    new LocalVarInfo("i", 5, 6)
+                },
+                5
+            );
+        }
+
         [Fact]
         public void NumericForWithStep()
         {
@@ -1741,7 +1771,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public void GenericFor()
         {
             DoCompilerTest(

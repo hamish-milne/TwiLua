@@ -440,10 +440,10 @@ namespace YANCL
                         continue;
                     }
                     case OpCode.FORLOOP: {
-                        var i = R(GetA(op)).Number + R(GetA(op) + 2).Number;
-                        R(GetA(op)) = i;
                         var step = R(GetA(op) + 2).Number;
                         var limit = R(GetA(op) + 1).Number;
+                        var i = R(GetA(op)).Number + step;
+                        R(GetA(op)) = i;
                         if ( (step > 0 && i <= limit) || (step < 0 && i >= limit) ) {
                             pc += GetSbx(op);
                             R(GetA(op) + 3) = i;

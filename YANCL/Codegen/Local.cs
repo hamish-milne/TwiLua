@@ -37,7 +37,7 @@ namespace YANCL
 
             public Scope(Scope? parent) {
                 Parent = parent;
-                StartIdx = parent?.Locals.Count ?? 0;
+                StartIdx = parent?.Count ?? 0;
             }
 
             public int? Lookup(string name) {

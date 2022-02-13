@@ -85,9 +85,14 @@ namespace YANCL
         }
 
         public void Return(int argCount) {
-            var b = Dispatch(argCount, 0);
-            Emit(Build2(RETURN, argCount == 0 ? 0 : (Top-argCount), b));
-            Top -= argCount;
+            if (argCount == 1 && Peek(0) is TLocal local) {
+                Emit(Build2(RETURN, local.Index, 2));
+                Pop();
+            } else {
+                var b = Dispatch(argCount, 0);
+                Emit(Build2(RETURN, argCount == 0 ? 0 : (Top-argCount), b));
+                Top -= argCount;
+            }
         }
 
         public void Self() {
