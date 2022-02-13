@@ -13,11 +13,6 @@ namespace YANCL
             this.prototypeIdx = prototypeIdx;
         }
 
-        interface ICodeGen {
-            int Top { get; }
-            void Emit(int instruction);
-        }
-
         abstract class Operand
         {
             protected int stackSlots;
@@ -52,6 +47,8 @@ namespace YANCL
         int Top;
         int maxStack;
 
+        public bool IsVaradic { get; set; }
+
         private int PushS() {
             var idx = Top++;
             SetMaxStack();
@@ -60,11 +57,6 @@ namespace YANCL
 
         private void SetMaxStack() {
             if (maxStack < Top) maxStack = Top;
-        }
-
-        public void SetParameters() {
-            Top += currentScope!.Locals.Count;
-            SetMaxStack();
         }
 
         private Operand Peek(int idx) => operands[operands.Count - idx - 1];
@@ -107,9 +99,6 @@ namespace YANCL
 
         public LuaFunction MakeFunction()
         {
-            if (Top != currentScope!.Locals.Count) {
-                throw new InvalidOperationException();
-            }
             return new LuaFunction {
                 code = code.ToArray(),
                 constants = constants.ToArray(),

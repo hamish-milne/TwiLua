@@ -39,6 +39,7 @@ namespace YANCL.Test
                 code = new int[] {
                     Instruction.Build3(op, 1, 0, 0 | Instruction.KFlag),
                     Instruction.Build2(OpCode.RETURN, 1, 2),
+                    Instruction.Build2(OpCode.RETURN, 0, 1),
                 },
                 constants = new LuaValue[] {
                     b,
@@ -90,12 +91,13 @@ namespace YANCL.Test
                 code = new int[] {
                     Instruction.Build3(OpCode.CONCAT, 0, 0, 2),
                     Instruction.Build2(OpCode.RETURN, 0, 2),
+                    Instruction.Build2(OpCode.RETURN, 0, 1),
                 },
                 constants = new LuaValue[] {},
                 upvalues = Array.Empty<UpValueInfo>(),
                 prototypes = Array.Empty<LuaFunction>(),
                 nParams = 3,
-                nSlots = 0,
+                nSlots = 3,
             };
             var state = new LuaState(4, 1);
             var closure = new LuaClosure(function, new []{new LuaUpValue()});
@@ -116,6 +118,7 @@ namespace YANCL.Test
                     Instruction.Build2x(OpCode.LOADK, 1, 1),
                     Instruction.Build3(OpCode.CALL, 0, 2, 2),
                     Instruction.Build2(OpCode.RETURN, 0, 2),
+                    Instruction.Build2(OpCode.RETURN, 0, 1),
                 },
                 constants = new LuaValue[] {cf, "foo"},
                 upvalues = Array.Empty<UpValueInfo>(),

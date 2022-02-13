@@ -35,12 +35,15 @@ namespace YANCL
             }
         }
 
-        public void ParseChunk() {
+        public LuaFunction ParseChunk() {
+            C.IsVaradic = true;
             C.PushScope();
             while (!TryTake(TokenType.Eof)) {
                 ParseStat();
             }
+            C.Return(0);
             C.PopScope();
+            return C.MakeFunction();
         }
 
         void ParseBlock() {
@@ -155,13 +158,13 @@ namespace YANCL
                         }
                         Expect(TokenType.Do, "for loop body");
                         C.ForInit();
+                        var state = C.ForPrep();
+                        C.PushScope();
                         C.Reserve(tmpLocals[0]);
                         tmpLocals.Clear();
-                        var c0 = C.Label();
-                        var c1 = C.Label();
-                        C.ForPrep(c0, c1);
                         ParseBlock();
-                        C.ForLoop(c0, c1);
+                        C.PopScope();
+                        C.ForLoop(state);
                     } else {
                         throw new NotImplementedException();
                     }
@@ -581,9 +584,9 @@ namespace YANCL
             if (TryTake(TokenType.Function)) {
                 var name = Expect(TokenType.Identifier, "function name")!;
                 var scope = C.Closure();
+                C.InitLocals(1, 1);
                 C.DefineLocal(name); // Local functions become 'active' immediately
                 ParseFunction(hasSelf: false, scope);
-                C.InitLocals(1, 1);
                 return;
             }
             do {
@@ -601,12 +604,18 @@ namespace YANCL
         }
 
         void ParseFunction(bool hasSelf, Compiler scope) {
+            scope.PushScope();
             Expect(TokenType.OpenParen, "function");
             if (hasSelf) {
-                scope.DefineLocal("self");
+                scope.Reserve("self");
             }
             while (Peek() != TokenType.CloseParen) {
-                scope.DefineLocal(Expect(TokenType.Identifier, "function argument")!);
+                if (TryTake(TokenType.TripleDot)) {
+                    scope.IsVaradic = true;
+                    Expect(TokenType.CloseParen, "function varadic specifier");
+                    break;
+                }
+                scope.Reserve(Expect(TokenType.Identifier, "function argument")!);
                 if (Peek() == TokenType.Comma) {
                     Next();
                 } else if (Peek() != TokenType.CloseParen) {
@@ -614,12 +623,13 @@ namespace YANCL
                 }
             }
             Next();
-            scope.SetParameters();
+            scope.PushScope();
             new Parser(lexer, scope).ParseBlock();
+            scope.Return(0);
+            scope.PopScope();
+            scope.PopScope();
             C.EndClosure(scope);
         }
-
-        public LuaFunction MakeFunction() => C.MakeFunction();
 
         int ParseArgumentList(int argc) {
             ParseExpression();

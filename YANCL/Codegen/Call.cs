@@ -86,7 +86,7 @@ namespace YANCL
 
         public void Return(int argCount) {
             var b = Dispatch(argCount, 0);
-            Emit(Build2(RETURN, Top-argCount, b));
+            Emit(Build2(RETURN, argCount == 0 ? 0 : (Top-argCount), b));
             Top -= argCount;
         }
 

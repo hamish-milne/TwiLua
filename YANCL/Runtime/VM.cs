@@ -18,6 +18,8 @@ namespace YANCL
             InStack = inStack;
             Index = index;
         }
+
+        public override string ToString() => $"{Name} {(InStack ? "in stack" : "in upvalue")} {Index}";
     }
 
     public readonly struct LocalVarInfo
@@ -32,6 +34,8 @@ namespace YANCL
             Start = start;
             End = end;
         }
+
+        public override string ToString() => $"{Name} {Start} {End}";
     }
 
     public sealed class LuaFunction
@@ -43,9 +47,7 @@ namespace YANCL
         public LocalVarInfo[] locals;
         public LuaFunction? parent;
         public int nParams;
-        public int nLocals => locals.Length;
         public int nSlots;
-        public int StackSize => nParams + nLocals + nSlots;
         public bool IsVaradic;
     }
 
@@ -117,27 +119,29 @@ namespace YANCL
         readonly LuaUpValue?[] upValueStack;
         readonly CallInfo[] callStack;
         int callStackPtr;
-        // readonly Stack<LuaClosure> closures = new Stack<LuaClosure>();
-        // LuaClosure closure = null!;
 
         int func;
         int pc;
         int top;
         int baseR;
         int nVarargs;
-        // int closureCount;
 
         int[] code;
         LuaUpValue[] parentUpValues;
         LuaValue[] constants;
+        int nSlots;
 
         void SetFunc(int func) {
             this.func = func;
             var closure = stack[func].Function;
             if (closure != null) {
                 code = closure.Function.code;
+                if (code[code.Length - 1] != Build2(OpCode.RETURN, 0, 1)) {
+                    throw new Exception("Invalid program");
+                }
                 constants = closure.Function.constants;
                 parentUpValues = closure.UpValues;
+                nSlots = closure.Function.nSlots;
             }
         }
 
@@ -176,7 +180,6 @@ namespace YANCL
                 baseR = baseR,
                 top = top,
                 nVarargs = nVarargs,
-                // closureCount = closureCount,
             };
         }
 
@@ -241,6 +244,7 @@ namespace YANCL
                 callState.Base = func;
                 callState.Count = nArgs;
                 stack[func].CFunction!.Invoke(callState);
+                nSlots = nArgs;
                 Return(callState.Count);
                 break;
             default:
@@ -252,13 +256,13 @@ namespace YANCL
         void Return(int nResults) {
             var callInfo = PopCallInfo();
 
-            Array.Clear(stack, func + nResults, top - func - nResults);
+            Array.Clear(stack, func + nResults, nSlots - nResults + 1);
 
+            top = func + nResults;
             pc = callInfo.pc;
             SetFunc(callInfo.func);
             baseR = callInfo.baseR;
             nVarargs = callInfo.nVarargs;
-            top = func + nResults;
         }
 
         void Close(int downTo) {
@@ -424,7 +428,7 @@ namespace YANCL
                     case OpCode.RETURN: {
                         int nResults = GetB(op);
                         if (nResults == 0) {
-                            nResults = top - GetA(op);
+                            nResults = top - GetA(op) - 1;
                         } else {
                             nResults--;
                         }

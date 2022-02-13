@@ -35,6 +35,24 @@ namespace YANCL.StdLib {
                 o.Flush();
                 s.Count = 0;
             });
+            globals["select"] = new LuaCFunction(s => {
+                if (s.Count == 0) {
+                    throw new WrongNumberOfArguments();
+                }
+                if (s[1] == "#") {
+                    s.Return(s.Count - 1);
+                } else {
+                    var idx = s.Integer(1);
+                    if (idx <= 0) {
+                        throw new ArgumentOutOfRangeException();
+                    }
+                    if (idx > s.Count - 1) {
+                        s.Return(LuaValue.Nil);
+                    } else {
+                        s.Return(s[(int)idx]);
+                    }
+                }
+            });
         }
     }
 }

@@ -16,9 +16,7 @@ namespace YANCL
         }
 
         public static LuaFunction Compile(string str) {
-            var c = new Parser(new Lexer(str), new Compiler());
-            c.ParseChunk();
-            return c.MakeFunction();
+            return new Parser(new Lexer(str), new Compiler()).ParseChunk();
         }
     }
 }

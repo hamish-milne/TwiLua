@@ -14,7 +14,7 @@ namespace YANCL.Test
             int[] expectedInstructions,
             LocalVarInfo[] expectedLocals,
             int nSlots,
-            (LuaValue[] constants, int[] instructions, int nLocals, int nSlots)[] functions = null
+            (LuaValue[] constants, int[] instructions, LocalVarInfo[] expectedLocals, int nSlots)[] functions = null
         ) {
             var result = Lua.Compile(source);
             Assert.Equal(expectedConstants, result.constants);
@@ -38,7 +38,7 @@ namespace YANCL.Test
                             throw new Exception($"Expected {Stringify(pair.Item1)}\n but got {Stringify(pair.Item2)}");
                         }
                     }
-                    Assert.Equal(expectedNLocals, result.prototypes[i].nLocals);
+                    Assert.Equal(expectedNLocals, result.prototypes[i].locals);
                     Assert.Equal(expectedNSlots, result.prototypes[i].nSlots);
                 }
             }
@@ -52,6 +52,7 @@ namespace YANCL.Test
                 new LuaValue[] { "x", 10 },
                 new [] {
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 0
@@ -67,11 +68,12 @@ namespace YANCL.Test
                 new [] {
                     Build2(LOADNIL, 0, 0),
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
-                    new LocalVarInfo("a", 1, 2),
+                    new LocalVarInfo("x", 1, 3),
                 },
-                0
+                1
             );
         }
 
@@ -84,6 +86,7 @@ namespace YANCL.Test
                 new [] {
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
                     Build3(SETTABUP, 0, 2 | KFlag, 3 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 0
@@ -99,6 +102,7 @@ namespace YANCL.Test
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(CALL, 0, 1, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -116,6 +120,7 @@ namespace YANCL.Test
                     Build2x(LOADK, 1, 1),
                     Build2x(LOADK, 2, 2),
                     Build3(CALL, 0, 3, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 3
@@ -132,6 +137,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(GETTABLE, 0, 0, 2 | KFlag),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -148,6 +154,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(GETTABUP, 1, 0, 2 | KFlag),
                     Build3(SETTABLE, 0, 1 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -164,6 +171,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(GETTABUP, 1, 0, 2 | KFlag),
                     Build3(SETTABLE, 0, 1 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -179,6 +187,7 @@ namespace YANCL.Test
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(SETTABLE, 0, 1 | KFlag, 2 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -195,11 +204,12 @@ namespace YANCL.Test
                     Build2(LOADNIL, 0, 0),
                     Build3(GETTABLE, 1, 0, 0 | KFlag),
                     Build3(SETTABLE, 1, 1 | KFlag, 2 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
-                    new LocalVarInfo("x", 1, 3),
+                    new LocalVarInfo("x", 1, 4),
                 },
-                1
+                2
             );
         }
 
@@ -216,11 +226,12 @@ namespace YANCL.Test
                     Build3(CALL, 1, 2, 2),
                     Build3(GETTABUP, 2, 0, 1 | KFlag),
                     Build3(SETTABLE, 1, 2, 2 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
-                    new LocalVarInfo("x", 1, 6),
+                    new LocalVarInfo("x", 1, 7),
                 },
-                2
+                3
             );
         }
 
@@ -236,11 +247,12 @@ namespace YANCL.Test
                     Build3(GETTABLE, 1, 0, 1),
                     Build3(GETTABUP, 2, 0, 1 | KFlag),
                     Build3(SETTABLE, 1, 2, 2 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
-                    new LocalVarInfo("x", 1, 5),
+                    new LocalVarInfo("x", 1, 6),
                 },
-                2
+                3
             );
         }
 
@@ -255,11 +267,12 @@ namespace YANCL.Test
                     Build3(GETTABLE, 1, 0, 1 | KFlag),
                     Build3(GETTABLE, 1, 1, 2 | KFlag),
                     Build3(SETTABUP, 0, 0 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
-                    new LocalVarInfo("x", 1, 4),
+                    new LocalVarInfo("x", 1, 5),
                 },
-                1
+                2
             );
         }
 
@@ -276,11 +289,12 @@ namespace YANCL.Test
                     Build3(GETTABUP, 2, 0, 2 | KFlag),
                     Build3(GETTABLE, 1, 1, 2),
                     Build3(SETTABUP, 0, 0 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
-                    new LocalVarInfo("x", 1, 6),
+                    new LocalVarInfo("x", 1, 7),
                 },
-                2
+                3
             );
         }
 
@@ -296,11 +310,12 @@ namespace YANCL.Test
                     Build3(GETTABUP, 2, 0, 1 | KFlag),
                     Build3(CALL, 1, 2, 2),
                     Build3(SETTABUP, 0, 0 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
                     new LocalVarInfo("x", 1, 6),
                 },
-                2
+                3
             );
         }
 
@@ -315,6 +330,7 @@ namespace YANCL.Test
                     Build3(CALL, 0, 1, 2),
                     Build3(GETTABUP, 1, 0, 2 | KFlag),
                     Build3(SETTABLE, 0, 1 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -332,6 +348,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 1, 0, 2 | KFlag),
                     Build3(CALL, 0, 2, 2),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -348,6 +365,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(NEWTABLE, 1, 0, 0),
                     Build3(CALL, 0, 2, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -364,6 +382,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build2x(LOADK, 1, 1),
                     Build3(CALL, 0, 2, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -382,6 +401,7 @@ namespace YANCL.Test
                     Build2x(LOADK, 2, 2),
                     Build2x(LOADK, 3, 3),
                     Build3(CALL, 0, 4, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 4
@@ -398,6 +418,7 @@ namespace YANCL.Test
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
                     Build3(SETTABUP, 0, 2 | KFlag, 3 | KFlag),
                     Build3(SETTABUP, 0, 4 | KFlag, 5 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 0
@@ -414,13 +435,14 @@ namespace YANCL.Test
                     Build2(LOADBOOL, 0, 1),
                     Build2(LOADBOOL, 1, 0),
                     Build2(LOADNIL, 2, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new [] {
-                    new LocalVarInfo("x", 1, 3),
-                    new LocalVarInfo("y", 2, 3),
-                    new LocalVarInfo("z", 3, 3),
+                    new LocalVarInfo("x", 1, 4),
+                    new LocalVarInfo("y", 2, 4),
+                    new LocalVarInfo("z", 3, 4),
                 },
-                0
+                3
             );
         }
 
@@ -433,6 +455,7 @@ namespace YANCL.Test
                 new [] {
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
                     Build3(SETTABUP, 0, 2 | KFlag, 3 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 0
@@ -449,6 +472,7 @@ namespace YANCL.Test
                     Build3(SETTABUP, 0, 0 | KFlag, 1 | KFlag),
                     Build3(SETTABUP, 0, 2 | KFlag, 3 | KFlag),
                     Build3(SETTABUP, 0, 4 | KFlag, 5 | KFlag),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 0
@@ -469,6 +493,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 1, 0, 4 | KFlag),
                     Build3(CALL, 0, 2, 2),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -488,6 +513,7 @@ namespace YANCL.Test
                     Build2x(LOADK, 3, 3),
                     Build3(SETLIST, 0, 3, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 4
@@ -512,6 +538,7 @@ namespace YANCL.Test
                     Build2x(LOADK, 4, 10),
                     Build3(SETLIST, 0, 4, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 5
@@ -527,8 +554,12 @@ namespace YANCL.Test
                 new [] {
                     Build2(LOADNIL, 0, 0),
                     Build2x(LOADK, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("x", 1, 3),
+                },
+                1
             );
         }
 
@@ -542,6 +573,7 @@ namespace YANCL.Test
                     Build2x(LOADK, 0, 2),
                     Build3(SETTABUP, 0, 1 | KFlag, 3 | KFlag),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -561,6 +593,7 @@ namespace YANCL.Test
                     Build3(SETTABUP, 0, 2 | KFlag, 2),
                     Build3(SETTABUP, 0, 1 | KFlag, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 3
@@ -576,8 +609,13 @@ namespace YANCL.Test
                 new [] {
                     Build2x(LOADK, 0, 0),
                     Build2x(LOADK, 1, 1),
+                    Build2(RETURN, 0, 1),
                 },
-                2, 0
+                new [] {
+                    new LocalVarInfo("x", 2, 3),
+                    new LocalVarInfo("y", 2, 3),
+                },
+                2
             );
         }
 
@@ -592,8 +630,12 @@ namespace YANCL.Test
                     Build2x(LOADK, 1, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 2 | KFlag),
                     Build2(MOVE, 0, 1),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 1
+                new [] {
+                    new LocalVarInfo("x", 1, 5),
+                },
+                2
             );
         }
 
@@ -609,6 +651,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 2, 0, 4 | KFlag),
                     Build3(SETTABUP, 0, 1 | KFlag, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 3
@@ -628,6 +671,7 @@ namespace YANCL.Test
                     Build3(SETTABUP, 0, 2 | KFlag, 2),
                     Build3(SETTABUP, 0, 1 | KFlag, 1),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 3
@@ -647,6 +691,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 3, 0, 3 | KFlag),
                     Build3(CALL, 3, 1, 0),
                     Build3(CALL, 0, 0, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 4
@@ -665,6 +710,7 @@ namespace YANCL.Test
                     Build2x(LOADK, 2, 2),
                     Build2(VARARG, 3, 0),
                     Build3(CALL, 0, 0, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 4
@@ -681,8 +727,12 @@ namespace YANCL.Test
                     Build2(VARARG, 0, 2),
                     Build2(VARARG, 1, 2),
                     Build3(GETTABLE, 0, 0, 1),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 1
+                new [] {
+                    new LocalVarInfo("a", 3, 4),
+                },
+                2
             );
         }
 
@@ -695,8 +745,14 @@ namespace YANCL.Test
                 new [] {
                     Build2(LOADK, 0, 0),
                     Build2(VARARG, 1, 3),
+                    Build2(RETURN, 0, 1),
                 },
-                3, 0
+                new [] {
+                    new LocalVarInfo("a", 2, 3),
+                    new LocalVarInfo("b", 2, 3),
+                    new LocalVarInfo("c", 2, 3),
+                },
+                3
             );
         }
 
@@ -714,8 +770,13 @@ namespace YANCL.Test
                     Build3(NEWTABLE, 1, 0, 0),
                     Build2(VARARG, 2, 0),
                     Build3(SETLIST, 1, 0, 1),
+                    Build2(RETURN, 0, 1),
                 },
-                2, 1
+                new [] {
+                    new LocalVarInfo("a", 7, 8),
+                    new LocalVarInfo("b", 7, 8),
+                },
+                3
             );
         }
 
@@ -727,16 +788,24 @@ namespace YANCL.Test
                 new LuaValue[] { },
                 new [] {
                     Build2(CLOSURE, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0,
+                new [] {
+                    new LocalVarInfo("a", 1, 2),
+                },
+                1,
                 new [] {(
                     new LuaValue[] { "print", "b" },
                     new [] {
                         Build3(GETTABUP, 1, 0, 0 | KFlag),
                         Build3(GETTABUP, 2, 0, 1 | KFlag),
                         Build3(CALL, 1, 2, 1),
+                        Build2(RETURN, 0, 1),
                     },
-                    1, 2
+                    new [] {
+                        new LocalVarInfo("a", 0, 4),
+                    },
+                    3
                 )}
             );
         }
@@ -749,12 +818,19 @@ namespace YANCL.Test
                 new LuaValue[] { },
                 new [] {
                     Build2(CLOSURE, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0,
+                new [] {
+                    new LocalVarInfo("foo", 1, 2),
+                },
+                1,
                 new [] {(
                     new LuaValue[] { },
-                    new int[] { },
-                    0, 0
+                    new [] {
+                        Build2(RETURN, 0, 1),
+                    },
+                    new LocalVarInfo[] { },
+                    0
                 )}
             );
         }
@@ -768,13 +844,17 @@ namespace YANCL.Test
                 new [] {
                     Build2(CLOSURE, 0, 0),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1,
                 new [] {(
                     new LuaValue[] { },
-                    new int[] { },
-                    0, 0
+                    new [] {
+                        Build2(RETURN, 0, 1),
+                    },
+                    new LocalVarInfo[] {},
+                    0
                 )}
             );
         }
@@ -790,13 +870,17 @@ namespace YANCL.Test
                     Build3(GETTABLE, 0, 0, 1 | KFlag),
                     Build2(CLOSURE, 1, 0),
                     Build3(SETTABLE, 0, 2 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2,
                 new [] {(
                     new LuaValue[] { },
-                    new int[] { },
-                    0, 0
+                    new [] {
+                        Build2(RETURN, 0, 1),
+                    },
+                    new LocalVarInfo[] { },
+                    0
                 )}
             );
         }
@@ -812,6 +896,7 @@ namespace YANCL.Test
                     Build3(GETTABLE, 0, 0, 1 | KFlag),
                     Build2(CLOSURE, 1, 0),
                     Build3(SETTABLE, 0, 2 | KFlag, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2,
@@ -821,8 +906,12 @@ namespace YANCL.Test
                         Build3(GETTABUP, 1, 0, 0 | KFlag),
                         Build2(MOVE, 2, 0),
                         Build3(CALL, 1, 2, 1),
+                        Build2(RETURN, 0, 1),
                     },
-                    1, 2
+                    new [] {
+                        new LocalVarInfo("self", 0, 4),
+                    },
+                    3
                 )}
             );
         }
@@ -835,9 +924,13 @@ namespace YANCL.Test
                 new LuaValue[] { "x" },
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
-                    Build2(LEN, 0, 0)
+                    Build2(LEN, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("a", 2, 3),
+                },
+                1
             );
         }
 
@@ -849,9 +942,13 @@ namespace YANCL.Test
                 new LuaValue[] { "x" },
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
-                    Build2(NOT, 0, 0)
+                    Build2(NOT, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("a", 2, 3),
+                },
+                1
             );
         }
 
@@ -868,8 +965,12 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 1),
                     Build3(LOADBOOL, 0, 0, 1),
                     Build3(LOADBOOL, 0, 1, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 1
+                new [] {
+                    new LocalVarInfo("a", 6, 7),
+                },
+                2
             );
         }
 
@@ -885,6 +986,7 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(CALL, 0, 1, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -900,9 +1002,13 @@ namespace YANCL.Test
                 new LuaValue[] { "x" },
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
-                    Build2(UNM, 0, 0)
+                    Build2(UNM, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("a", 2, 3),
+                },
+                1
             );
         }
 
@@ -914,9 +1020,13 @@ namespace YANCL.Test
                 new LuaValue[] { "x" },
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
-                    Build2(BNOT, 0, 0)
+                    Build2(BNOT, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("a", 2, 3),
+                },
+                1
             );
         }
 
@@ -931,8 +1041,16 @@ namespace YANCL.Test
                     Build3(MUL, 5, 1, 2),
                     Build3(DIV, 5, 5, 3),
                     Build3(ADD, 0, 5, 4),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 5),
+                    new LocalVarInfo("b", 1, 5),
+                    new LocalVarInfo("c", 1, 5),
+                    new LocalVarInfo("d", 1, 5),
+                    new LocalVarInfo("e", 1, 5),
+                },
+                6
             );
         }
 
@@ -947,8 +1065,16 @@ namespace YANCL.Test
                     Build3(DIV, 5, 2, 3),
                     Build3(MUL, 5, 5, 4),
                     Build3(ADD, 0, 1, 5),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 5),
+                    new LocalVarInfo("b", 1, 5),
+                    new LocalVarInfo("c", 1, 5),
+                    new LocalVarInfo("d", 1, 5),
+                    new LocalVarInfo("e", 1, 5),
+                },
+                6
             );
         }
 
@@ -960,8 +1086,12 @@ namespace YANCL.Test
                 new LuaValue[] { 3 },
                 new [] {
                     Build2x(LOADK, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("a", 1, 2),
+                },
+                1
             );
         }
 
@@ -975,8 +1105,14 @@ namespace YANCL.Test
                     Build2(LOADNIL, 0, 2),
                     Build3(POW, 3, 1, 2),
                     Build2(LEN, 0, 3),
+                    Build2(RETURN, 0, 1),
                 },
-                3, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 4),
+                    new LocalVarInfo("b", 1, 4),
+                    new LocalVarInfo("c", 1, 4),
+                },
+                4
             );
         }
 
@@ -991,8 +1127,13 @@ namespace YANCL.Test
                     Build3(GETTABUP, 2, 0, 0 | KFlag),
                     Build3(POW, 2, 2, 1),
                     Build2(LEN, 0, 2),
+                    Build2(RETURN, 0, 1),
                 },
-                2, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 5),
+                    new LocalVarInfo("c", 1, 5),
+                },
+                3
             );
         }
 
@@ -1007,8 +1148,16 @@ namespace YANCL.Test
                     Build3(BAND, 5, 1, 2),
                     Build3(BXOR, 5, 5, 3),
                     Build3(BOR, 0, 5, 4),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 5),
+                    new LocalVarInfo("b", 1, 5),
+                    new LocalVarInfo("c", 1, 5),
+                    new LocalVarInfo("d", 1, 5),
+                    new LocalVarInfo("e", 1, 5),
+                },
+                6
             );
         }
 
@@ -1022,8 +1171,15 @@ namespace YANCL.Test
                     Build2(LOADNIL, 0, 3),
                     Build3(SHL, 4, 1, 2),
                     Build3(SHR, 0, 4, 3),
+                    Build2(RETURN, 0, 1),
                 },
-                4, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 4),
+                    new LocalVarInfo("b", 1, 4),
+                    new LocalVarInfo("c", 1, 4),
+                    new LocalVarInfo("d", 1, 4),
+                },
+                5
             );
         }
 
@@ -1059,8 +1215,19 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 1),
                     Build3(LOADBOOL, 0, 0, 1),
                     Build3(LOADBOOL, 0, 1, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                8, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 26),
+                    new LocalVarInfo("b", 1, 26),
+                    new LocalVarInfo("c", 1, 26),
+                    new LocalVarInfo("d", 1, 26),
+                    new LocalVarInfo("e", 1, 26),
+                    new LocalVarInfo("f", 1, 26),
+                    new LocalVarInfo("g", 1, 26),
+                    new LocalVarInfo("h", 1, 26),
+                },
+                9
             );
         }
 
@@ -1078,8 +1245,16 @@ namespace YANCL.Test
                     Build3(TESTSET, 4, 5, 1),
                     Build2sx(JMP, 0, 1),
                     Build2(MOVE, 4, 3),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 8),
+                    new LocalVarInfo("b", 1, 8),
+                    new LocalVarInfo("c", 1, 8),
+                    new LocalVarInfo("d", 1, 8),
+                    new LocalVarInfo("x", 1, 8),
+                },
+                6
             );
         }
 
@@ -1097,8 +1272,16 @@ namespace YANCL.Test
                     Build3(TESTSET, 4, 5, 0),
                     Build2sx(JMP, 0, 1),
                     Build2(MOVE, 4, 3),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 8),
+                    new LocalVarInfo("b", 1, 8),
+                    new LocalVarInfo("c", 1, 8),
+                    new LocalVarInfo("d", 1, 8),
+                    new LocalVarInfo("x", 1, 8),
+                },
+                6
             );
         }
 
@@ -1117,8 +1300,16 @@ namespace YANCL.Test
                     Build3(TESTSET, 4, 2, 1),
                     Build2sx(JMP, 0, 1),
                     Build2(MOVE, 4, 3),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 0
+                new [] {
+                    new LocalVarInfo("a", 1, 9),
+                    new LocalVarInfo("b", 1, 9),
+                    new LocalVarInfo("c", 1, 9),
+                    new LocalVarInfo("d", 1, 9),
+                    new LocalVarInfo("x", 1, 9),
+                },
+                5
             );
         }
 
@@ -1137,8 +1328,16 @@ namespace YANCL.Test
                     Build3(TESTSET, 4, 2, 0),
                     Build2sx(JMP, 0, 1),
                     Build2(MOVE, 4, 3),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 0
+                new [] {
+                    new LocalVarInfo("a", 1, 9),
+                    new LocalVarInfo("b", 1, 9),
+                    new LocalVarInfo("c", 1, 9),
+                    new LocalVarInfo("d", 1, 9),
+                    new LocalVarInfo("x", 1, 9),
+                },
+                5
             );
         }
 
@@ -1158,8 +1357,16 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(LOADBOOL, 4, 0, 1),
                     Build3(LOADBOOL, 4, 1, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 0
+                new [] {
+                    new LocalVarInfo("a", 1, 10),
+                    new LocalVarInfo("b", 1, 10),
+                    new LocalVarInfo("c", 1, 10),
+                    new LocalVarInfo("d", 1, 10),
+                    new LocalVarInfo("x", 1, 10),
+                },
+                5
             );
         }
 
@@ -1179,8 +1386,16 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(LOADBOOL, 4, 0, 1),
                     Build3(LOADBOOL, 4, 1, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 0
+                new [] {
+                    new LocalVarInfo("a", 1, 10),
+                    new LocalVarInfo("b", 1, 10),
+                    new LocalVarInfo("c", 1, 10),
+                    new LocalVarInfo("d", 1, 10),
+                    new LocalVarInfo("x", 1, 10),
+                },
+                5
             );
         }
 
@@ -1202,8 +1417,16 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(LOADBOOL, 4, 0, 1),
                     Build3(LOADBOOL, 4, 1, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 0
+                new [] {
+                    new LocalVarInfo("a", 1, 12),
+                    new LocalVarInfo("b", 1, 12),
+                    new LocalVarInfo("c", 1, 12),
+                    new LocalVarInfo("d", 1, 12),
+                    new LocalVarInfo("x", 1, 12),
+                },
+                5
             );
         }
 
@@ -1225,8 +1448,16 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build2(MOVE, 5, 4),
                     Build3(CALL, 5, 1, 1),
+                    Build2(RETURN, 0, 1),
                 },
-                5, 1
+                new [] {
+                    new LocalVarInfo("a", 1, 12),
+                    new LocalVarInfo("b", 1, 12),
+                    new LocalVarInfo("c", 1, 12),
+                    new LocalVarInfo("d", 1, 12),
+                    new LocalVarInfo("x", 1, 12),
+                },
+                6
             );
         }
 
@@ -1244,8 +1475,18 @@ namespace YANCL.Test
                     Build2(MOVE, 10, 5),
                     Build2(MOVE, 11, 6),
                     Build3(CONCAT, 0, 7, 11),
+                    Build2(RETURN, 0, 1),
                 },
-                7, 5
+                new [] {
+                    new LocalVarInfo("a", 1, 8),
+                    new LocalVarInfo("b", 1, 8),
+                    new LocalVarInfo("c", 1, 8),
+                    new LocalVarInfo("d", 1, 8),
+                    new LocalVarInfo("e", 1, 8),
+                    new LocalVarInfo("f", 1, 8),
+                    new LocalVarInfo("g", 1, 8),
+                },
+                12
             );
         }
 
@@ -1259,6 +1500,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(GETTABUP, 1, 0, 1 | KFlag),
                     Build2(RETURN, 0, 3),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -1272,6 +1514,7 @@ namespace YANCL.Test
                 "return",
                 new LuaValue[] { },
                 new [] {
+                    Build2(RETURN, 0, 1),
                     Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
@@ -1289,6 +1532,7 @@ namespace YANCL.Test
                     Build2x(LOADK, 0, 0),
                     Build2(VARARG, 1, 0),
                     Build2(RETURN, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 2
@@ -1322,6 +1566,7 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(GETTABUP, 0, 0, 6 | KFlag),
                     Build3(CALL, 0, 1, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -1341,6 +1586,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(CALL, 0, 1, 1),
                     Build2sx(JMP, 0, -6),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -1359,6 +1605,7 @@ namespace YANCL.Test
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(TEST, 0, 0, 0),
                     Build2sx(JMP, 0, -5),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -1377,6 +1624,7 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(GETTABUP, 0, 0, 1 | KFlag),
                     Build3(CALL, 0, 1, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -1395,6 +1643,7 @@ namespace YANCL.Test
                     Build2sx(JMP, 0, 2),
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(CALL, 0, 1, 1),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 1
@@ -1409,8 +1658,12 @@ namespace YANCL.Test
                 new LuaValue[] { 3 },
                 new [] {
                     Build2x(LOADK, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("a", 1, 2),
+                },
+                1
             );
         }
 
@@ -1425,8 +1678,12 @@ namespace YANCL.Test
                     Build3(TEST, 0, 0, 1),
                     Build2sx(JMP, 0, 1),
                     Build2x(LOADK, 0, 0),
+                    Build2(RETURN, 0, 1),
                 },
-                1, 0
+                new [] {
+                    new LocalVarInfo("a", 4, 5),
+                },
+                1
             );
         }
 
@@ -1445,8 +1702,14 @@ namespace YANCL.Test
                     Build2(MOVE, 5, 3),
                     Build3(CALL,  4, 2, 1),
                     Build2sx(FORLOOP, 0, -4),
+                    Build2(RETURN, 0, 1),
                 },
-                new LocalVarInfo[] {},
+                new [] {
+                    new LocalVarInfo("(for index)", 3, 8),
+                    new LocalVarInfo("(for limit)", 3, 8),
+                    new LocalVarInfo("(for step)", 3, 8),
+                    new LocalVarInfo("i", 4, 7)
+                },
                 6
             );
         }
@@ -1466,8 +1729,14 @@ namespace YANCL.Test
                     Build2(MOVE, 5, 3),
                     Build3(CALL,  4, 2, 1),
                     Build2sx(FORLOOP, 0, -4),
+                    Build2(RETURN, 0, 1),
                 },
-                new LocalVarInfo[] {},
+                new [] {
+                    new LocalVarInfo("(for index)", 3, 8),
+                    new LocalVarInfo("(for limit)", 3, 8),
+                    new LocalVarInfo("(for step)", 3, 8),
+                    new LocalVarInfo("i", 4, 7)
+                },
                 6
             );
         }
@@ -1489,6 +1758,7 @@ namespace YANCL.Test
                     Build3(CALL,  5, 3, 1),
                     Build3(TFORCALL, 0, 0, 2),
                     Build2sx(TFORLOOP, 2, -6),
+                    Build2(RETURN, 0, 1),
                 },
                 new LocalVarInfo[] {},
                 8

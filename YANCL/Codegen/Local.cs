@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static YANCL.Instruction;
 using static YANCL.OpCode;
 
@@ -29,19 +30,19 @@ namespace YANCL
         class Scope
         {
             public readonly Scope? Parent;
-            public readonly int StartPC;
             public readonly int StartIdx;
-            public readonly List<string> Locals = new List<string>();
+            public readonly List<(string name, int startPC)> Locals = new List<(string, int)>();
 
-            public Scope(Scope? parent, int startPC) {
+            public int Count => Locals.Count + (Parent?.Count ?? 0);
+
+            public Scope(Scope? parent) {
                 Parent = parent;
-                StartPC = startPC;
                 StartIdx = parent?.Locals.Count ?? 0;
             }
 
             public int? Lookup(string name) {
                 for (var i = Locals.Count - 1; i >= 0; i--) {
-                    if (Locals[i] == name) return i + StartIdx;
+                    if (Locals[i].name == name) return i + StartIdx;
                 }
                 return Parent?.Lookup(name);
             }
@@ -50,23 +51,26 @@ namespace YANCL
         private Scope? currentScope;
         private readonly List<LocalVarInfo> locals = new List<LocalVarInfo>();
 
-        public void PushScope() => currentScope = new Scope(currentScope, code.Count);
+        public void PushScope() => currentScope = new Scope(currentScope);
 
         public void PopScope() {
-            foreach (var local in currentScope!.Locals) {
-                if (local != "<hidden>") {
-                    locals.Add(new LocalVarInfo(local, currentScope.StartPC, code.Count));
-                }
+            for (int i = 0; i < currentScope!.Locals.Count; i++) {
+                var local = currentScope.Locals[i];
+                // This ensures that locals are defined in the correct order.
+                locals.Insert(i, new LocalVarInfo(local.name, local.startPC, code.Count));
+            }
+            if (Top != currentScope.Count) {
+                throw new InvalidOperationException("Stack is not empty");
             }
             Top -= currentScope.Locals.Count;
             currentScope = currentScope?.Parent;
         }
 
         public void DefineLocal(string name) {
-            if (currentScope!.Locals.Contains(name)) {
+            if (currentScope!.Locals.Any(x => x.name == name)) {
                 throw new Exception($"local '{name}' already defined");
             }
-            currentScope.Locals.Add(name);
+            currentScope!.Locals.Add((name, code.Count));
         }
 
         public void Reserve(string name) {
