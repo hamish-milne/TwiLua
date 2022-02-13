@@ -17,7 +17,7 @@ namespace YANCL
         {
             var c0 = Label();
             var c1 = Label();
-            Emit(Build2sx(FORPREP, Top - currentScope!.Locals.Count, 0));
+            Emit(Build2sx(FORPREP, currentScope!.StartIdx, 0));
             Mark(c0);
             JumpAt(c1, code.Count - 1);
             return (c0, c1);
@@ -27,7 +27,7 @@ namespace YANCL
         {
             var (c0, c1) = state;
             Mark(c1);
-            Emit(Build2sx(FORLOOP, Top - currentScope!.Locals.Count, 0));
+            Emit(Build2sx(FORLOOP, currentScope!.StartIdx, 0));
             JumpAt(c0, code.Count - 1);
         }
     }

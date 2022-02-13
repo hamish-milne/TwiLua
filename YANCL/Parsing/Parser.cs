@@ -82,7 +82,7 @@ namespace YANCL
                     ParseFunction(hasSelf, C.Closure());
                     C.Assign(1, 1);
                     break;
-                case TokenType.Return:
+                case TokenType.Return: {
                     Next();
                     int argc = 0;
                     switch (Peek()) {
@@ -108,6 +108,7 @@ namespace YANCL
                             throw new Exception($"Unexpected {Peek()} after return");
                     }
                     break;
+                }
                 case TokenType.If:
                     ParseIfBody();
                     break;
@@ -161,13 +162,23 @@ namespace YANCL
                         var state = C.ForPrep();
                         C.PushScope();
                         C.Reserve(tmpLocals[0]);
-                        tmpLocals.Clear();
                         ParseBlock();
                         C.PopScope();
                         C.ForLoop(state);
                     } else {
-                        throw new NotImplementedException();
+                        Expect(TokenType.In, "generic for loop");
+                        var argc = ParseArgumentList(0);
+                        Expect(TokenType.Do, "for loop body");
+                        var state = C.GForInit(argc);
+                        C.PushScope();
+                        foreach (var l in tmpLocals) {
+                            C.Reserve(l);
+                        }
+                        ParseBlock();
+                        C.PopScope();
+                        C.GForLoop(state, tmpLocals.Count);
                     }
+                    tmpLocals.Clear();
                     C.PopScope();
                     break;
                 }

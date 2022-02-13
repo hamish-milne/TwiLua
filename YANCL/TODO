@@ -35,7 +35,7 @@ Declarations:
     ✔ Global function @done(21-09-09 11:29)
     ✔ Member function @done(21-09-09 11:29)
     ✔ Self function @done(21-09-09 11:29)
-    ☐ Local variable scoping
+    ✔ Local variable scoping @done(22-02-13 21:22)
 Misc language features:
     ☐ Comments
     ☐ Hashbang
@@ -67,14 +67,14 @@ Varargs:
     ✔ Table constructor @done(21-09-08 21:35)
     ✔ Assignment @done(21-09-08 21:35)
 Blocks:
-    ☐ Do/end
+    ✔ Do/end @done(22-02-13 21:22)
     ✔ If @done(22-01-25 21:01)
     ✔ Else @done(22-01-25 21:01)
     ✔ Elseif @done(22-01-25 21:01)
     ✔ While @done(22-01-27 00:50)
     ✔ Repeat @done(22-02-01 22:30)
     ✔ Numeric for @done(22-02-05 12:44)
-    ☐ Generic for
+    ✔ Generic for @done(22-02-13 21:22)
     ☐ continue
     ☐ break
 Metafunctions:

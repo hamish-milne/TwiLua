@@ -1771,7 +1771,7 @@ namespace YANCL.Test
             );
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void GenericFor()
         {
             DoCompilerTest(
@@ -1790,7 +1790,13 @@ namespace YANCL.Test
                     Build2sx(TFORLOOP, 2, -6),
                     Build2(RETURN, 0, 1),
                 },
-                new LocalVarInfo[] {},
+                new [] {
+                    new LocalVarInfo("(for generator)", 3, 10),
+                    new LocalVarInfo("(for state)", 3, 10),
+                    new LocalVarInfo("(for control)", 3, 10),
+                    new LocalVarInfo("k", 4, 8),
+                    new LocalVarInfo("v", 4, 8),
+                },
                 8
             );
         }
