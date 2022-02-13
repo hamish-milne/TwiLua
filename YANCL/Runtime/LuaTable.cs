@@ -98,13 +98,22 @@ namespace YANCL
             }
             return LuaValue.Nil;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool TryGetArrayIndex(in LuaValue key, out int idx) {
+            if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
+                idx = (int)key.Number - 1;
+                return true;
+            }
+            idx = 0;
+            return false;
+        }
 #endregion Details
 
         public LuaValue this[in LuaValue key] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
-                    var idx = (int)key.Number - 1;
+                if (TryGetArrayIndex(key, out var idx)) {
                     if (idx < arrayCount) {
                         return array![idx];
                     } else {
@@ -117,13 +126,12 @@ namespace YANCL
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
-                if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
-                    var idx = (int)key.Number;
-                    if (idx > arrayCount) {
-                        arrayCount = idx;
+                if (TryGetArrayIndex(key, out var idx)) {
+                    if (idx >= arrayCount) {
+                        arrayCount = idx + 1;
                         EnsureCapacity(ref array, arrayCount);
                     }
-                    array![idx - 1] = value;
+                    array![idx] = value;
                 } else {
                     MapSet(key, value);
                 }
@@ -182,6 +190,20 @@ namespace YANCL
             var idx = i - arrayCount;
             if (idx < mapCount) {
                 return (map![idx].key, map[idx].value);
+            }
+            return null;
+        }
+
+        public (LuaValue key, LuaValue value)? Start() => Iterate(0);
+
+        public (LuaValue key, LuaValue value)? Next(in LuaValue key) {
+            if (TryGetArrayIndex(key, out var idx) && idx < arrayCount) {
+                idx++;
+                return (idx, array![idx]);
+            }
+            if (Lookup(key, out idx) && idx < mapCount) {
+                var mapItem = map![idx + 1];
+                return (mapItem.key, mapItem.value);
             }
             return null;
         }

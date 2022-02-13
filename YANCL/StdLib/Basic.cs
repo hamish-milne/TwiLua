@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace YANCL.StdLib {
     public static class Basic {
@@ -52,6 +53,22 @@ namespace YANCL.StdLib {
                         s.Return(s[(int)idx]);
                     }
                 }
+            });
+            globals["next"] = new LuaCFunction(s => {
+                if (s.Count < 1) {
+                    throw new WrongNumberOfArguments();
+                }
+                var table = s.Table(1);
+                var key = s.Count >= 2 ? s[2] : LuaValue.Nil;
+                LuaValue key2, value;
+                if (key == LuaValue.Nil) {
+                    (key2, value) = table.Start() ?? (LuaValue.Nil, LuaValue.Nil);
+                } else {
+                    (key2, value) = table.Next(key) ?? (LuaValue.Nil, LuaValue.Nil);
+                }
+                s[0] = key2;
+                s[1] = value;
+                s.Count = 2;
             });
         }
     }
