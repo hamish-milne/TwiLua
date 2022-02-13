@@ -43,7 +43,7 @@ namespace YANCL
         public LocalVarInfo[] locals;
         public LuaFunction? parent;
         public int nParams;
-        public int nLocals;
+        public int nLocals => locals.Length;
         public int nSlots;
         public int StackSize => nParams + nLocals + nSlots;
         public bool IsVaradic;

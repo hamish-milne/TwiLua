@@ -26,22 +26,70 @@ namespace YANCL
             }
         }
 
-        public void Local(int index) => Push(new TLocal(index, isVar: true));
-
         class Scope
         {
-            public readonly int Start;
+            public readonly Scope? Parent;
+            public readonly int StartPC;
+            public readonly int StartIdx;
             public readonly List<string> Locals = new List<string>();
 
-            public Scope(int start) {
-                Start = start;
+            public Scope(Scope? parent, int startPC) {
+                Parent = parent;
+                StartPC = startPC;
+                StartIdx = parent?.Locals.Count ?? 0;
+            }
+
+            public int? Lookup(string name) {
+                for (var i = Locals.Count - 1; i >= 0; i--) {
+                    if (Locals[i] == name) return i + StartIdx;
+                }
+                return Parent?.Lookup(name);
             }
         }
 
-        private readonly Stack<Scope> scopes = new Stack<Scope>();
+        private Scope? currentScope;
+        private readonly List<LocalVarInfo> locals = new List<LocalVarInfo>();
 
-        public void PushScope() => scopes.Push(new Scope(code.Count));
+        public void PushScope() => currentScope = new Scope(currentScope, code.Count);
 
-        public void PopScope() {}
+        public void PopScope() {
+            foreach (var local in currentScope!.Locals) {
+                if (local != "<hidden>") {
+                    locals.Add(new LocalVarInfo(local, currentScope.StartPC, code.Count));
+                }
+            }
+            Top -= currentScope.Locals.Count;
+            currentScope = currentScope?.Parent;
+        }
+
+        public void DefineLocal(string name) {
+            if (currentScope!.Locals.Contains(name)) {
+                throw new Exception($"local '{name}' already defined");
+            }
+            currentScope.Locals.Add(name);
+        }
+
+        public void Reserve(string name) {
+            DefineLocal(name);
+            PushS();
+        }
+
+        private int? Local(string name) => currentScope?.Lookup(name);
+
+        public void Identifier(string name) {
+            var localIdx = Local(name);
+            if (localIdx != null) {
+                Push(new TLocal(localIdx.Value, isVar: true));
+            } else {
+                var upval = Upvalue(name);
+                if (upval != null) {
+                    Push(new TUpvalue(upval.Value));
+                } else {
+                    Push(new TUpvalue(Upvalue("_ENV")!.Value));
+                    Push(new TConstant(name));
+                    Index();
+                }
+            }
+        }
     }
 }

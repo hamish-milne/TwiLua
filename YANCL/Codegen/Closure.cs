@@ -7,7 +7,7 @@ namespace YANCL
 {
     public partial class Compiler
     {
-        private readonly List<LuaFunction> closures = new List<LuaFunction>();
+        private readonly List<LuaFunction?> closures = new List<LuaFunction?>();
 
         class TClosure : Operand
         {
@@ -16,13 +16,15 @@ namespace YANCL
             public override void Load(Compiler c, int dst) => c.Emit(Build2(CLOSURE, dst, Index));
         }
 
-        public void Closure(LuaFunction closure) {
-            var idx = closures.IndexOf(closure);
-            if (idx == -1) {
-                idx = closures.Count;
-                closures.Add(closure);
-            }
+        public Compiler Closure() {
+            var idx = closures.Count;
+            closures.Add(null);
             Push(new TClosure(idx));
+            return new Compiler(this, idx);
+        }
+
+        public void EndClosure(Compiler context) {
+            closures[context.prototypeIdx] = context.MakeFunction();
         }
     }
 }

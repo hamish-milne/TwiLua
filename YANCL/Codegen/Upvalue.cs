@@ -7,6 +7,8 @@ namespace YANCL
 {
     public partial class Compiler
     {
+        private readonly Compiler? parent;
+        private readonly int prototypeIdx;
         private readonly List<UpValueInfo> upValues = new List<UpValueInfo>();
 
         class TUpvalue : Operand
@@ -17,14 +19,30 @@ namespace YANCL
             public override void Store(Compiler c, int src) => c.Emit(Build2(SETUPVAL, src, Index));
         }
 
-        public void Upvalue(int index, bool inStack) {
-            var upValue = new UpValueInfo("", inStack, index);
-            var idx = upValues.IndexOf(upValue);
-            if (idx == -1) {
-                idx = upValues.Count;
-                upValues.Add(upValue);
+        private int? Upvalue(string name) {
+            UpValueInfo upval;
+            var localIdx = Local(name);
+            if (localIdx != null) {
+                upval = new UpValueInfo(name, inStack: true, localIdx.Value);
             }
-            Push(new TUpvalue(idx));
+            if (parent != null) {
+                var parentIdx = parent.Upvalue(name);
+                if (parentIdx != null) {
+                    upval = new UpValueInfo(name, inStack: false, parentIdx.Value);
+                } else {
+                    return null;
+                }
+            } else if (name == "_ENV") {
+                upval = new UpValueInfo(name, inStack: true, 0);
+            } else {
+                return null;
+            }
+            var idx = upValues.IndexOf(upval);
+            if (idx < 0) {
+                idx = upValues.Count;
+                upValues.Add(upval);
+            }
+            return idx;
         }
         
     }

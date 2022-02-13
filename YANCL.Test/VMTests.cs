@@ -46,8 +46,7 @@ namespace YANCL.Test
                 upvalues = Array.Empty<UpValueInfo>(),
                 prototypes = Array.Empty<LuaFunction>(),
                 nParams = 1,
-                nLocals = 1,
-                nSlots = 0,
+                nSlots = 1,
             };
             var state = new LuaState(3, 1);
             var closure = new LuaClosure(function, new []{new LuaUpValue()});
@@ -96,7 +95,6 @@ namespace YANCL.Test
                 upvalues = Array.Empty<UpValueInfo>(),
                 prototypes = Array.Empty<LuaFunction>(),
                 nParams = 3,
-                nLocals = 0,
                 nSlots = 0,
             };
             var state = new LuaState(4, 1);
@@ -123,8 +121,7 @@ namespace YANCL.Test
                 upvalues = Array.Empty<UpValueInfo>(),
                 prototypes = Array.Empty<LuaFunction>(),
                 nParams = 0,
-                nLocals = 2,
-                nSlots = 0,
+                nSlots = 2,
             };
             var state = new LuaState(3, 2);
             var closure = new LuaClosure(function, new []{new LuaUpValue()});

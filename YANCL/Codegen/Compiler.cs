@@ -7,6 +7,12 @@ namespace YANCL
 {
     public partial class Compiler
     {
+        public Compiler() { }
+        private Compiler(Compiler parent, int prototypeIdx) {
+            this.parent = parent;
+            this.prototypeIdx = prototypeIdx;
+        }
+
         interface ICodeGen {
             int Top { get; }
             void Emit(int instruction);
@@ -56,8 +62,8 @@ namespace YANCL
             if (maxStack < Top) maxStack = Top;
         }
 
-        public void SetParameters(int count) {
-            Top += count;
+        public void SetParameters() {
+            Top += currentScope!.Locals.Count;
             SetMaxStack();
         }
 
@@ -101,13 +107,16 @@ namespace YANCL
 
         public LuaFunction MakeFunction()
         {
+            if (Top != currentScope!.Locals.Count) {
+                throw new InvalidOperationException();
+            }
             return new LuaFunction {
                 code = code.ToArray(),
                 constants = constants.ToArray(),
                 upvalues = upValues.ToArray(),
-                prototypes = closures.ToArray(),
+                prototypes = closures.ToArray()!,
+                locals = locals.ToArray(),
                 nParams = 0,
-                nLocals = Top,
                 nSlots = maxStack - Top,
             };
         }

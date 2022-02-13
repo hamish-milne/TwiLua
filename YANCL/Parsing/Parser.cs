@@ -5,11 +5,8 @@ namespace YANCL
 {
     internal class Parser
     {
-        readonly Parser? parent;
         readonly Lexer lexer;
-        readonly List<string> locals = new List<string>();
-        readonly List<LuaFunction> prototypes = new List<LuaFunction>();
-        readonly Compiler C = new Compiler();
+        readonly Compiler C;
 
         Token Next() => lexer.Next();
         TokenType Peek() => lexer.Peek();
@@ -18,13 +15,9 @@ namespace YANCL
         bool TryTake(TokenType type) => lexer.TryTake(type);
 
 
-        public Parser(string str) {
-            lexer = new Lexer(str);
-        }
-
-        Parser(Parser parent) {
-            this.parent = parent;
-            lexer = parent.lexer;
+        public Parser(Lexer lexer, Compiler compiler) {
+            this.lexer = lexer;
+            C = compiler;
         }
 
         bool PeekSuffix() {
@@ -43,9 +36,11 @@ namespace YANCL
         }
 
         public void ParseChunk() {
+            C.PushScope();
             while (!TryTake(TokenType.Eof)) {
                 ParseStat();
             }
+            C.PopScope();
         }
 
         void ParseBlock() {
@@ -68,7 +63,7 @@ namespace YANCL
                     break;
                 case TokenType.Function:
                     Next();
-                    ParseIdentifier(Expect(TokenType.Identifier, "function name")!);
+                    C.Identifier(Expect(TokenType.Identifier, "function name")!);
                     while (TryTake(TokenType.Dot)) {
                         C.Indexee();
                         C.Constant(Expect(TokenType.Identifier, "function declaration member access")!);
@@ -81,7 +76,7 @@ namespace YANCL
                         C.Index();
                         hasSelf = true;
                     }
-                    ParseFunction(hasSelf);
+                    ParseFunction(hasSelf, C.Closure());
                     C.Assign(1, 1);
                     break;
                 case TokenType.Return:
@@ -121,7 +116,9 @@ namespace YANCL
                     Expect(TokenType.Do, "condition");
                     var c1 = C.Label();
                     C.JumpIfFalse(c1);
+                    C.PushScope();
                     ParseBlock();
+                    C.PopScope();
                     C.Jump(c0);
                     C.Mark(c1);
                     break;
@@ -130,44 +127,52 @@ namespace YANCL
                     Next();
                     var c0 = C.Label();
                     C.Mark(c0);
+                    C.PushScope();
                     while (!TryTake(TokenType.Until)) {
                         ParseStat();
                     }
                     ParseExpression(condition: true);
+                    C.PopScope();
                     C.JumpIfFalse(c0);
                     break;
                 }
                 case TokenType.For: {
                     Next();
+                    C.PushScope();
                     do {
-                        var name = Expect(TokenType.Identifier, "for loop variable name")!;
-                        locals.Add(name);
+                        tmpLocals.Add(Expect(TokenType.Identifier, "for loop variable name")!);
                     } while (TryTake(TokenType.Comma));
-                    Expect(TokenType.Equal, "for loop initializer");
-                    ParseExpression();
-                    C.Argument();
-                    Expect(TokenType.Comma, "for loop separator");
-                    ParseExpression();
-                    C.Argument();
-                    if (TryTake(TokenType.Comma)) {
+                    if (tmpLocals.Count == 1 && TryTake(TokenType.Equal)) {
                         ParseExpression();
+                        C.Argument();
+                        Expect(TokenType.Comma, "for loop separator");
+                        ParseExpression();
+                        C.Argument();
+                        if (TryTake(TokenType.Comma)) {
+                            ParseExpression();
+                        } else {
+                            C.Constant(1);
+                        }
+                        Expect(TokenType.Do, "for loop body");
+                        C.ForInit();
+                        C.Reserve(tmpLocals[0]);
+                        tmpLocals.Clear();
+                        var c0 = C.Label();
+                        var c1 = C.Label();
+                        C.ForPrep(c0, c1);
+                        ParseBlock();
+                        C.ForLoop(c0, c1);
                     } else {
-                        C.Constant(1);
+                        throw new NotImplementedException();
                     }
-                    Expect(TokenType.Do, "for loop body");
-                    var c0 = C.Label();
-                    var c1 = C.Label();
-
-                    // TODO: Fix this hack!
-                    for (int i = 0; i < 3; i++) {
-                        locals.Insert(locals.Count - 1, "__for_loop_var");
-                    }
-
-                    C.ForPrep(c0, c1);
-                    ParseBlock();
-                    C.ForLoop(c0, c1);
+                    C.PopScope();
                     break;
                 }
+                case TokenType.Do:
+                    C.PushScope();
+                    ParseBlock();
+                    C.PopScope();
+                    break;
                 default:
                     throw new Exception($"Unexpected token {Peek()}");
             }
@@ -179,13 +184,16 @@ namespace YANCL
             Expect(TokenType.Then, "condition");
             var c1 = C.Label();
             C.JumpIfFalse(c1);
+            C.PushScope();
             while (true) {
                 switch (Peek()) {
                     case TokenType.End:
+                        C.PopScope();
                         C.Mark(c1);
                         Next();
                         return;
                     case TokenType.Else: {
+                        C.PopScope();
                         Next();
                         var c2 = C.Label();
                         C.Jump(c2);
@@ -195,6 +203,7 @@ namespace YANCL
                         return;
                     }
                     case TokenType.ElseIf: {
+                        C.PopScope();
                         var c2 = C.Label();
                         C.Jump(c2);
                         C.Mark(c1);
@@ -207,20 +216,11 @@ namespace YANCL
             }
         }
 
-        void ParseIdentifier(string name) {
-            var localIdx = locals.IndexOf(name);
-            if (localIdx < 0) { // Global
-                C.Global(name);
-            } else {
-                C.Local(localIdx);
-            }
-        }
-
         void ParseVar(int nTargets) {
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier: {
-                    ParseIdentifier(token.text!);
+                    C.Identifier(token.text!);
                     ContinueParseVar(nTargets);
                     break;
                 }
@@ -328,7 +328,7 @@ namespace YANCL
             var token = Next();
             switch (token.type) {
                 case TokenType.Identifier:
-                    ParseIdentifier(token.text!);
+                    C.Identifier(token.text!);
                     ParseSuffix();
                     break;
                 case TokenType.Number: C.Constant(token.number); break;
@@ -339,7 +339,7 @@ namespace YANCL
                 case TokenType.Nil: C.Constant(LuaValue.Nil); break;
                 case TokenType.OpenBrace: ParseTableConstructor(); break;
                 case TokenType.TripleDot: C.Vararg(); break;
-                case TokenType.Function: ParseFunction(hasSelf: false); break;
+                case TokenType.Function: ParseFunction(hasSelf: false, C.Closure()); break;
                 default: throw new Exception($"Unexpected token {token.type}");
             }
         }
@@ -580,34 +580,33 @@ namespace YANCL
             Next();
             if (TryTake(TokenType.Function)) {
                 var name = Expect(TokenType.Identifier, "function name")!;
-                locals.Add(name); // Local functions become 'active' immediately
-                ParseFunction(hasSelf: false);
+                var scope = C.Closure();
+                C.DefineLocal(name); // Local functions become 'active' immediately
+                ParseFunction(hasSelf: false, scope);
                 C.InitLocals(1, 1);
                 return;
             }
             do {
                 tmpLocals.Add(Expect(TokenType.Identifier, "local declaration")!);
-                if (locals.Contains(tmpLocals[tmpLocals.Count - 1])) {
-                    throw new Exception("Local re-declaration");
-                }
             } while (TryTake(TokenType.Comma));
             int argc = 0;
             if (TryTake(TokenType.Equal)) {
                 argc = ParseArgumentList(0);
             }
             C.InitLocals(tmpLocals.Count, argc);
-            locals.AddRange(tmpLocals);
+            foreach (var l in tmpLocals) {
+                C.DefineLocal(l);
+            }
             tmpLocals.Clear();
         }
 
-        void ParseFunction(bool hasSelf) {
+        void ParseFunction(bool hasSelf, Compiler scope) {
             Expect(TokenType.OpenParen, "function");
-            var scope = new Parser(this);
             if (hasSelf) {
-                scope.locals.Add("self");
+                scope.DefineLocal("self");
             }
             while (Peek() != TokenType.CloseParen) {
-                scope.locals.Add(Expect(TokenType.Identifier, "function argument")!);
+                scope.DefineLocal(Expect(TokenType.Identifier, "function argument")!);
                 if (Peek() == TokenType.Comma) {
                     Next();
                 } else if (Peek() != TokenType.CloseParen) {
@@ -615,9 +614,9 @@ namespace YANCL
                 }
             }
             Next();
-            scope.C.SetParameters(scope.locals.Count);
-            scope.ParseBlock();
-            C.Closure(scope.MakeFunction());
+            scope.SetParameters();
+            new Parser(lexer, scope).ParseBlock();
+            C.EndClosure(scope);
         }
 
         public LuaFunction MakeFunction() => C.MakeFunction();
