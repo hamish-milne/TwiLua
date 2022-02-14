@@ -86,6 +86,7 @@ namespace YANCL
         public int top;
         public int baseR;
         public int nVarargs;
+        public int resultsIdx;
     }
 
     public class LuaCallState {
@@ -121,6 +122,8 @@ namespace YANCL
         int callStackPtr;
 
         int func;
+        int expResults;
+        int resultsIdx;
         int pc;
         int top;
         int baseR;
@@ -156,19 +159,19 @@ namespace YANCL
             stack[callee] = closure;
             Array.Copy(args, 0, stack, callee + 1, args.Length);
             PushCallInfo();
-            Call(0, args.Length + 1, 0);
+            Call(0, args.Length + 1, 0, 0);
             var ci = callStackPtr;
             try {
                 Execute(ci - 1);
             } catch {
                 callStackPtr = ci;
-                Return(0);
+                Return(func, 0);
                 throw;
             }
-            var nResults = top - func;
+            var nResults = top - resultsIdx;
             var results = new LuaValue[nResults];
-            Array.Copy(stack, func, results, 0, nResults);
-            Array.Clear(stack, func, nResults);
+            Array.Copy(stack, resultsIdx, results, 0, nResults);
+            Array.Clear(stack, resultsIdx, nResults);
             return results; 
         }
 
@@ -180,6 +183,7 @@ namespace YANCL
                 baseR = baseR,
                 top = top,
                 nVarargs = nVarargs,
+                resultsIdx = resultsIdx,
             };
         }
 
@@ -210,8 +214,9 @@ namespace YANCL
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Call(int callee, int nArgs, int nResults) {
+        void Call(int callee, int nArgs, int nResults, int resultsIdx) {
             SetFunc(baseR + callee);
+            this.resultsIdx = baseR + resultsIdx;
             baseR = func + 1;
             if (nArgs == 0) {
                 nArgs = top - baseR;
@@ -245,7 +250,7 @@ namespace YANCL
                 callState.Count = nArgs;
                 stack[func].CFunction!.Invoke(callState);
                 nSlots = nArgs;
-                Return(callState.Count);
+                Return(func, callState.Count);
                 break;
             default:
                 throw new Exception("Tried to call a thing that isn't a function");
@@ -253,16 +258,20 @@ namespace YANCL
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Return(int nResults) {
+        void Return(int src, int nResults) {
             var callInfo = PopCallInfo();
 
-            Array.Clear(stack, func + nResults, nSlots - nResults + 1);
+            Array.Copy(stack, src, stack, resultsIdx, nResults);
+            var clearFrom = resultsIdx + nResults;
+            var clearTo = func + nSlots + 1;
+            Array.Clear(stack, clearFrom, clearTo - clearFrom);
 
-            top = func + nResults;
+            top = resultsIdx + nResults;
             pc = callInfo.pc;
             SetFunc(callInfo.func);
             baseR = callInfo.baseR;
             nVarargs = callInfo.nVarargs;
+            resultsIdx = callInfo.resultsIdx;
         }
 
         void Close(int downTo) {
@@ -418,12 +427,11 @@ namespace YANCL
                         continue;
                     case OpCode.CALL:
                         PushCallInfo();
-                        // closureCount = 0;
-                        Call(GetA(op), GetB(op), GetC(op));
+                        Call(GetA(op), GetB(op), GetC(op), GetA(op));
                         continue;
                     case OpCode.TAILCALL:
                         Close(baseR);
-                        Call(GetA(op), GetB(op), GetC(op));
+                        Call(GetA(op), GetB(op), GetC(op), GetA(op));
                         continue;
                     case OpCode.RETURN: {
                         int nResults = GetB(op);
@@ -432,8 +440,7 @@ namespace YANCL
                         } else {
                             nResults--;
                         }
-                        Array.Copy(stack, baseR + GetA(op), stack, func, nResults);
-                        Return(nResults);
+                        Return(baseR + GetA(op), nResults);
                         if (callStackPtr == stopAt) {
                             return;
                         }
