@@ -50,7 +50,7 @@ namespace YANCL.StdLib {
                     if (idx > s.Count - 1) {
                         s.Return(LuaValue.Nil);
                     } else {
-                        s.Return(s[(int)idx]);
+                        s.Return(s[(int)idx + 1]);
                     }
                 }
             });

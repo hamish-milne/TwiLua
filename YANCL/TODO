@@ -84,7 +84,7 @@ Metafunctions:
     ☐ Length
 Basic functions library:
     ☐ assert
-    ☐ collectgarbage
+    ✔ collectgarbage @done(22-02-14 21:40)
     ☐ dofile
     ☐ error
     ☐ _G
@@ -92,14 +92,14 @@ Basic functions library:
     ☐ ipairs
     ☐ load
     ☐ loadfile
-    ☐ next
+    ✔ next @done(22-02-14 21:40)
     ☐ pairs
     ☐ pcall
-    ☐ print
+    ✔ print @done(22-02-14 21:40)
     ☐ rawequal
     ☐ rawget
     ☐ rawset
-    ☐ select
+    ✔ select @done(22-02-14 21:40)
     ☐ setmetatable
     ☐ tonumber
     ☐ tostring
