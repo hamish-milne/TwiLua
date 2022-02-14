@@ -38,6 +38,13 @@ namespace YANCL
         }
 
         public void Jump(Label label) {
+            // Combine consecutive JMPs
+            if (code.Count > 0) {
+                var prev = code[code.Count - 1];
+                if (GetA(prev) > 0 && GetSbx(prev) == 0) {
+                    JumpAt(label, code.Count - 1);
+                }
+            }
             Emit(Build2sx(JMP, 0, 0));
             JumpAt(label, code.Count - 1);
         }

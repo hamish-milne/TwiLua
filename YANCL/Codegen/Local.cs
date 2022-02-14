@@ -32,6 +32,7 @@ namespace YANCL
             public readonly Scope? Parent;
             public readonly int StartIdx;
             public readonly List<(string name, int startPC)> Locals = new List<(string, int)>();
+            public bool HasUpvalues { get; private set; }
 
             public int Count => Locals.Count + (Parent?.Count ?? 0);
 
@@ -40,11 +41,16 @@ namespace YANCL
                 StartIdx = parent?.Count ?? 0;
             }
 
-            public int? Lookup(string name) {
+            public int? Lookup(string name, bool markUpvalue) {
                 for (var i = Locals.Count - 1; i >= 0; i--) {
-                    if (Locals[i].name == name) return i + StartIdx;
+                    if (Locals[i].name == name) {
+                        if (markUpvalue) {
+                            HasUpvalues = true;
+                        }
+                        return i + StartIdx;
+                    }
                 }
-                return Parent?.Lookup(name);
+                return Parent?.Lookup(name, markUpvalue);
             }
         }
 
@@ -54,6 +60,9 @@ namespace YANCL
         public void PushScope() => currentScope = new Scope(currentScope);
 
         public void PopScope() {
+            if (currentScope!.HasUpvalues) {
+                Emit(Build2sx(JMP, currentScope.StartIdx + 1, 0));
+            }
             for (int i = 0; i < currentScope!.Locals.Count; i++) {
                 var local = currentScope.Locals[i];
                 // This ensures that locals are defined in the correct order.
@@ -78,10 +87,10 @@ namespace YANCL
             PushS();
         }
 
-        private int? Local(string name) => currentScope?.Lookup(name);
+        private int? Local(string name, bool markUpvalue) => currentScope?.Lookup(name, markUpvalue);
 
         public void Identifier(string name) {
-            var localIdx = Local(name);
+            var localIdx = Local(name, markUpvalue: false);
             if (localIdx != null) {
                 Push(new TLocal(localIdx.Value, isVar: true));
             } else {

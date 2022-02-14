@@ -86,7 +86,6 @@ namespace YANCL
         public int top;
         public int baseR;
         public int nVarargs;
-        public int resultsIdx;
         public int expResults;
     }
 
@@ -283,7 +282,6 @@ namespace YANCL
             SetFunc(callInfo.func);
             baseR = callInfo.baseR;
             nVarargs = callInfo.nVarargs;
-            resultsIdx = callInfo.resultsIdx;
             expResults = callInfo.expResults;
         }
 

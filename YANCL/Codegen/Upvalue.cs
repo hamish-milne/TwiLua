@@ -21,16 +21,17 @@ namespace YANCL
 
         private int? Upvalue(string name) {
             UpValueInfo upval;
-            var localIdx = Local(name);
-            if (localIdx != null) {
-                upval = new UpValueInfo(name, inStack: true, localIdx.Value);
-            }
             if (parent != null) {
-                var parentIdx = parent.Upvalue(name);
-                if (parentIdx != null) {
-                    upval = new UpValueInfo(name, inStack: false, parentIdx.Value);
+                var localIdx = parent.Local(name, markUpvalue: true);
+                if (localIdx != null) {
+                    upval = new UpValueInfo(name, inStack: true, localIdx.Value);
                 } else {
-                    return null;
+                    var parentIdx = parent.Upvalue(name);
+                    if (parentIdx != null) {
+                        upval = new UpValueInfo(name, inStack: false, parentIdx.Value);
+                    } else {
+                        return null;
+                    }
                 }
             } else if (name == "_ENV") {
                 upval = new UpValueInfo(name, inStack: true, 0);

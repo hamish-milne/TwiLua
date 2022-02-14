@@ -83,8 +83,9 @@ namespace YANCL
 
         void Emit(int instruction) {
             if (code.Count > 0) {
-                // Combine consecutive LOADNILs
                 var prev = code[code.Count - 1];
+
+                // Combine consecutive LOADNILs
                 if (GetOpCode(instruction) == LOADNIL &&
                     GetOpCode(prev) == LOADNIL &&
                     GetA(prev)+GetB(prev)+1 == GetA(instruction)) {

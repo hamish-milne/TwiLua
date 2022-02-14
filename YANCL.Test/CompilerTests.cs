@@ -1800,5 +1800,64 @@ namespace YANCL.Test
                 8
             );
         }
+
+        [Fact]
+        public void Upvalues()
+        {
+            DoCompilerTest(
+                @"
+                if x then
+                    local a
+                    b = function() return a end
+                elseif y then
+                    local a
+                    d = function() return a end
+                end
+                ",
+                new LuaValue[] { "x", "b", "y", "d" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(TEST, 0, 0, 0),
+                    Build2sx(JMP, 0, 5),
+                    Build2(LOADNIL, 0, 0),
+                    Build2(CLOSURE, 1, 0),
+                    Build3(SETTABUP, 0, 1 | KFlag, 1),
+                    Build2sx(JMP, 1, 8),
+                    Build2sx(JMP, 0, 7),
+                    Build3(GETTABUP, 0, 0, 2 | KFlag),
+                    Build3(TEST, 0, 0, 0),
+                    Build2sx(JMP, 0, 4),
+                    Build2(LOADNIL, 0, 0),
+                    Build2(CLOSURE, 1, 1),
+                    Build3(SETTABUP, 0, 3 | KFlag, 1),
+                    Build2sx(JMP, 1, 0),
+                    Build2(RETURN, 0, 1),
+                },
+                new [] {
+                    new LocalVarInfo("a", 4, 7),
+                    new LocalVarInfo("a", 12, 15),
+                },
+                2,
+                new [] {(
+                    new LuaValue[] { },
+                    new [] {
+                        Build2(GETUPVAL, 0, 0),
+                        Build2(RETURN, 0, 2),
+                        Build2(RETURN, 0, 1),
+                    },
+                    new LocalVarInfo[] { },
+                    1
+                ), (
+                    new LuaValue[] { },
+                    new [] {
+                        Build2(GETUPVAL, 0, 0),
+                        Build2(RETURN, 0, 2),
+                        Build2(RETURN, 0, 1),
+                    },
+                    new LocalVarInfo[] { },
+                    1
+                )}
+            );
+        }
     }
 }
