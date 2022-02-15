@@ -43,9 +43,9 @@ Misc language features:
     ☐ Stack overflow check
 Upvalues:
     ☐ _ENV
-    ☐ In-stack
-    ☐ Out-of-stack
-    ☐ Closure
+    ✔ In-stack @done(22-02-15 18:38)
+    ✔ Out-of-stack @done(22-02-15 18:38)
+    ✔ Closure @done(22-02-15 18:38)
     ✔ Jump closes upvalues w/ A parameter @done(22-02-14 23:34)
 Unary operators:
     ✔ Length @done(21-09-09 12:15)

@@ -149,6 +149,7 @@ namespace YANCL
 
         public LuaState(int stackSize, int callStackSize) {
             stack = new LuaValue[stackSize];
+            upValueStack = new LuaUpValue[stackSize];
             callStack = new CallInfo[callStackSize];
             callState = new LuaCallState(stack);
         }
@@ -286,7 +287,7 @@ namespace YANCL
         }
 
         void Close(int downTo) {
-            for (int i = top - 1; i >= downTo; i--) {
+            for (int i = func + nSlots - 1; i >= downTo; i--) {
                 var upval = upValueStack[i];
                 if (upval != null) {
                     upval.Close(stack[i]);
@@ -486,9 +487,10 @@ namespace YANCL
                         for (int i = 0; i < upValues.Length; i++) {
                             var upValInfo = proto.upvalues[i];
                             if (upValInfo.InStack) {
-                                var upValObj = upValueStack[upValInfo.Index];
+                                var idx = baseR + upValInfo.Index;
+                                var upValObj = upValueStack[idx];
                                 if (upValObj == null) {
-                                    upValueStack[upValInfo.Index] = upValObj = new LuaUpValue { Index = upValInfo.Index };
+                                    upValueStack[idx] = upValObj = new LuaUpValue { Index = idx };
                                 }
                                 upValues[i] = upValObj;
                             } else {

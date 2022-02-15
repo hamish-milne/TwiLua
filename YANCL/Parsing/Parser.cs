@@ -183,6 +183,7 @@ namespace YANCL
                     break;
                 }
                 case TokenType.Do:
+                    Next();
                     C.PushScope();
                     ParseBlock();
                     C.PopScope();

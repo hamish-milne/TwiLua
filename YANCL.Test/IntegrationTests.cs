@@ -85,5 +85,8 @@ namespace YANCL.Test
 
         [Fact]
         public void For2() => AssertEqual("local x = 0 for i = 1, 3, 2 do x = x + i end return x", 4);
+
+        [Fact]
+        public void Upvalues() => AssertEqual("do local x = 1; f = function() x = x + 2 return x end end f() return f()", 5);
     }
 }
