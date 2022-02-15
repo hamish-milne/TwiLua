@@ -46,8 +46,38 @@ namespace YANCL
                 return TokenType.Eof;
             }
 
-            var start = position;
             char c = str[position++];
+
+            if (position == 1 && c == '#') {
+                while (position < str.Length && str[position] != '\n') {
+                    position++;
+                }
+                position++;
+                return Next();
+            }
+
+            if (position < str.Length && c == '-' && str[position] == '-') {
+                bool isLongComment = false;
+                position++;
+                if (position < str.Length - 1 && str[position] == '[' && str[position + 1] == '[') {
+                    position += 2;
+                    isLongComment = true;
+                }
+                while (position < str.Length && str[position] != '\n') {
+                    position++;
+                }
+                if (isLongComment) {
+                    do {
+                        position++;
+                        if (position >= str.Length - 1) {
+                            throw new Exception("unterminated long comment");
+                        }
+                    } while (str[position] != ']' || str[position + 1] != ']');
+                    position += 2;
+                }
+                return Next();
+            }
+
             if (char.IsWhiteSpace(c)) {
                 while (position < str.Length && char.IsWhiteSpace(str[position])) {
                     position++;
@@ -55,6 +85,7 @@ namespace YANCL
                 return Next();
             }
 
+            var start = position - 1;
             if (char.IsLetter(c) || c == '_') {
                 while (position < str.Length && (char.IsLetter(str[position]) || char.IsDigit(str[position]) || str[position] == '_')) {
                     position++;

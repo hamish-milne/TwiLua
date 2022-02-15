@@ -37,12 +37,12 @@ Declarations:
     ✔ Self function @done(21-09-09 11:29)
     ✔ Local variable scoping @done(22-02-13 21:22)
 Misc language features:
-    ☐ Comments
-    ☐ Hashbang
+    ✔ Comments @done(22-02-15 19:44)
+    ✔ Hashbang @done(22-02-15 19:44)
     ☐ Compile error handling
     ☐ Stack overflow check
 Upvalues:
-    ☐ _ENV
+    ✔ _ENV @done(22-02-15 19:06)
     ✔ In-stack @done(22-02-15 18:38)
     ✔ Out-of-stack @done(22-02-15 18:38)
     ✔ Closure @done(22-02-15 18:38)

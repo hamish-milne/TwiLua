@@ -88,5 +88,14 @@ namespace YANCL.Test
 
         [Fact]
         public void Upvalues() => AssertEqual("do local x = 1; f = function() x = x + 2 return x end end f() return f()", 5);
+
+        [Fact]
+        public void Hashbang() => AssertEqual("#!/usr/bin/env lua\nreturn 1", 1);
+
+        [Fact]
+        public void ShortComment() => AssertEqual("-- foo\nreturn 1", 1);
+
+        [Fact]
+        public void LongComment() => AssertEqual("--[[ ]] foo\nbar\n]] return 1", 1);
     }
 }
