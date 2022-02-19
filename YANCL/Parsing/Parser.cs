@@ -7,6 +7,7 @@ namespace YANCL
     {
         readonly Lexer lexer;
         readonly Compiler C;
+        readonly Stack<Label> breakLabels = new Stack<Label>();
 
         Token Next() => lexer.Next();
         TokenType Peek() => lexer.Peek();
@@ -51,6 +52,10 @@ namespace YANCL
                 ParseStat();
             }
         }
+
+        void PushBreak() => PushBreak(C.Label());
+        void PushBreak(Label label) => breakLabels.Push(label);
+        void PopBreak() => C.Mark(breakLabels.Pop());
 
         void ParseStat() {
             switch (Peek()) {
@@ -119,17 +124,19 @@ namespace YANCL
                     ParseExpression(condition: true);
                     Expect(TokenType.Do, "condition");
                     var c1 = C.Label();
+                    PushBreak(c1);
                     C.JumpIfFalse(c1);
                     C.PushScope();
                     ParseBlock();
                     C.PopScope();
                     C.Jump(c0);
-                    C.Mark(c1);
+                    PopBreak();
                     break;
                 }
                 case TokenType.Repeat: {
                     Next();
                     var c0 = C.Label();
+                    PushBreak();
                     C.Mark(c0);
                     C.PushScope();
                     while (!TryTake(TokenType.Until)) {
@@ -138,6 +145,7 @@ namespace YANCL
                     ParseExpression(condition: true);
                     C.PopScope();
                     C.JumpIfFalse(c0);
+                    PopBreak();
                     break;
                 }
                 case TokenType.For: {
@@ -160,16 +168,19 @@ namespace YANCL
                         Expect(TokenType.Do, "for loop body");
                         C.ForInit();
                         var state = C.ForPrep();
+                        PushBreak();
                         C.PushScope();
                         C.Reserve(tmpLocals[0]);
                         ParseBlock();
                         C.PopScope();
                         C.ForLoop(state);
+                        PopBreak();
                     } else {
                         Expect(TokenType.In, "generic for loop");
                         var argc = ParseArgumentList(0);
                         Expect(TokenType.Do, "for loop body");
                         var state = C.GForInit(argc);
+                        PushBreak();
                         C.PushScope();
                         foreach (var l in tmpLocals) {
                             C.Reserve(l);
@@ -177,6 +188,7 @@ namespace YANCL
                         ParseBlock();
                         C.PopScope();
                         C.GForLoop(state, tmpLocals.Count);
+                        PopBreak();
                     }
                     tmpLocals.Clear();
                     C.PopScope();
@@ -187,6 +199,13 @@ namespace YANCL
                     C.PushScope();
                     ParseBlock();
                     C.PopScope();
+                    break;
+                case TokenType.Break:
+                    Next();
+                    if (breakLabels.Count == 0) {
+                        throw new Exception("Break outside of loop");
+                    }
+                    C.Jump(breakLabels.Peek());
                     break;
                 default:
                     throw new Exception($"Unexpected token {Peek()}");

@@ -1859,5 +1859,66 @@ namespace YANCL.Test
                 )}
             );
         }
+
+        [Fact]
+        public void Break1()
+        {
+            DoCompilerTest(
+                "for i = 1, 10 do if a(i) then break end end",
+                new LuaValue[] { 1, 10, "a" },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 0),
+                    Build2sx(FORPREP, 0, 5),
+                    Build3(GETTABUP, 4, 0, 2 | KFlag),
+                    Build2(MOVE, 5, 3),
+                    Build3(CALL,  4, 2, 2),
+                    Build3(TEST, 4, 0, 1),
+                    Build2sx(JMP, 0, 1),
+                    Build2sx(FORLOOP, 0, -6),
+                    Build2(RETURN, 0, 1),
+                },
+                new [] {
+                    new LocalVarInfo("(for index)", 3, 10),
+                    new LocalVarInfo("(for limit)", 3, 10),
+                    new LocalVarInfo("(for step)", 3, 10),
+                    new LocalVarInfo("i", 4, 9)
+                },
+                6
+            );
+        }
+
+        [Fact]
+        public void Break2()
+        {
+            DoCompilerTest(
+                "for i = 1, 10 do if a(i) then b() break end end",
+                new LuaValue[] { 1, 10, "a", "b" },
+                new [] {
+                    Build2x(LOADK, 0, 0),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 0),
+                    Build2sx(FORPREP, 0, 8),
+                    Build3(GETTABUP, 4, 0, 2 | KFlag),
+                    Build2(MOVE, 5, 3),
+                    Build3(CALL,  4, 2, 2),
+                    Build3(TEST, 4, 0, 0),
+                    Build2sx(JMP, 0, 3),
+                    Build3(GETTABUP, 4, 0, 3 | KFlag),
+                    Build3(CALL, 4, 1, 1),
+                    Build2sx(JMP, 0, 1),
+                    Build2sx(FORLOOP, 0, -9),
+                    Build2(RETURN, 0, 1),
+                },
+                new [] {
+                    new LocalVarInfo("(for index)", 3, 13),
+                    new LocalVarInfo("(for limit)", 3, 13),
+                    new LocalVarInfo("(for step)", 3, 13),
+                    new LocalVarInfo("i", 4, 12)
+                },
+                6
+            );
+        }
     }
 }
