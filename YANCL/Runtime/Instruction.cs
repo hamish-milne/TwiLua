@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System;
 
 namespace YANCL
 {
@@ -70,6 +71,30 @@ namespace YANCL
                 c = -1 - (c & ~KFlag);
             }
             return $"{opCode}\n    A: {a}\n    B: {b}\n    C: {c}\n    Bx: {bx}\n    Sbx: {sbx}\n    Ax: {ax}";
+        }
+
+        public static int FromFBByte(int value) {
+            return value < 0b1000 ? value : (0b1000 | (value & 0b111)) << ((value >> 3) - 1);
+        }
+
+        public static int ToFPByte(int value) {
+            if (value < 8) {
+                return value;
+            }
+            int exp = 0;
+            int mantissa;
+            do {
+                mantissa = (int)Math.Ceiling((float)value / (1 << exp));
+                if (mantissa > 0b1111 && exp < 0b11110) {
+                    exp++;
+                } else {
+                    break;
+                }
+            } while(true);
+            if (mantissa > 0b1111) {
+                mantissa = 0b1111;
+            }
+            return ((exp+1) << 3) | (mantissa & 0b111);
         }
     }
 }

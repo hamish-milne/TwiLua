@@ -26,8 +26,8 @@ Expressions:
     ✔ Index suffix @done(21-09-05 21:55)
     ✔ Call suffix @done(21-09-05 21:55)
     ✔ Table constructor @done(21-09-08 17:19)
-    ☐ Tables: Fields per flush
-    ☐ Floating point byte
+    ✔ Tables: Fields per flush @done(22-06-26 00:29)
+    ✔ Floating point byte @done(22-06-26 00:30)
     ✔ Function expression @done(21-09-08 23:08)
     ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:

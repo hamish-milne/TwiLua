@@ -1938,5 +1938,32 @@ namespace YANCL.Test
                 2
             );
         }
+
+        [Fact]
+        public void FieldsPerFlush()
+        {
+            DoCompilerTest(
+                @"foo = {
+    1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,
+}",
+                new LuaValue[] { "foo", 1 },
+                new [] {
+                    Build3(NEWTABLE, 0, 31, 0)
+                }.Concat(Enumerable.Range(1, Lua.FieldsPerFlush).Select(x => Build2x(LOADK, x, 1))).Concat(new []{
+                    Build3(SETLIST, 0, Lua.FieldsPerFlush, 1)
+                }).Concat(Enumerable.Range(1, 10).Select(x => Build2x(LOADK, x, 1))).Concat(new []{
+                    Build3(SETLIST, 0, 10, 2),
+                    Build3(SETTABUP, 0, 0 | KFlag, 0),
+                    Build2(RETURN, 0, 1),
+                }).ToArray(),
+                new LocalVarInfo[] { },
+                51
+            );
+        }
     }
 }

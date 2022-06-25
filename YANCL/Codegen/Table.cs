@@ -75,13 +75,25 @@ namespace YANCL
             if (argPending) {
                 hasDispatch = Dispatch(array, 0) == 0;
             }
+            var nArray = hasDispatch ? array-1 : array;
             if (Pop() is TNewTable op) {
                 if (array > 0) {
-                    code.Add(Build3(SETLIST, op.Index, hasDispatch ? array-1 : array, 1));
-                    Top -= array;
+                    code.Add(Build3(SETLIST, op.Index, nArray % Lua.FieldsPerFlush, (array / Lua.FieldsPerFlush) + 1));
+                    Top -= array % Lua.FieldsPerFlush;
                 }
-                code[op.Instruction] = Build3(NEWTABLE, op.Index, hasDispatch ? array-1 : array, hash);
+                code[op.Instruction] = Build3(NEWTABLE, op.Index, ToFPByte(nArray), ToFPByte(hash));
                 Push(new TLocal(op.Index, isVar: false));
+            } else {
+                throw new InvalidOperationException();
+            }
+        }
+
+        public void FlushTable(int array)
+        {
+            Argument();
+            if (Peek(0) is TNewTable op) {
+                code.Add(Build3(SETLIST, op.Index, Lua.FieldsPerFlush, ((array-1) / Lua.FieldsPerFlush) + 1));
+                Top -= Lua.FieldsPerFlush;
             } else {
                 throw new InvalidOperationException();
             }

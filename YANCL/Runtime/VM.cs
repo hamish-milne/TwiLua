@@ -477,7 +477,7 @@ namespace YANCL
                             list.Add(LuaValue.Nil);
                         }
                         for ( var i = 0; i < n; i++ ) {
-                            list[GetC(op)*50 + i] = R(GetA(op) + i);
+                            list[GetC(op)*Lua.FieldsPerFlush + i] = R(GetA(op) + i);
                         }
                         continue;
                     }

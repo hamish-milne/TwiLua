@@ -566,6 +566,7 @@ namespace YANCL
 
         void ParseTableConstructor() {
             int nArray = 0;
+            int nArrayTotal = 0;
             int nHash = 0;
             bool argPending = false;
             C.NewTable();
@@ -588,6 +589,7 @@ namespace YANCL
                             ParseExpression();
                             argPending = true;
                             nArray++;
+                            nArrayTotal++;
                         }
                         break;
                     }
@@ -604,8 +606,14 @@ namespace YANCL
                     }
                     default:
                         ParseExpression();
-                        argPending = true;
                         nArray++;
+                        nArrayTotal++;
+                        if (nArray >= Lua.FieldsPerFlush) {
+                            C.FlushTable(nArrayTotal);
+                            nArray = 0;
+                        } else {
+                            argPending = true;
+                        }
                         break;
                 }
                 if (!TryTake(TokenType.Comma)) {
@@ -613,7 +621,7 @@ namespace YANCL
                 }
             }
             Expect(TokenType.CloseBrace, "table constructor");
-            C.SetList(nArray, nHash, argPending);
+            C.SetList(nArrayTotal, nHash, argPending);
         }
 
         readonly List<string> tmpLocals = new List<string>();
