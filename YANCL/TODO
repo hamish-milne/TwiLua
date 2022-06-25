@@ -27,6 +27,7 @@ Expressions:
     ✔ Call suffix @done(21-09-05 21:55)
     ✔ Table constructor @done(21-09-08 17:19)
     ☐ Tables: Fields per flush
+    ☐ Floating point byte
     ✔ Function expression @done(21-09-08 23:08)
     ✔ Parenthesized @done(21-09-05 21:58)
 Declarations:
@@ -75,8 +76,7 @@ Blocks:
     ✔ Repeat @done(22-02-01 22:30)
     ✔ Numeric for @done(22-02-05 12:44)
     ✔ Generic for @done(22-02-13 21:22)
-    ☐ continue
-    ☐ break
+    ✔ break @done(22-06-25 18:16)
 Metafunctions:
     ☐ Metatable
     ☐ Index

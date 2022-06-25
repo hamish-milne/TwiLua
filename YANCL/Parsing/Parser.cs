@@ -125,7 +125,7 @@ namespace YANCL
                     Expect(TokenType.Do, "condition");
                     var c1 = C.Label();
                     PushBreak(c1);
-                    C.JumpIfFalse(c1);
+                    C.JumpIf(c1, false);
                     C.PushScope();
                     ParseBlock();
                     C.PopScope();
@@ -144,7 +144,7 @@ namespace YANCL
                     }
                     ParseExpression(condition: true);
                     C.PopScope();
-                    C.JumpIfFalse(c0);
+                    C.JumpIf(c0, false);
                     PopBreak();
                     break;
                 }
@@ -217,7 +217,15 @@ namespace YANCL
             ParseExpression(condition: true);
             Expect(TokenType.Then, "condition");
             var c1 = C.Label();
-            C.JumpIfFalse(c1);
+            if (TryTake(TokenType.Break)) {
+                if (breakLabels.Count == 0) {
+                    throw new Exception("Break outside of loop");
+                }
+                C.JumpIf(breakLabels.Peek(), true);
+                C.Jump(c1);
+            } else {
+                C.JumpIf(c1, false);
+            }
             C.PushScope();
             while (true) {
                 switch (Peek()) {

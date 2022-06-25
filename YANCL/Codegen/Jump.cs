@@ -20,7 +20,11 @@ namespace YANCL
             if (label.Location < 0) {
                 label.Location = dst;
                 foreach (var refIdx in label.References) {
-                    code[refIdx] = Build2sx(GetOpCode(code[refIdx]), GetA(code[refIdx]), label.Location - refIdx - 1);
+                    if (refIdx == code.Count - 1 && dst == code.Count) {
+                        code.RemoveAt(refIdx);
+                    } else {
+                        code[refIdx] = Build2sx(GetOpCode(code[refIdx]), GetA(code[refIdx]), label.Location - refIdx - 1);
+                    }
                 }
             } else {
                 throw new InvalidOperationException("Label already marked");
@@ -57,7 +61,7 @@ namespace YANCL
             _ => false
         });
 
-        public void JumpIfFalse(Label label) {
+        public void JumpIf(Label label, bool value) {
             if (IsConstantTrue(Peek(0))) {
                 Pop();
                 return;
@@ -75,7 +79,9 @@ namespace YANCL
                 op = logical.Last;
             }
             if (op is TCondition cond) {
-                cond.Invert(this);
+                if (!value) {
+                    cond.Invert(this);
+                }
                 JumpAt(label, cond.Jump);
             } else {
                 throw new InvalidOperationException("Expected condition");

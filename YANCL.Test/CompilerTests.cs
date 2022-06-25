@@ -18,7 +18,6 @@ namespace YANCL.Test
         ) {
             var result = Lua.Compile(source);
             Assert.Equal(expectedConstants, result.constants);
-            Assert.Equal(expectedInstructions.Length, result.code.Length);
             if (!expectedInstructions.SequenceEqual(result.code)) {
                 foreach (var pair in expectedInstructions.Zip(result.code)) {
                     if (pair.Item1 != pair.Item2) {
@@ -26,6 +25,7 @@ namespace YANCL.Test
                     }
                 }
             }
+            Assert.Equal(expectedInstructions.Length, result.code.Length);
             Assert.Equal(expectedLocals, result.locals);
             Assert.Equal(nSlots, result.nSlots);
             if (functions != null) {
