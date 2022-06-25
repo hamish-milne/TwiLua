@@ -31,7 +31,7 @@ namespace YANCL
         {
             public readonly Scope? Parent;
             public readonly int StartIdx;
-            public readonly List<(string name, int startPC)> Locals = new List<(string, int)>();
+            public readonly List<(string name, int startPC, int infoIdx)> Locals = new List<(string, int, int)>();
             public bool HasUpvalues { get; private set; }
 
             public int Count => Locals.Count + (Parent?.Count ?? 0);
@@ -60,13 +60,15 @@ namespace YANCL
         public void PushScope() => currentScope = new Scope(currentScope);
 
         public void PopScope() {
-            if (currentScope!.HasUpvalues) {
+            if (currentScope == null) {
+                throw new InvalidOperationException();
+            }
+            if (currentScope.HasUpvalues) {
                 Emit(Build2sx(JMP, currentScope.StartIdx + 1, 0));
             }
-            for (int i = 0; i < currentScope!.Locals.Count; i++) {
+            for (int i = 0; i < currentScope.Locals.Count; i++) {
                 var local = currentScope.Locals[i];
-                // This ensures that locals are defined in the correct order.
-                locals.Insert(i, new LocalVarInfo(local.name, local.startPC, code.Count));
+                locals[local.infoIdx] = new LocalVarInfo(local.name, local.startPC, code.Count);
             }
             if (Top != currentScope.Count) {
                 throw new InvalidOperationException("Stack is not empty");
@@ -76,10 +78,14 @@ namespace YANCL
         }
 
         public void DefineLocal(string name) {
-            if (currentScope!.Locals.Any(x => x.name == name)) {
+            if (currentScope == null) {
+                throw new InvalidOperationException();
+            }
+            if (currentScope.Locals.Any(x => x.name == name)) {
                 throw new Exception($"local '{name}' already defined");
             }
-            currentScope!.Locals.Add((name, code.Count));
+            currentScope.Locals.Add((name, code.Count, locals.Count));
+            locals.Add(new LocalVarInfo(name, code.Count, -1));
         }
 
         public void Reserve(string name) {
