@@ -88,6 +88,10 @@ namespace YANCL
             if (argCount == 1 && Peek(0) is TLocal local) {
                 Emit(Build2(RETURN, local.Index, 2));
                 Pop();
+            } else if (argCount == 1 && Peek(0) is TCall call) {
+                Emit(Build3(TAILCALL, call.Func, call.B, 0));
+                Emit(Build2(RETURN, call.Func, 0));
+                Pop();
             } else {
                 var b = Dispatch(argCount, 0);
                 Emit(Build2(RETURN, argCount == 0 ? 0 : (Top-argCount), b));

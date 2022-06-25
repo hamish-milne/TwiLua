@@ -1920,5 +1920,23 @@ namespace YANCL.Test
                 6
             );
         }
+
+        [Fact]
+        public void TailCall()
+        {
+            DoCompilerTest(
+                "return foo(a)",
+                new LuaValue[] { "foo", "a" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(GETTABUP, 1, 0, 1 | KFlag),
+                    Build3(TAILCALL, 0, 2, 0),
+                    Build2(RETURN, 0, 0),
+                    Build2(RETURN, 0, 1),
+                },
+                new LocalVarInfo[] { },
+                2
+            );
+        }
     }
 }

@@ -15,7 +15,7 @@ Function call:
     ✔ Self call @done(21-09-09 11:56)
     ✔ C functions @done(21-10-26 14:13)
     ✔ Return statement @done(21-09-09 15:01)
-    ☐ Tail call
+    ✔ Tail call @done(22-06-25 19:38)
 Expressions:
     ✔ True, false, nil @done(21-09-07 10:16)
     ✔ Number literals @done(21-09-07 11:44)
