@@ -442,6 +442,9 @@ namespace YANCL
                         Call(GetA(op), GetB(op), GetC(op));
                         continue;
                     case OpCode.TAILCALL:
+                        if ( R(GetA(op)).Type == LuaType.CFUNCTION ) {
+                            goto case OpCode.CALL;
+                        }
                         Close(baseR);
                         Call(GetA(op), GetB(op), GetC(op));
                         continue;
@@ -468,16 +471,20 @@ namespace YANCL
                         pc += GetSbx(op);
                         continue;
                     case OpCode.SETLIST: {
-                        var list = R(GetB(op)).Table!;
+                        var list = R(GetA(op)).Table!;
+                        var block = GetC(op) - 1;
+                        if (block < 0) {
+                            block = code[pc++];
+                        }
                         var n = GetB(op);
-                        if ( n > 0 ) {
+                        if ( n <= 0 ) {
                             n = top - GetA(op);
                         }
-                        while ( n > list.Count ) {
+                        while ( (block*Lua.FieldsPerFlush + n) > list.Count ) {
                             list.Add(LuaValue.Nil);
                         }
-                        for ( var i = 0; i < n; i++ ) {
-                            list[GetC(op)*Lua.FieldsPerFlush + i] = R(GetA(op) + i);
+                        for ( var i = 1; i <= n; i++ ) {
+                            list[block*Lua.FieldsPerFlush + i] = R(GetA(op) + i);
                         }
                         continue;
                     }

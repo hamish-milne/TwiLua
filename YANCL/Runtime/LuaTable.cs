@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 namespace YANCL
 {
 
-    public sealed class LuaTable : IEnumerable<(LuaValue key, LuaValue value)>
+    public sealed class LuaTable : ICollection<(LuaValue key, LuaValue value)>
     {
 #region Details
         const int initialSize = 4;
@@ -40,7 +40,7 @@ namespace YANCL
                 return Index < Table.arrayCount + Table.mapCount;
             }
 
-            public void Reset() => Index = -1;
+            public void Reset() => Index = 0;
         }
 
         IEnumerator<(LuaValue key, LuaValue value)> IEnumerable<(LuaValue key, LuaValue value)>.GetEnumerator() => GetEnumerator();
@@ -152,13 +152,15 @@ namespace YANCL
         public void Add(in LuaValue value) {
             arrayCount++;
             EnsureCapacity(ref array, arrayCount);
-            this[arrayCount - 1] = value;
+            this[arrayCount] = value;
         }
 
         public int Count {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => arrayCount;
         }
+
+        public bool IsReadOnly => false;
 
         public void Insert(int pos, in LuaValue value) {
             if (pos < 0) {
@@ -206,6 +208,34 @@ namespace YANCL
                 return (mapItem.key, mapItem.value);
             }
             return null;
+        }
+
+        void ICollection<(LuaValue key, LuaValue value)>.Add((LuaValue key, LuaValue value) item) => Add(item.key, item.value);
+
+        public void Clear()
+        {
+            arrayCount = 0;
+            mapCount = 0;
+            array = null;
+            map = null;
+        }
+
+        bool ICollection<(LuaValue key, LuaValue value)>.Contains((LuaValue key, LuaValue value) item) => this[item.key].Equals(item.value);
+
+        void ICollection<(LuaValue key, LuaValue value)>.CopyTo((LuaValue key, LuaValue value)[] array, int arrayIndex)
+        {
+            foreach (var (key, value) in this) {
+                array[arrayIndex++] = (key, value);
+            }
+        }
+
+        bool ICollection<(LuaValue key, LuaValue value)>.Remove((LuaValue key, LuaValue value) item)
+        {
+            if (this[item.key].Equals(item.value)) {
+                this[item.key] = LuaValue.Nil;
+                return true;
+            }
+            return false;
         }
     }
 }
