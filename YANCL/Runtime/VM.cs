@@ -45,9 +45,11 @@ namespace YANCL
         public UpValueInfo[] upvalues;
         public LuaFunction[] prototypes;
         public LocalVarInfo[] locals;
+        public Location[] locations;
         public LuaFunction? parent;
         public int nParams;
         public int nSlots;
+        public string chunkName;
         public bool IsVaradic;
     }
 

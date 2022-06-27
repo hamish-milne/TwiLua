@@ -45,7 +45,7 @@ namespace YANCL.Test
         public void Next() {
             var l = new Lua();
             StdLib.Basic.Load(l.Globals);
-            Assert.Equal(l.DoString("local x = 0; for k,v in next, {a=1, b=2, c=3} do x = x + v end; return x"), new LuaValue[]{6});
+            Assert.Equal(new LuaValue[]{6}, l.DoString("local x = 0; for k,v in next, {a=1, b=2, c=3} do x = x + v end; return x"));
         }
 
         [Fact]
@@ -74,6 +74,20 @@ namespace YANCL.Test
         public void PCall() {
             AssertEqual("pcall(function(a) return a end, 1)", true, 1);
             AssertEqual("pcall(function(a) error(a) end, 'foo')", false, "foo");
+        }
+
+        [Fact]
+        public void Pairs() {
+            var l = new Lua();
+            StdLib.Basic.Load(l.Globals);
+            Assert.Equal(new LuaValue[]{6}, l.DoString("local x = 0; for k,v in pairs({1, a=2, 3}) do x = x + v end; return x"));
+        }
+
+        [Fact]
+        public void IPairs() {
+            var l = new Lua();
+            StdLib.Basic.Load(l.Globals);
+            Assert.Equal(new LuaValue[]{6}, l.DoString("local x = 0; for k,v in ipairs({1, 2, 3, a=4}) do x = x + v end; return x"));
         }
     }
 }

@@ -17,8 +17,8 @@ namespace YANCL
             return state.Execute(new LuaClosure(Compile(str), globalsUpValue));
         }
 
-        public static LuaFunction Compile(string str) {
-            return new Parser(new Lexer(str), new Compiler()).ParseChunk();
+        public static LuaFunction Compile(string str, string chunkName = "chunk") {
+            return new Parser(new Lexer(str), new Compiler(chunkName)).ParseChunk();
         }
     }
 }

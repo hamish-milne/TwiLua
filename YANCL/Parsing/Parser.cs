@@ -9,11 +9,25 @@ namespace YANCL
         readonly Compiler C;
         readonly Stack<Label> breakLabels = new Stack<Label>();
 
-        Token Next() => lexer.Next();
-        TokenType Peek() => lexer.Peek();
+        Token Next() {
+            var token = lexer.Next();
+            C.Location = token.location;
+            return token;
+        }
+        Token Peek() => lexer.Peek();
         string? Expect(TokenType type, string after) => lexer.Expect(type, after);
-        string ParseString(char term) => lexer.ParseString(term);
-        bool TryTake(TokenType type) => lexer.TryTake(type);
+        string ParseString(char term) {
+            var (value, location) = lexer.ParseString(term);
+            C.Location = location;
+            return value;
+        }
+        bool TryTake(TokenType type) {
+            if (Peek().type == type) {
+                Next();
+                return true;
+            }
+            return false;
+        }
 
 
         public Parser(Lexer lexer, Compiler compiler) {
@@ -22,7 +36,7 @@ namespace YANCL
         }
 
         bool PeekSuffix() {
-            switch (Peek()) {
+            switch (Peek().type) {
                 case TokenType.Dot:
                 case TokenType.OpenBracket:
                 case TokenType.OpenParen:
@@ -58,7 +72,7 @@ namespace YANCL
         void PopBreak() => C.Mark(breakLabels.Pop());
 
         void ParseStat() {
-            switch (Peek()) {
+            switch (Peek().type) {
                 case TokenType.Identifier:
                 case TokenType.OpenParen:
                     ParseVar(1);
@@ -90,7 +104,7 @@ namespace YANCL
                 case TokenType.Return: {
                     Next();
                     int argc = 0;
-                    switch (Peek()) {
+                    switch (Peek().type) {
                         case TokenType.Eof:
                         case TokenType.Semicolon:
                         case TokenType.End:
@@ -100,10 +114,10 @@ namespace YANCL
                             break;
                     }
                     C.Return(argc);
-                    while (Peek() == TokenType.Semicolon) {
+                    while (Peek().type == TokenType.Semicolon) {
                         Next();
                     }
-                    switch (Peek()) {
+                    switch (Peek().type) {
                         case TokenType.End:
                         case TokenType.Eof:
                         case TokenType.Else:
@@ -228,7 +242,7 @@ namespace YANCL
             }
             C.PushScope();
             while (true) {
-                switch (Peek()) {
+                switch (Peek().type) {
                     case TokenType.End:
                         C.PopScope();
                         C.Mark(c1);
@@ -309,7 +323,7 @@ namespace YANCL
         }
 
         void ParseSuffix(ref bool endsInCall) {
-            switch (Peek()) {
+            switch (Peek().type) {
                 case TokenType.Dot:
                     C.Indexee();
                     Next();
@@ -389,17 +403,17 @@ namespace YANCL
         struct Operation {
             public bool isUnary;
             public int order;
-            public TokenType token;
+            public Token token;
             public bool? isLogical;
         }
 
         readonly Stack<Operation> operations = new Stack<Operation>();
         private int parens;
 
-        TokenType? GetUOP(out int order) {
+        Token? GetUOP(out int order) {
             order = 10;
             var token = Peek();
-            switch (token) {
+            switch (token.type) {
                 case TokenType.Not:
                 case TokenType.Hash:
                 case TokenType.Minus:
@@ -411,10 +425,10 @@ namespace YANCL
             }
         }
 
-        TokenType? GetBOP(out int order, out bool isLogical) {
+        Token? GetBOP(out int order, out bool isLogical) {
             order = -1;
             var token = Peek();
-            order = token switch {
+            order = token.type switch {
                 TokenType.Or => 0,
                 TokenType.And => 1,
                 TokenType.LessThan => 2,
@@ -449,22 +463,23 @@ namespace YANCL
         void ResolveOperations(int order, bool condition) {
             while (operations.Count > 0 && operations.Peek().order >= order) {
                 var op = operations.Pop();
-                if (op.token == TokenType.CloseParen) {
+                if (op.token.type == TokenType.CloseParen) {
                     ResolveOperations(-1, condition);
-                    if (operations.Pop().token != TokenType.OpenParen) {
+                    if (operations.Pop().token.type != TokenType.OpenParen) {
                         throw new InvalidOperationException();
                     }
                     continue;
                 }
-                if (op.token == TokenType.OpenParen) {
+                if (op.token.type == TokenType.OpenParen) {
                     operations.Push(op);
                     break;
                 }
-                if (condition && op.token == TokenType.Not) {
+                C.Location = op.token.location;
+                if (condition && op.token.type == TokenType.Not) {
                     C.Test();
                 }
                 condition = op.isLogical ?? condition;
-                switch (op.token) {
+                switch (op.token.type) {
                     case TokenType.Not: C.Not(); break;
                     case TokenType.Hash: C.Len(); break;
                     case TokenType.Minus:
@@ -516,24 +531,25 @@ namespace YANCL
                         isLogical = false,
                     });
                 }
-                if (TryTake(TokenType.OpenParen)) {
+                if (Peek().type == TokenType.OpenParen) {
                     parens++;
                     operations.Push(new Operation {
-                        token = TokenType.OpenParen,
-                        order = 999
+                        token = Next(),
+                        order = 999,
                     });
                     continue;
                 }
                 ParseTerm();
-                while (parens > 0 && TryTake(TokenType.CloseParen)) {
+                while (parens > 0 && Peek().type == TokenType.CloseParen) {
+                    var closeParen = Next();
                     parens--;
                     if (PeekSuffix()) {
                         ResolveOperations(-1, condition);
                         ParseSuffix();
                     } else {
                         operations.Push(new Operation {
-                            token = TokenType.CloseParen,
-                            order = 999
+                            token = closeParen,
+                            order = 999,
                         });
                     }
                 }
@@ -541,7 +557,7 @@ namespace YANCL
                 if (bop == null) break;
                 ResolveOperations(order, isLogical);
                 if (isLogical) {
-                    C.Test(keepConstantTrue: bop == TokenType.And);
+                    C.Test(keepConstantTrue: bop.Value.type == TokenType.And);
                 }
                 operations.Push(new Operation {
                     token = bop.Value,
@@ -556,7 +572,7 @@ namespace YANCL
                 ResolveOperations(-1, condition);
             }
             // TODO: Tidy this up a bit?
-            while (operations.Count > 0 && operations.Peek().token == TokenType.OpenParen) {
+            while (operations.Count > 0 && operations.Peek().token.type == TokenType.OpenParen) {
                 operations.Pop();
             }
             if (operations.Count > 0) {
@@ -570,12 +586,12 @@ namespace YANCL
             int nHash = 0;
             bool argPending = false;
             C.NewTable();
-            while (Peek() != TokenType.CloseBrace) {
+            while (Peek().type != TokenType.CloseBrace) {
                 if (argPending) {
                     C.Argument();
                     argPending = false;
                 }
-                switch (Peek()) {
+                switch (Peek().type) {
                     case TokenType.Identifier: {
                         var key = Next();
                         if (TryTake(TokenType.Equal)) {
@@ -656,16 +672,16 @@ namespace YANCL
             if (hasSelf) {
                 scope.Reserve("self");
             }
-            while (Peek() != TokenType.CloseParen) {
+            while (Peek().type != TokenType.CloseParen) {
                 if (TryTake(TokenType.TripleDot)) {
                     scope.IsVaradic = true;
                     Expect(TokenType.CloseParen, "function varadic specifier");
                     break;
                 }
                 scope.Reserve(Expect(TokenType.Identifier, "function argument")!);
-                if (Peek() == TokenType.Comma) {
+                if (Peek().type == TokenType.Comma) {
                     Next();
-                } else if (Peek() != TokenType.CloseParen) {
+                } else if (Peek().type != TokenType.CloseParen) {
                     throw new Exception($"Expected ',' or ')' but got {Peek()}");
                 }
             }

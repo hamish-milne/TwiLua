@@ -8,10 +8,13 @@ namespace YANCL
 {
     public partial class Compiler
     {
-        public Compiler() { }
+        public Compiler(string chunkName) {
+            this.chunkName = chunkName;
+        }
         private Compiler(Compiler parent, int prototypeIdx) {
             this.parent = parent;
             this.prototypeIdx = prototypeIdx;
+            this.chunkName = parent.chunkName;
         }
 
         abstract class Operand
@@ -42,13 +45,16 @@ namespace YANCL
             });
         }
 
+        private readonly string chunkName;
         private readonly List<Operand> operands = new List<Operand>();
         private readonly List<int> code = new List<int>();
+        private readonly List<Location> locations = new List<Location>();
         private readonly List<LuaValue> constants = new List<LuaValue>();
         int Top;
         int maxStack;
 
         public bool IsVaradic { get; set; }
+        public Location Location { get; set; }
 
         private int PushS() {
             var idx = Top++;
@@ -95,6 +101,7 @@ namespace YANCL
                 }
             }
             code.Add(instruction);
+            locations.Add(Location);
         }
 
         public void Constant(LuaValue value) => Push(new TConstant(value));
@@ -106,6 +113,8 @@ namespace YANCL
                 constants = constants.ToArray(),
                 upvalues = upValues.ToArray(),
                 prototypes = closures.ToArray()!,
+                locations = locations.ToArray(),
+                chunkName = chunkName,
                 locals = locals.ToArray(),
                 nParams = locals.Count(l => l.Start == 0),
                 nSlots = maxStack - Top,

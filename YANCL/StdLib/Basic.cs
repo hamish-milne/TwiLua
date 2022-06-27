@@ -50,22 +50,16 @@ namespace YANCL.StdLib {
                     }
                 }
             });
-            globals["next"] = new LuaCFunction(s => {
+            var next = new LuaCFunction(s => {
                 if (s.Count < 1) {
                     throw new WrongNumberOfArguments();
                 }
                 var table = s.Table(1);
                 var key = s.Count >= 2 ? s[2] : LuaValue.Nil;
-                LuaValue key2, value;
-                if (key == LuaValue.Nil) {
-                    (key2, value) = table.Start() ?? (LuaValue.Nil, LuaValue.Nil);
-                } else {
-                    (key2, value) = table.Next(key) ?? (LuaValue.Nil, LuaValue.Nil);
-                }
-                s[0] = key2;
-                s[1] = value;
+                (s[0], s[1]) = table.Next(key) ?? (LuaValue.Nil, LuaValue.Nil);
                 return 2;
             });
+            globals["next"] = next;
             globals["_G"] = globals;
             globals["_VERSION"] = "Lua 5.4";
             globals["type"] = new LuaCFunction(s => {
@@ -101,6 +95,33 @@ namespace YANCL.StdLib {
                     s.ResetCallStack();
                     s[0] = false;
                     s[1] = e is LuaRuntimeError lerror ? lerror.Value : e.Message;
+                    return 2;
+                }
+            });
+            globals["pairs"] = new LuaCFunction(s => {
+                if (s.Count < 1) {
+                    throw new WrongNumberOfArguments();
+                }
+                s[0] = next;
+                s[2] = LuaValue.Nil;
+                return 3;
+            });
+            globals["ipairs"] = new LuaCFunction(s => {
+                if (s.Count == 0) {
+                    throw new WrongNumberOfArguments();
+                }
+                if (s.Count == 1) {
+                    s[2] = 0;
+                    return 3;
+                }
+                var table = s.Table(1);
+                var idx = s.Integer(2) + 1;
+                if (idx > table.ArrayCount) {
+                    s[0] = LuaValue.Nil;
+                    return 1;
+                } else {
+                    s[0] = idx;
+                    s[1] = table[idx];
                     return 2;
                 }
             });

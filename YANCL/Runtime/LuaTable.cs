@@ -23,6 +23,8 @@ namespace YANCL
         private int arrayCount;
         private int mapCount;
 
+        public int ArrayCount => arrayCount;
+
         public struct MapEnumerator : IEnumerator<(LuaValue key, LuaValue value)>
         {
             public LuaTable Table;
@@ -198,14 +200,23 @@ namespace YANCL
             return null;
         }
 
-        public (LuaValue key, LuaValue value)? Start() => Iterate(0);
-
         public (LuaValue key, LuaValue value)? Next(in LuaValue key) {
-            if (TryGetArrayIndex(key, out var idx) && idx < arrayCount) {
-                idx++;
-                return (idx, array![idx]);
+            if (key == LuaValue.Nil) {
+                if (arrayCount > 0) {
+                    return (1, array![0]);
+                } else if (mapCount > 0) {
+                    return (map![0].key, map![0].value);
+                }
+                return null;
             }
-            if (Lookup(key, out idx) && idx < mapCount) {
+            if (TryGetArrayIndex(key, out var idx) || key == LuaValue.Nil) {
+                if (idx < arrayCount-1) {
+                    return (idx + 2, array![idx + 1]);
+                } else if (mapCount > 0) {
+                    return (map![0].key, map![0].value);
+                }
+            }
+            if (Lookup(key, out idx) && idx < mapCount-1) {
                 var mapItem = map![idx + 1];
                 return (mapItem.key, mapItem.value);
             }

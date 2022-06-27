@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using static YANCL.TokenType;
 
 namespace YANCL
 {
@@ -11,30 +12,39 @@ namespace YANCL
         }
 
         int position;
+        int lines;
+        int lineStart;
         string str;
 
         Stack<Token> tokens = new Stack<Token>();
 
         public void PushBack(Token token) => tokens.Push(token);
 
-        TokenType TwoCharToken(TokenType token, char c, TokenType token2) {
+        Token TwoCharToken(TokenType token, char c, TokenType token2) {
             if (position < str.Length && str[position] == c) {
                 position++;
-                return token2;
+                return T(token2, 2);
             }
-            return token;
+            return T(token);
         }
 
-        TokenType TwoCharToken2(TokenType token, char c2, TokenType token2, char c3, TokenType token3) {
+        Token TwoCharToken2(TokenType token, char c2, TokenType token2, char c3, TokenType token3) {
             if (position < str.Length && str[position] == c2) {
                 position++;
-                return token2;
+                return T(token2, 2);
             }
             if (position < str.Length && str[position] == c3) {
                 position++;
-                return token3;
+                return T(token3, 3);
             }
-            return token;
+            return T(token);
+        }
+
+        Token T(TokenType type, int length = 1) {
+            return new Token {
+                type = type,
+                location = new Location(lines, position - lineStart - length)
+            };
         }
 
         public Token Next() {
@@ -43,7 +53,7 @@ namespace YANCL
             }
 
             if (position >= str.Length) {
-                return TokenType.Eof;
+                return T(Eof);
             }
 
             char c = str[position++];
@@ -52,6 +62,8 @@ namespace YANCL
                 while (position < str.Length && str[position] != '\n') {
                     position++;
                 }
+                lines++;
+                lineStart = position + 1;
                 position++;
                 return Next();
             }
@@ -66,11 +78,17 @@ namespace YANCL
                 while (position < str.Length && str[position] != '\n') {
                     position++;
                 }
+                lines++;
+                lineStart = position + 1;
                 if (isLongComment) {
                     do {
                         position++;
                         if (position >= str.Length - 1) {
                             throw new Exception("unterminated long comment");
+                        }
+                        if (str[position] == '\n') {
+                            lines++;
+                            lineStart = position + 1;
                         }
                     } while (str[position] != ']' || str[position + 1] != ']');
                     position += 2;
@@ -80,6 +98,10 @@ namespace YANCL
 
             if (char.IsWhiteSpace(c)) {
                 while (position < str.Length && char.IsWhiteSpace(str[position])) {
+                    if (str[position] == '\n') {
+                        lines++;
+                        lineStart = position + 1;
+                    }
                     position++;
                 }
                 return Next();
@@ -92,30 +114,31 @@ namespace YANCL
                 }
                 var identifier = str.Substring(start, position - start);
                 switch (identifier) {
-                    case "and": return TokenType.And;
-                    case "or": return TokenType.Or;
-                    case "not": return TokenType.Not;
-                    case "if": return TokenType.If;
-                    case "then": return TokenType.Then;
-                    case "else": return TokenType.Else;
-                    case "elseif": return TokenType.ElseIf;
-                    case "for": return TokenType.For;
-                    case "do": return TokenType.Do;
-                    case "while": return TokenType.While;
-                    case "end": return TokenType.End;
-                    case "return": return TokenType.Return;
-                    case "local": return TokenType.Local;
-                    case "function": return TokenType.Function;
-                    case "true": return TokenType.True;
-                    case "false": return TokenType.False;
-                    case "nil": return TokenType.Nil;
-                    case "break": return TokenType.Break;
-                    case "repeat": return TokenType.Repeat;
-                    case "until": return TokenType.Until;
-                    case "in": return TokenType.In;
+                    case "and": return T(And);
+                    case "or": return T(Or);
+                    case "not": return T(Not);
+                    case "if": return T(If);
+                    case "then": return T(Then);
+                    case "else": return T(Else);
+                    case "elseif": return T(ElseIf);
+                    case "for": return T(For);
+                    case "do": return T(Do);
+                    case "while": return T(While);
+                    case "end": return T(End);
+                    case "return": return T(Return);
+                    case "local": return T(Local);
+                    case "function": return T(Function);
+                    case "true": return T(True);
+                    case "false": return T(False);
+                    case "nil": return T(Nil);
+                    case "break": return T(Break);
+                    case "repeat": return T(Repeat);
+                    case "until": return T(Until);
+                    case "in": return T(In);
                     default: return new Token {
                         type = TokenType.Identifier,
-                        text = identifier
+                        text = identifier,
+                        location = new Location(lines, start - lineStart)
                     };
                 }
             }
@@ -177,52 +200,54 @@ namespace YANCL
                 }
                 return new Token {
                     type = TokenType.Number,
-                    number = mantissa * Math.Pow(10, exponent)
+                    number = mantissa * Math.Pow(10, exponent),
+                    location = new Location(lines, start - lineStart)
                 };
             }
 
             switch (c) {
-                case '\'': return TokenType.SingleQuote;
-                case '"': return TokenType.DoubleQuote;
-                case '(': return TokenType.OpenParen;
-                case ')': return TokenType.CloseParen;
-                case '[': return TokenType.OpenBracket;
-                case ']': return TokenType.CloseBracket;
-                case '{': return TokenType.OpenBrace;
-                case '}': return TokenType.CloseBrace;
-                case ',': return TokenType.Comma;
+                case '\'': return T(SingleQuote);
+                case '"': return T(DoubleQuote);
+                case '(': return T(OpenParen);
+                case ')': return T(CloseParen);
+                case '[': return T(OpenBracket);
+                case ']': return T(CloseBracket);
+                case '{': return T(OpenBrace);
+                case '}': return T(CloseBrace);
+                case ',': return T(Comma);
                 case '.':
                     if (position < str.Length && str[position] == '.') {
                         position++;
                         if (position < str.Length && str[position] == '.') {
                             position++;
-                            return TokenType.TripleDot;
+                            return T(TripleDot);
                         }
-                        return TokenType.DoubleDot;
+                        return T(DoubleDot);
                     }
-                    return TokenType.Dot;
-                case ':': return TokenType.Colon;
-                case ';': return TokenType.Semicolon;
-                case '+': return TokenType.Plus;
-                case '-': return TokenType.Minus;
-                case '*': return TokenType.Star;
+                    return T(Dot);
+                case ':': return T(Colon);
+                case ';': return T(Semicolon);
+                case '+': return T(Plus);
+                case '-': return T(Minus);
+                case '*': return T(Star);
                 case '/': return TwoCharToken(TokenType.Slash, '/', TokenType.DoubleSlash);
-                case '%': return TokenType.Percent;
-                case '^': return TokenType.Caret;
+                case '%': return T(Percent);
+                case '^': return T(Caret);
                 case '~': return TwoCharToken(TokenType.Tilde, '=', TokenType.NotEqual);
                 case '=': return TwoCharToken(TokenType.Equal, '=', TokenType.DoubleEqual);
                 case '<': return TwoCharToken2(TokenType.LessThan, '=', TokenType.LessThanEqual, '<', TokenType.ShiftLeft);
                 case '>': return TwoCharToken2(TokenType.GreaterThan, '=', TokenType.GreaterThanEqual, '>', TokenType.ShiftRight);
-                case '#': return TokenType.Hash;
-                case '&': return TokenType.Ampersand;
-                case '|': return TokenType.Pipe;
+                case '#': return T(Hash);
+                case '&': return T(Ampersand);
+                case '|': return T(Pipe);
                 default:
                     throw new Exception($"Unexpected character '{c}' at position {position}");
             }
         }
 
-        public string ParseString(char term) {
+        public (string value, Location location) ParseString(char term) {
             var sb = new StringBuilder();
+            var start = position;
             while (true) {
                 var c = str[position++];
                 if (c == '\\') {
@@ -238,7 +263,10 @@ namespace YANCL
                         case '\\': sb.Append('\\'); break;
                         case '"': sb.Append('"'); break;
                         case '\'': sb.Append('\''); break;
-                        case '\n': break;
+                        case '\n':
+                            lines++;
+                            lineStart = position;
+                            break;
                         default:
                             throw new Exception($"Invalid escape sequence '\\{c}'");
                     }
@@ -248,14 +276,14 @@ namespace YANCL
                     sb.Append(c);
                 }
             }
-            return sb.ToString();
+            return (sb.ToString(), new Location(lines, start - lineStart));
         }
 
-        public TokenType Peek() {
+        public Token Peek() {
             if (tokens.Count == 0) {
                 tokens.Push(Next());
             }
-            return tokens.Peek().type;
+            return tokens.Peek();
         }
 
         public string? Expect(TokenType type, string after) {
@@ -264,14 +292,6 @@ namespace YANCL
                 throw new Exception($"Expected {type} after {after}, but got {token.type}");
             }
             return token.text;
-        }
-
-        public bool TryTake(TokenType type) {
-            if (Peek() == type) {
-                Next();
-                return true;
-            }
-            return false;
         }
     }
 }

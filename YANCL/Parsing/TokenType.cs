@@ -69,8 +69,7 @@ namespace YANCL
         public TokenType type;
         public string? text;
         public double number;
-
-        public static implicit operator Token(TokenType type) => new Token { type = type };
+        public Location location;
 
         public override string ToString() => TypeString(type);
 

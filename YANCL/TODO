@@ -91,11 +91,11 @@ Basic functions library:
     ✔ error @done(22-06-27 17:58)
     ✔ _G @done(22-06-27 14:40)
     ☐ getmetatable
-    ☐ ipairs
+    ✔ ipairs @done(22-06-28 00:00)
     ☐ load
     ☐ loadfile
     ✔ next @done(22-02-14 21:40)
-    ☐ pairs
+    ✔ pairs @done(22-06-28 00:00)
     ✔ pcall @done(22-06-27 17:58)
     ✔ print @done(22-02-14 21:40)
     ☐ rawequal
