@@ -43,6 +43,7 @@ Misc language features:
     ☐ Compile error handling
     ☐ Stack overflow check
     ☐ Userdata?
+    ☐ Common runtime errors
 Upvalues:
     ✔ _ENV @done(22-02-15 19:06)
     ✔ In-stack @done(22-02-15 18:38)
@@ -87,7 +88,7 @@ Basic functions library:
     ☐ assert
     ✔ collectgarbage @done(22-02-14 21:40)
     ☐ dofile
-    ☐ error
+    ✔ error @done(22-06-27 17:58)
     ✔ _G @done(22-06-27 14:40)
     ☐ getmetatable
     ☐ ipairs
@@ -95,10 +96,11 @@ Basic functions library:
     ☐ loadfile
     ✔ next @done(22-02-14 21:40)
     ☐ pairs
-    ☐ pcall
+    ✔ pcall @done(22-06-27 17:58)
     ✔ print @done(22-02-14 21:40)
     ☐ rawequal
     ☐ rawget
+    ☐ rawlen
     ☐ rawset
     ✔ select @done(22-02-14 21:40)
     ☐ setmetatable
@@ -106,6 +108,7 @@ Basic functions library:
     ☐ tostring
     ✔ type @done(22-06-27 14:45)
     ✔ _VERSION @done(22-06-27 14:40)
+    ☐ warn
     ☐ xpcall
 Coroutines:
     ☐ coroutine.create

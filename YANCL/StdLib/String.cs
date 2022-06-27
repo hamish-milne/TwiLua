@@ -18,20 +18,20 @@ namespace YANCL.StdLib {
                     for (; i <= j && i < t.Length; i++) {
                         s[c++] = (int)t[i];
                     }
-                    s.Count = c;
+                    return c;
                 }},
                 {"char", s => {
                     var buf = new char[s.Count];
                     for (int i = 1; i <= s.Count; i++) {
                         buf[i-1] = (char)s.Integer(i);
                     }
-                    s.Return(new string(buf));
+                    return s.Return(new string(buf));
                 }},
                 {"len", s => s.Return(s.String().Length)},
                 {"reverse", s => {
                     var buf = s.String().ToCharArray();
                     System.Array.Reverse(buf);
-                    s.Return(new string(buf));
+                    return s.Return(new string(buf));
                 }},
                 {"rep", s => {
                     var sb = new System.Text.StringBuilder();
@@ -44,7 +44,7 @@ namespace YANCL.StdLib {
                         }
                         sb.Append(t);
                     }
-                    s.Return(sb.ToString());
+                    return s.Return(sb.ToString());
                 }},
                 {"lower", s => s.Return(s.String().ToLowerInvariant())},
                 {"upper", s => s.Return(s.String().ToUpperInvariant())},

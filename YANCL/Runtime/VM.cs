@@ -90,37 +90,60 @@ namespace YANCL
         public int expResults;
     }
 
-    public class LuaCallState {
-        private readonly LuaValue[] stack;
-
-        internal LuaCallState(LuaValue[] stack)
-        {
-            this.stack = stack;
-        }
-
+    public struct LuaCallState {
+        // TODO: make these readonly
+        internal LuaValue[] stack;
+        internal LuaState state;
         internal int Base;
+        internal int CIPtr;
         public int Count;
         public LuaValue this[int idx] {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => stack[Base + idx];
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => stack[Base + idx] = value;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public double Number(int idx = 1) => this[idx].Number;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public long Integer(int idx = 1) => (long)this[idx].Number;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string String(int idx = 1) => this[idx].ToString();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaTable Table(int idx = 1) => this[idx].Table!;
-        public void Return(LuaValue v) {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Return(LuaValue v) {
             stack[Base] = v;
-            Count = 1;
+            return 1;
         }
+        public int Call(int callee, int nArgs, int resultsIdx) => state.Callback(callee - 1, nArgs, resultsIdx - 1);
+        public void ResetCallStack() => state.ResetCallStack(CIPtr + 1);
     }
 
     public class LuaState {
 
-        readonly LuaCallState callState;
         readonly LuaValue[] stack;
         readonly LuaUpValue?[] upValueStack;
         readonly CallInfo[] callStack;
         int callStackPtr;
+
+        internal void ResetCallStack(int ciptr) {
+            if (ciptr >= callStackPtr) {
+                throw new InvalidOperationException($"Tried to reset call stack pointer to {ciptr} but it is already at {callStackPtr}");
+            }
+            Array.Clear(callStack, ciptr, callStackPtr - ciptr);
+            callStackPtr = ciptr;
+            Return(0, 1); // Reset call info vars
+        }
+
+        internal int Callback(int callee, int nArgs, int resultsIdx) {
+            var stopAt = callStackPtr;
+            PushCallInfo();
+            this.resultsIdx = baseR + resultsIdx;
+            Call(callee, nArgs, 0, isTailCall: true);
+            Execute(stopAt);
+            return top - callee - baseR;
+        }
 
         int resultsIdx;
         int func;
@@ -153,7 +176,6 @@ namespace YANCL
             stack = new LuaValue[stackSize];
             upValueStack = new LuaUpValue[stackSize];
             callStack = new CallInfo[callStackSize];
-            callState = new LuaCallState(stack);
         }
 
         public LuaValue[] Execute(LuaClosure closure, params LuaValue[] args) {
@@ -180,6 +202,7 @@ namespace YANCL
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PushCallInfo() {
+            // TODO: Catch stack overflow here
             callStack[callStackPtr++] = new CallInfo {
                 resultsIdx = resultsIdx,
                 func = func,
@@ -218,12 +241,12 @@ namespace YANCL
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Call(int callee, int nArgs, int nResults, bool isTailCall) {
+        internal void Call(int callee, int nArgs, int callerResults, bool isTailCall) {
             SetFunc(baseR + callee);
             if (!isTailCall) {
                 resultsIdx = func;
             }
-            expResults = nResults;
+            expResults = callerResults;
             baseR = func + 1;
             if (nArgs == 0) {
                 nArgs = top - baseR;
@@ -252,13 +275,19 @@ namespace YANCL
 
                 pc = 0;
                 break;
-            case LuaType.CFUNCTION:
-                callState.Base = func;
-                callState.Count = nArgs;
-                stack[func].CFunction!.Invoke(callState);
+            case LuaType.CFUNCTION: {
+                var callState = new LuaCallState {
+                    state = this,
+                    stack = stack,
+                    Base = func,
+                    Count = nArgs,
+                    CIPtr = callStackPtr
+                };
+                var nReturns = stack[func].CFunction!.Invoke(callState);
                 nSlots = nArgs;
-                Return(func, callState.Count + 1);
+                Return(func, nReturns + 1);
                 break;
+            }
             default:
                 throw new Exception("Tried to call a thing that isn't a function");
             }

@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Linq;
 
 namespace YANCL.StdLib {
     public static class Basic {
@@ -16,13 +14,11 @@ namespace YANCL.StdLib {
                     // Not supported
                     break;
                 case "count":
-                    s.Return(0);
-                    return;
+                    return s.Return(0);
                 case "isrunning":
-                    s.Return(true);
-                    return;
+                    return s.Return(true);
                 }
-                s.Count = 0;
+                return 0;
             });
             globals["print"] = new LuaCFunction(s => {
                 var o = Console.Out;
@@ -34,23 +30,23 @@ namespace YANCL.StdLib {
                 }
                 o.WriteLine();
                 o.Flush();
-                s.Count = 0;
+                return 0;
             });
             globals["select"] = new LuaCFunction(s => {
                 if (s.Count == 0) {
                     throw new WrongNumberOfArguments();
                 }
                 if (s[1] == "#") {
-                    s.Return(s.Count - 1);
+                    return s.Return(s.Count - 1);
                 } else {
                     var idx = s.Integer(1);
                     if (idx <= 0) {
                         throw new ArgumentOutOfRangeException();
                     }
                     if (idx > s.Count - 1) {
-                        s.Return(LuaValue.Nil);
+                        return s.Return(LuaValue.Nil);
                     } else {
-                        s.Return(s[(int)idx + 1]);
+                        return s.Return(s[(int)idx + 1]);
                     }
                 }
             });
@@ -68,7 +64,7 @@ namespace YANCL.StdLib {
                 }
                 s[0] = key2;
                 s[1] = value;
-                s.Count = 2;
+                return 2;
             });
             globals["_G"] = globals;
             globals["_VERSION"] = "Lua 5.4";
@@ -77,14 +73,35 @@ namespace YANCL.StdLib {
                     throw new WrongNumberOfArguments();
                 }
                 switch (s[1].Type) {
-                case LuaType.NIL: s.Return("nil"); break;
-                case LuaType.BOOLEAN: s.Return("boolean"); break;
-                case LuaType.NUMBER: s.Return("number"); break;
-                case LuaType.STRING: s.Return("string"); break;
-                case LuaType.TABLE: s.Return("table"); break;
+                case LuaType.NIL: return s.Return("nil");
+                case LuaType.BOOLEAN: return s.Return("boolean");
+                case LuaType.NUMBER: return s.Return("number");
+                case LuaType.STRING: return s.Return("string");
+                case LuaType.TABLE: return s.Return("table");
                 case LuaType.CFUNCTION:
                 case LuaType.FUNCTION:
-                    s.Return("function"); break;
+                    return s.Return("function");
+                default:
+                    throw new Exception("Unknown type");
+                }
+            });
+            globals["error"] = new LuaCFunction(s => {
+                // TODO: Error position
+                throw new LuaRuntimeError(s[1]);
+            });
+            globals["pcall"] = new LuaCFunction(s => {
+                if (s.Count < 1) {
+                    throw new WrongNumberOfArguments();
+                }
+                try {
+                    var nResults = s.Call(1, s.Count, 1);
+                    s[0] = true;
+                    return nResults + 1;
+                } catch (Exception e) {
+                    s.ResetCallStack();
+                    s[0] = false;
+                    s[1] = e is LuaRuntimeError lerror ? lerror.Value : e.Message;
+                    return 2;
                 }
             });
         }

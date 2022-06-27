@@ -8,11 +8,11 @@ namespace YANCL.Test
     {
         void AssertEqual(string str, params LuaValue[] expected) {
             var f = Lua.Compile("return " + str);
-            var s = new LuaState(16, 2);
+            var s = new LuaState(16, 4);
             var g = new LuaTable();
             StdLib.Basic.Load(g);
             var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});
-            Assert.Equal(s.Execute(closure), expected);
+            Assert.Equal(expected, s.Execute(closure));
         }
 
         [Fact]
@@ -57,9 +57,7 @@ namespace YANCL.Test
 
         [Fact]
         public void _VERSION() {
-            var l = new Lua();
-            StdLib.Basic.Load(l.Globals);
-            Assert.Equal(l.DoString("return _VERSION"), new LuaValue[]{"Lua 5.4"});
+            AssertEqual("_VERSION", "Lua 5.4");
         }
 
         [Fact]
@@ -70,6 +68,12 @@ namespace YANCL.Test
             AssertEqual("type('foo')", "string");
             AssertEqual("type(print)", "function");
             AssertEqual("type({})", "table");
+        }
+
+        [Fact]
+        public void PCall() {
+            AssertEqual("pcall(function(a) return a end, 1)", true, 1);
+            AssertEqual("pcall(function(a) error(a) end, 'foo')", false, "foo");
         }
     }
 }

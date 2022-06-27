@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static YANCL.Instruction;
 using static YANCL.OpCode;
 
@@ -106,7 +107,7 @@ namespace YANCL
                 upvalues = upValues.ToArray(),
                 prototypes = closures.ToArray()!,
                 locals = locals.ToArray(),
-                nParams = 0,
+                nParams = locals.Count(l => l.Start == 0),
                 nSlots = maxStack - Top,
             };
         }

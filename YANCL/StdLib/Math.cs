@@ -32,20 +32,17 @@ namespace YANCL.StdLib {
                 {"random", s => {
                     switch (s.Count) {
                         case 0:
-                            s.Return(random.NextDouble());
-                            break;
+                            return s.Return(random.NextDouble());
                         case 1:
                             var n = s.Integer(1);
                             if (n == 0) {
                                 random.NextBytes(rndBuf);
-                                s.Return(BitConverter.ToDouble(rndBuf, 0));
+                                return s.Return(BitConverter.ToDouble(rndBuf, 0));
                             } else {
-                                s.Return(random.Next(1, (int)n));
+                                return s.Return(random.Next(1, (int)n));
                             }
-                            break;
                         case 2:
-                            s.Return(random.Next((int)s.Integer(1), (int)s.Integer(2)));
-                            break;
+                            return s.Return(random.Next((int)s.Integer(1), (int)s.Integer(2)));
                         default:
                             throw new WrongNumberOfArguments();
                     }
@@ -62,24 +59,24 @@ namespace YANCL.StdLib {
                         default:
                             throw new WrongNumberOfArguments();
                     }
-                    s.Count = 0;
+                    return 0;
                 }},
                 {"tointeger", s => {
                     try {
-                        s.Return(s.Integer());
+                        return s.Return(s.Integer());
                     } catch (NoIntegerRepresentation) {
-                        s.Return(LuaValue.Nil);
+                        return s.Return(LuaValue.Nil);
                     }
                 }},
                 {"type", s => {
                     if (s[1].Type == LuaType.NUMBER) {
                         if (s[1].Number % 1 == 0.0) {
-                            s.Return("integer");
+                            return s.Return("integer");
                         } else {
-                            s.Return("float");
+                            return s.Return("float");
                         }
                     } else {
-                        s.Return(LuaValue.Nil);
+                        return s.Return(LuaValue.Nil);
                     }
                 }},
                 {"max", s => {
@@ -87,14 +84,14 @@ namespace YANCL.StdLib {
                     for (int i = 2; i <= s.Count; i++) {
                         a = Max(a, s.Number(i));
                     }
-                    s.Return(a);
+                    return s.Return(a);
                 }},
                 {"min", s => {
                     var a = s.Number(0);
                     for (int i = 2; i <= s.Count; i++) {
                         a = Min(a, s.Number(i));
                     }
-                    s.Return(a);
+                    return s.Return(a);
                 }}
             };
         }

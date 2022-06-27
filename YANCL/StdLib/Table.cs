@@ -18,14 +18,14 @@ namespace YANCL.StdLib {
                         }
                         sb.Append(list[i]);
                     }
-                    s.Return(sb.ToString());
+                    return s.Return(sb.ToString());
                 }},
                 {"insert", s => {
                     var list = s.Table(1);
                     var pos = s.Count >= 3 ? s.Integer(2) : list.Count + 1;
                     var value = s.Count >= 3 ? s[3] : s[2];
                     list.Insert((int)pos - 1, value);
-                    s.Count = 0;
+                    return 0;
                 }},
                 {"move", s => {
                     var a1 = s.Table(1);
@@ -37,7 +37,7 @@ namespace YANCL.StdLib {
                     for (int i = 0; i <= (e - f); i++) {
                         a2[t + i] = a1[f + i];
                     }
-                    s.Count = 0;
+                    return 0;
                 }},
                 {"pack", s => {
                     var list = new LuaTable();
@@ -45,13 +45,13 @@ namespace YANCL.StdLib {
                         list.Add(s[i]);
                     }
                     list["n"] = s.Count;
-                    s.Return(list);
+                    return s.Return(list);
                 }},
                 {"remove", s => {
                     var list = s.Table(1);
                     var pos = s.Count >= 2 ? s.Integer(2) : list.Count;
 
-                    s.Return(list.RemoveAt((int)pos - 1));
+                    return s.Return(list.RemoveAt((int)pos - 1));
                 }},
                 {"unpack", s => {
                     var list = s.Table(1);
@@ -62,7 +62,7 @@ namespace YANCL.StdLib {
                     for (k = 0; i <= list.Count && i <= j; k++, i++) {
                         s[k] = list[i];
                     }
-                    s.Count = k;
+                    return k;
                 }}
             };
         }

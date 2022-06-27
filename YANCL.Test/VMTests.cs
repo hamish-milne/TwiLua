@@ -110,7 +110,7 @@ namespace YANCL.Test
             
             LuaCFunction cf = s => {
                 Assert.Equal("foo", s.String());
-                s.Return("bar");
+                return s.Return("bar");
             };
             var function = new LuaFunction{
                 code = new int[] {

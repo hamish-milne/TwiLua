@@ -19,7 +19,7 @@ namespace YANCL
     class WrongNumberOfArguments : Exception { }
     class NoIntegerRepresentation : Exception { }
 
-    public delegate void LuaCFunction(LuaCallState s);
+    public delegate int LuaCFunction(LuaCallState s);
 
     public readonly struct LuaValue : IEquatable<LuaValue> {
         public readonly LuaType Type;
