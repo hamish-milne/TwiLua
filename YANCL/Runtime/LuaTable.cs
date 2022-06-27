@@ -40,7 +40,7 @@ namespace YANCL
                 return Index < Table.arrayCount + Table.mapCount;
             }
 
-            public void Reset() => Index = 0;
+            public void Reset() => Index = -1;
         }
 
         IEnumerator<(LuaValue key, LuaValue value)> IEnumerable<(LuaValue key, LuaValue value)>.GetEnumerator() => GetEnumerator();
@@ -180,10 +180,12 @@ namespace YANCL
             if (pos < arrayCount - 1) {
                 Array.Copy(array!, pos + 1, array!, pos, arrayCount - pos - 1);
             }
+            array[arrayCount - 1] = LuaValue.Nil;
+            arrayCount--;
             return ret;
         }
 
-        public MapEnumerator GetEnumerator() => new MapEnumerator { Table = this };
+        public MapEnumerator GetEnumerator() => new MapEnumerator { Table = this, Index = -1 };
 
         public (LuaValue key, LuaValue value)? Iterate(int i) {
             if (i < arrayCount) {

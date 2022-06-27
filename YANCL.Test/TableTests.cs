@@ -21,5 +21,38 @@ namespace YANCL.Test
             var results = s.DoString("local t = {1, 2, 3}; table.insert(t, 4); return t");
             Assert.Equal(new LuaTable { 1, 2, 3, 4 }, results[0].Table!);
         }
+
+        [Fact]
+        public void Move() {
+            var s = new Lua();
+            StdLib.Table.Load(s.Globals);
+            var results = s.DoString("local t = {1, 2, 3, 4, 5}; table.move(t, 2, 4, 1); return t");
+            Assert.Equal(new LuaTable { 2, 3, 4, 4, 5 }, results[0].Table!);
+        }
+
+        [Fact]
+        public void Pack() {
+            var s = new Lua();
+            StdLib.Table.Load(s.Globals);
+            var results = s.DoString("return table.pack(1, 2, 3)");
+            Assert.Equal(new LuaTable { 1, 2, 3, { "n", 3 } }, results[0].Table!);
+        }
+
+        [Fact]
+        public void Remove() {
+            var s = new Lua();
+            StdLib.Table.Load(s.Globals);
+            var results = s.DoString("local t = {1, 2, 3}; table.remove(t); return t");
+            Assert.Equal(new LuaTable { 1, 2 }, results[0].Table!);
+        }
+
+        [Fact]
+        public void Unpack() {
+            var s = new Lua();
+            StdLib.Table.Load(s.Globals);
+            var results = s.DoString("return table.unpack({1, 2, 3})");
+            Assert.Equal(new LuaValue[] { 1, 2, 3 }, results);
+        }
+
     }
 }

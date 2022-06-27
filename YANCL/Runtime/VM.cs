@@ -276,7 +276,9 @@ namespace YANCL
             Array.Copy(stack, src, stack, resultsIdx, nResults);
             var clearFrom = resultsIdx + nResults;
             var clearTo = func + nSlots;
-            Array.Clear(stack, clearFrom, clearTo - clearFrom + 1);
+            if (clearTo > clearFrom) {
+                Array.Clear(stack, clearFrom, clearTo - clearFrom);
+            }
 
             top = resultsIdx + nResults;
             pc = callInfo.pc;

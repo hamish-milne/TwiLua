@@ -45,7 +45,7 @@ namespace YANCL.StdLib {
                         list.Add(s[i]);
                     }
                     list["n"] = s.Count;
-                    s.Count = 0;
+                    s.Return(list);
                 }},
                 {"remove", s => {
                     var list = s.Table(1);
