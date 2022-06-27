@@ -70,6 +70,23 @@ namespace YANCL.StdLib {
                 s[1] = value;
                 s.Count = 2;
             });
+            globals["_G"] = globals;
+            globals["_VERSION"] = "Lua 5.4";
+            globals["type"] = new LuaCFunction(s => {
+                if (s.Count < 1) {
+                    throw new WrongNumberOfArguments();
+                }
+                switch (s[1].Type) {
+                case LuaType.NIL: s.Return("nil"); break;
+                case LuaType.BOOLEAN: s.Return("boolean"); break;
+                case LuaType.NUMBER: s.Return("number"); break;
+                case LuaType.STRING: s.Return("string"); break;
+                case LuaType.TABLE: s.Return("table"); break;
+                case LuaType.CFUNCTION:
+                case LuaType.FUNCTION:
+                    s.Return("function"); break;
+                }
+            });
         }
     }
 }

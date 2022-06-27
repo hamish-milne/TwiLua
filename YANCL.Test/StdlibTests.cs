@@ -47,5 +47,29 @@ namespace YANCL.Test
             StdLib.Basic.Load(l.Globals);
             Assert.Equal(l.DoString("local x = 0; for k,v in next, {a=1, b=2, c=3} do x = x + v end; return x"), new LuaValue[]{6});
         }
+
+        [Fact]
+        public void _G() {
+            var l = new Lua();
+            StdLib.Basic.Load(l.Globals);
+            Assert.Equal(l.DoString("return _G"), new LuaValue[]{l.Globals});
+        }
+
+        [Fact]
+        public void _VERSION() {
+            var l = new Lua();
+            StdLib.Basic.Load(l.Globals);
+            Assert.Equal(l.DoString("return _VERSION"), new LuaValue[]{"Lua 5.4"});
+        }
+
+        [Fact]
+        public void Type() {
+            AssertEqual("type(nil)", "nil");
+            AssertEqual("type(true)", "boolean");
+            AssertEqual("type(1)", "number");
+            AssertEqual("type('foo')", "string");
+            AssertEqual("type(print)", "function");
+            AssertEqual("type({})", "table");
+        }
     }
 }
