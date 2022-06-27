@@ -81,6 +81,7 @@ namespace YANCL
     }
 
     struct CallInfo {
+        public int resultsIdx;
         public int func;
         public int pc;
         public int top;
@@ -121,6 +122,7 @@ namespace YANCL
         readonly CallInfo[] callStack;
         int callStackPtr;
 
+        int resultsIdx;
         int func;
         int pc;
         int top;
@@ -157,9 +159,10 @@ namespace YANCL
         public LuaValue[] Execute(LuaClosure closure, params LuaValue[] args) {
             var callee = baseR;
             stack[callee] = closure;
+            // TODO: Allow calling this from within a CFunction
             Array.Copy(args, 0, stack, callee + 1, args.Length);
             PushCallInfo();
-            Call(0, args.Length + 1, 0);
+            Call(0, args.Length + 1, 0, isTailCall: false);
             var ci = callStackPtr;
             try {
                 Execute(ci - 1);
@@ -168,8 +171,7 @@ namespace YANCL
                 Return(func, 1);
                 throw;
             }
-            var resultsIdx = func;
-            var nResults = top - resultsIdx;
+            var nResults = top;
             var results = new LuaValue[nResults];
             Array.Copy(stack, resultsIdx, results, 0, nResults);
             Array.Clear(stack, resultsIdx, nResults);
@@ -179,6 +181,7 @@ namespace YANCL
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PushCallInfo() {
             callStack[callStackPtr++] = new CallInfo {
+                resultsIdx = resultsIdx,
                 func = func,
                 pc = pc,
                 baseR = baseR,
@@ -215,8 +218,11 @@ namespace YANCL
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void Call(int callee, int nArgs, int nResults) {
+        void Call(int callee, int nArgs, int nResults, bool isTailCall) {
             SetFunc(baseR + callee);
+            if (!isTailCall) {
+                resultsIdx = func;
+            }
             expResults = nResults;
             baseR = func + 1;
             if (nArgs == 0) {
@@ -272,12 +278,11 @@ namespace YANCL
 
             var callInfo = PopCallInfo();
 
-            var resultsIdx = func;
             Array.Copy(stack, src, stack, resultsIdx, nResults);
             var clearFrom = resultsIdx + nResults;
             var clearTo = func + nSlots;
-            if (clearTo > clearFrom) {
-                Array.Clear(stack, clearFrom, clearTo - clearFrom);
+            if (clearTo >= clearFrom) {
+                Array.Clear(stack, clearFrom, clearTo - clearFrom + 1);
             }
 
             top = resultsIdx + nResults;
@@ -286,6 +291,7 @@ namespace YANCL
             baseR = callInfo.baseR;
             nVarargs = callInfo.nVarargs;
             expResults = callInfo.expResults;
+            resultsIdx = callInfo.resultsIdx;
         }
 
         void Close(int downTo) {
@@ -441,14 +447,14 @@ namespace YANCL
                         continue;
                     case OpCode.CALL:
                         PushCallInfo();
-                        Call(GetA(op), GetB(op), GetC(op));
+                        Call(GetA(op), GetB(op), GetC(op), isTailCall: false);
                         continue;
                     case OpCode.TAILCALL:
                         if ( R(GetA(op)).Type == LuaType.CFUNCTION ) {
                             goto case OpCode.CALL;
                         }
                         Close(baseR);
-                        Call(GetA(op), GetB(op), GetC(op));
+                        Call(GetA(op), GetB(op), GetC(op), isTailCall: true);
                         continue;
                     case OpCode.RETURN: {
                         Return(baseR + GetA(op), GetB(op));
@@ -530,7 +536,7 @@ namespace YANCL
                         R(a + 3) = R(a);
                         R(a + 4) = R(a + 1);
                         R(a + 5) = R(a + 2);
-                        Call(a + 3, 3, GetC(op));
+                        Call(a + 3, 3, GetC(op), isTailCall: false);
                         continue;
                     }
                     case OpCode.TFORLOOP: {
