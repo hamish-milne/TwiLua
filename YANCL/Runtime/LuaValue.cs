@@ -43,7 +43,7 @@ namespace YANCL
                 if (Type == LuaType.STRING) {
                     return String!.Length;
                 } else if (Type == LuaType.TABLE) {
-                    return Table!.Count;
+                    return Table!.Length;
                 } else {
                     throw new Exception("Not a string or table");
                 }

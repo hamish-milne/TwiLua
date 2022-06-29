@@ -1,14 +1,74 @@
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Pair = System.Collections.Generic.KeyValuePair<YANCL.LuaValue, YANCL.LuaValue>;
 
 namespace YANCL
 {
-    public class LuaMap : IDictionary<LuaValue, LuaValue> {
-        
+    /// <summary>
+    /// The map component of a Lua table.
+    /// </summary>
+    /// <remarks>
+    /// This class is a custom dictionary implementation that allows for stateless iteration.
+    /// It does not implement Lua semantics regarding nil keys and values.
+    /// </remarks>
+    public class LuaMap : IDictionary<LuaValue, LuaValue>
+    {
+        public KeyCollection Keys => new KeyCollection(this);
+        public ValueCollection Values => new ValueCollection(this);
+        ICollection<LuaValue> IDictionary<LuaValue, LuaValue>.Keys => Keys;
+        ICollection<LuaValue> IDictionary<LuaValue, LuaValue>.Values => Values;
+
+        public int Count => _Count(Root);
+
+        bool ICollection<Pair>.IsReadOnly => false;
+
+        public LuaValue this[LuaValue key] {
+            get => (Find(key) ?? throw new KeyNotFoundException()).Value;
+            set => Insert(key, value, allowOverwrite: true);
+        }
+
+        public void Add(LuaValue key, LuaValue value) => Insert(key, value, allowOverwrite: false);
+
+        public bool ContainsKey(LuaValue key) => Find(key) != null;
+
+        public bool Remove(LuaValue key) => Delete(key).HasValue;
+
+        public bool TryGetValue(LuaValue key, out LuaValue value)
+        {
+            var node = Find(key);
+            if (node != null) {
+                value = node.Value;
+                return true;
+            }
+            value = LuaValue.Nil;
+            return false;
+        }
+
+        void ICollection<Pair>.Add(Pair item) => Insert(item.Key, item.Value, allowOverwrite: false);
+
+        public void Clear() => Root = null;
+
+        public bool Contains(Pair item) => Find(item.Key)?.Value == item.Value;
+
+        public void CopyTo(Pair[] array, int arrayIndex)
+        {
+            foreach (var pair in this) {
+                array[arrayIndex++] = pair;
+            }
+        }
+
+        public bool Remove(Pair item)
+        {
+            if (Find(item.Key)?.Value != item.Value) {
+                return false;
+            }
+            Delete(item.Key);
+            return true;
+        }
+
+
+        #region LLRB tree implementation
         class Node {
             public Node? Left;
             public Node? Right;
@@ -19,25 +79,12 @@ namespace YANCL
 
         private Node? Root;
 
-        public KeyCollection Keys => new KeyCollection(this);
-        public ValueCollection Values => new ValueCollection(this);
-        ICollection<LuaValue> IDictionary<LuaValue, LuaValue>.Keys => Keys;
-        ICollection<LuaValue> IDictionary<LuaValue, LuaValue>.Values => Values;
-
-        public int Count => _Count(Root);
-
-        bool ICollection<Pair>.IsReadOnly => false;
-
-        public LuaValue this[LuaValue key] { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        #region LLRB tree implementation
-        private Node? Find(LuaValue key) {
+        private Node? Find(in LuaValue key) {
             var node = Root;
             while (node != null) {
-                var cmp = key.Hash.CompareTo(node.Key.Hash);
-                if (cmp == 0 && key.Equals(node.Key)) {
+                if (key.Equals(node.Key)) {
                     return node;
-                } else if (cmp < 0) {
+                } else if (key.Hash < node.Key.Hash) {
                     node = node.Left;
                 } else {
                     node = node.Right;
@@ -46,7 +93,7 @@ namespace YANCL
             return null;
         }
 
-        private Node? Next(LuaValue key) {
+        public (LuaValue key, LuaValue value)? Next(in LuaValue key) {
             var node = Root;
             Node? found = null;
             while (node != null) {
@@ -62,7 +109,21 @@ namespace YANCL
                     node = node.Right;
                 }
             }
-            return found;
+            if (found == null) {
+                return null;
+            }
+            return (found.Key, found.Value);
+        }
+
+        public (LuaValue key, LuaValue value)? First() {
+            var node = Root;
+            if (node == null) {
+                return null;
+            }
+            while (node.Left != null) {
+                node = node.Left;
+            }
+            return (node.Key, node.Value);
         }
         
         private static void FlipColors(Node node) {
@@ -91,12 +152,12 @@ namespace YANCL
             return x;
         }
 
-        private void Insert(LuaValue key, LuaValue value) {
-            Root = Insert(Root, key, value);
+        private void Insert(in LuaValue key, in LuaValue value, bool allowOverwrite) {
+            Root = Insert(Root, key, value, allowOverwrite);
             Root.IsRed = false;
         }
 
-        private static Node Insert(Node? h, LuaValue key, LuaValue value) {
+        private static Node Insert(Node? h, in LuaValue key, in LuaValue value, bool allowOverwrite) {
             if (h == null) {
                 return new Node {
                     Key = key,
@@ -104,13 +165,15 @@ namespace YANCL
                     IsRed = true
                 };
             }
-            var cmp = key.Hash.CompareTo(h.Key.Hash);
-            if (cmp == 0 && key.Equals(h.Key)) {
+            if (key.Equals(h.Key)) {
+                if (!allowOverwrite) {
+                    throw new ArgumentException("Key already exists");
+                }
                 h.Value = value;
-            } else if (cmp < 0) {
-                h.Left = Insert(h.Left, key, value);
+            } else if (key.Hash < h.Key.Hash) {
+                h.Left = Insert(h.Left, key, value, allowOverwrite);
             } else {
-                h.Right = Insert(h.Right, key, value);
+                h.Right = Insert(h.Right, key, value, allowOverwrite);
             }
             return FixUp(h);
         }
@@ -134,7 +197,7 @@ namespace YANCL
             return h;
         }
 
-        private LuaValue Delete(LuaValue key) {
+        public LuaValue? Delete(in LuaValue key) {
             Root = Delete(Root, key, out var value);
             if (Root != null) {
                 Root.IsRed = false;
@@ -142,12 +205,26 @@ namespace YANCL
             return value;
         }
 
-        private static Node? Delete(Node? h, LuaValue key, out LuaValue value) {
-            value = LuaValue.Nil;
+        private static Node? DeleteMin(Node h) {
+            if (h.Left == null) {
+                return null;
+            }
+            if (!IsRed(h.Left) && !IsRed(h.Left.Left)) {
+                h = MoveRedLeft(h);
+            }
+            h.Left = DeleteMin(h.Left!);
+            return FixUp(h);
+        }
+
+        private static Node? Delete(Node? h, in LuaValue key, out LuaValue? value) {
+            value = null;
             if (h == null) {
                 return null;
             }
-            if (key.Hash.CompareTo(h.Key.Hash) < 0) {
+            if (key.Hash < h.Key.Hash) {
+                if (h.Left == null) {
+                    return h;
+                }
                 if (!IsRed(h.Left) && !IsRed(h.Left!.Left)) {
                     h = MoveRedLeft(h);
                 }
@@ -160,6 +237,9 @@ namespace YANCL
                     value = h.Value;
                     return null;
                 }
+                if (h.Right == null) {
+                    return h;
+                }
                 if (!IsRed(h.Right) && !IsRed(h.Right!.Left)) {
                     h = MoveRedRight(h);
                 }
@@ -171,7 +251,7 @@ namespace YANCL
                     }
                     h.Key = x.Key;
                     h.Value = x.Value;
-                    h.Right = Delete(h.Right, x.Key, out value);
+                    h.Right = DeleteMin(h.Right!);
                 } else {
                     h.Right = Delete(h.Right, key, out value);
                 }
@@ -205,13 +285,6 @@ namespace YANCL
                 }
             }
             return null;
-        }
-
-        private static Node LeftMost(Node node) {
-            while (node.Left != null) {
-                node = node.Left;
-            }
-            return node;
         }
 
         private static int _Count(Node? node) {
@@ -373,46 +446,5 @@ namespace YANCL
         }
 
         #endregion
-
-        public void Add(LuaValue key, LuaValue value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool ContainsKey(LuaValue key) => Find(key) != null;
-
-        public bool Remove(LuaValue key) => Delete(key) != LuaValue.Nil;
-
-        public bool TryGetValue(LuaValue key, out LuaValue value)
-        {
-            var node = Find(key);
-            if (node != null) {
-                value = node.Value;
-                return true;
-            }
-            value = LuaValue.Nil;
-            return false;
-        }
-
-        public void Add(Pair item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Clear() => Root = null;
-
-        public bool Contains(Pair item) => Find(item.Key)?.Value == item.Value;
-
-        public void CopyTo(Pair[] array, int arrayIndex)
-        {
-            foreach (var pair in this) {
-                array[arrayIndex++] = pair;
-            }
-        }
-
-        public bool Remove(Pair item)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

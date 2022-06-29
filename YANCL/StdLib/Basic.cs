@@ -116,7 +116,7 @@ namespace YANCL.StdLib {
                 }
                 var table = s.Table(1);
                 var idx = s.Integer(2) + 1;
-                if (idx > table.ArrayCount) {
+                if (idx > table.Length) {
                     s[0] = LuaValue.Nil;
                     return 1;
                 } else {

@@ -378,7 +378,7 @@ namespace YANCL
                         RK(GetA(op))[RK(GetB(op))] = RK(GetC(op));
                         continue;
                     case OpCode.NEWTABLE:
-                        R(GetA(op)) = new LuaTable();
+                        R(GetA(op)) = new LuaTable(GetB(op));
                         continue;
                     case OpCode.SELF:
                         R(GetA(op)) = R(GetB(op))[RK(GetC(op))];
@@ -519,7 +519,7 @@ namespace YANCL
                         if ( n <= 0 ) {
                             n = top - GetA(op);
                         }
-                        while ( (block*Lua.FieldsPerFlush + n) > list.Count ) {
+                        while ( (block*Lua.FieldsPerFlush + n) > list.Length ) {
                             list.Add(LuaValue.Nil);
                         }
                         for ( var i = 1; i <= n; i++ ) {

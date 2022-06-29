@@ -10,7 +10,7 @@ namespace YANCL.StdLib {
                     var sep = s.Count >= 2 ? s.String(2) : "";
                     var i = s.Count >= 3 ? s.Integer(3) : 1;
                     var i1 = i;
-                    var j = s.Count >= 4 ? s.Integer(4) : list.Count;
+                    var j = s.Count >= 4 ? s.Integer(4) : list.Length;
 
                     for (; i <= j; i++) {
                         if (i != i1) {
@@ -22,7 +22,7 @@ namespace YANCL.StdLib {
                 }},
                 {"insert", s => {
                     var list = s.Table(1);
-                    var pos = s.Count >= 3 ? s.Integer(2) : list.Count + 1;
+                    var pos = s.Count >= 3 ? s.Integer(2) : list.Length + 1;
                     var value = s.Count >= 3 ? s[3] : s[2];
                     list.Insert((int)pos - 1, value);
                     return 0;
@@ -48,18 +48,22 @@ namespace YANCL.StdLib {
                     return s.Return(list);
                 }},
                 {"remove", s => {
-                    var list = s.Table(1);
+                    var list = s.Table(1).Array;
                     var pos = s.Count >= 2 ? s.Integer(2) : list.Count;
-
-                    return s.Return(list.RemoveAt((int)pos - 1));
+                    if (pos <= list.Count) {
+                        var value = list[(int)pos - 1];
+                        list.RemoveAt((int)pos - 1);
+                        return s.Return(value);
+                    }
+                    return 0;
                 }},
                 {"unpack", s => {
                     var list = s.Table(1);
                     var i = s.Count >= 2 ? s.Integer(2) : 1;
-                    var j = s.Count >= 3 ? s.Integer(3) : list.Count;
+                    var j = s.Count >= 3 ? s.Integer(3) : list.Length;
 
                     int k;
-                    for (k = 0; i <= list.Count && i <= j; k++, i++) {
+                    for (k = 0; i <= list.Length && i <= j; k++, i++) {
                         s[k] = list[i];
                     }
                     return k;

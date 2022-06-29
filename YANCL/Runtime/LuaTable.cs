@@ -1,254 +1,152 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace YANCL
 {
 
-    public sealed class LuaTable : ICollection<(LuaValue key, LuaValue value)>
+    public sealed class LuaTable : IEnumerable<(LuaValue key, LuaValue value)>
     {
-#region Details
-        const int initialSize = 4;
-        const int multiplier = 2;
+        private LuaMap? map = null;
+        private List<LuaValue>? array = null;
 
-        struct MapEntry
-        {
-            public LuaValue key;
-            public LuaValue value;
+        public LuaMap Map => map ??= new LuaMap();
+        public List<LuaValue> Array => array ??= new List<LuaValue>();
+        public LuaTable? MetaTable { get; set; }
+        public int Length => array == null ? 0 : array.Count;
+
+        public LuaTable() { }
+        public LuaTable(int initialCapacity) {
+            array = new List<LuaValue>(initialCapacity);
         }
 
-        private LuaValue[]? array;
-        private MapEntry[]? map;
-        private int arrayCount;
-        private int mapCount;
-
-        public int ArrayCount => arrayCount;
-
-        public struct MapEnumerator : IEnumerator<(LuaValue key, LuaValue value)>
-        {
-            public LuaTable Table;
-            public int Index;
-
-            public (LuaValue key, LuaValue value) Current => Table.Iterate(Index) ?? throw new InvalidOperationException();
-
-            object IEnumerator.Current => Current;
-
-            public void Dispose(){}
-
-            public bool MoveNext()
-            {
-                Index++;
-                return Index < Table.arrayCount + Table.mapCount;
-            }
-
-            public void Reset() => Index = -1;
-        }
-
-        IEnumerator<(LuaValue key, LuaValue value)> IEnumerable<(LuaValue key, LuaValue value)>.GetEnumerator() => GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        private class HashComparer : IComparer<MapEntry>
-        {
-            public int Compare(MapEntry x, MapEntry y) => x.key.Hash.CompareTo(y.key.Hash);
-        }
-        private static readonly HashComparer hashComparer = new HashComparer();
-        
-        private bool Lookup(LuaValue key, out int idx) {
-            if (map == null) {
-                idx = 0;
-                return false;
-            }
-            idx = Array.BinarySearch(map!, 0, mapCount, new MapEntry { key = key }, hashComparer);
-            while (idx > 0 && map![idx - 1].key.Hash == key.Hash) {
-                idx--;
-            }
-            if (idx >= 0) {
-                do {
-                    if (map![idx].key.Equals(key)) {
-                        return true;
-                    }
-                } while (++idx < mapCount && map![idx].key.Hash == key.Hash);
-                return false;
-            }
-            idx = ~idx;
-            return false;
-        }
-
-        private void EnsureCapacity<T>(ref T[]? arr, int capacity) {
-            var currentSize = arr?.Length ?? initialSize;
-            while (currentSize < capacity) {
-                currentSize *= multiplier;
-            }
-            Array.Resize(ref arr, currentSize);
-        }
-
-        private void MapSet(LuaValue key, LuaValue value) {
-            if (Lookup(key, out var idx)) {
-                map![idx].value = value;
-                return;
-            }
-            mapCount++;
-            EnsureCapacity(ref map, mapCount);
-            Array.Copy(map!, idx, map!, idx + 1, mapCount - idx - 1);
-            map![idx] = new MapEntry { key = key, value = value };
-        }
-
-        private LuaValue MapGet(LuaValue key) {
-            if (Lookup(key, out var idx)) {
-                return map![idx].value;
-            }
-            return LuaValue.Nil;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool TryGetArrayIndex(in LuaValue key, out int idx) {
-            if (key.Type == LuaType.NUMBER && key.Number == (int)key.Number && key.Number >= 1) {
+        private static bool IsArrayIndex(in LuaValue key, out int idx) {
+            if (key.Type == LuaType.NUMBER && key.Number > 0 && key.Number % 1 == 0) {
                 idx = (int)key.Number - 1;
                 return true;
             }
-            idx = 0;
+            idx = -1;
             return false;
         }
-#endregion Details
+
+        public Enumerator GetEnumerator() => new Enumerator(this);
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        IEnumerator<(LuaValue key, LuaValue value)> IEnumerable<(LuaValue key, LuaValue value)>.GetEnumerator() => GetEnumerator();
+
+        private void MoveContiguousIntegerKeys() {
+            if (array != null && map != null) {
+                LuaValue? mapVal;
+                while ((mapVal = map.Delete(array.Count + 1)) != null) {
+                    array.Add(mapVal.Value);
+                }
+            }
+        }
 
         public LuaValue this[in LuaValue key] {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if (TryGetArrayIndex(key, out var idx)) {
-                    if (idx < arrayCount) {
-                        return array![idx];
-                    } else {
-                        return LuaValue.Nil;
-                    }
-                } else {
-                    return MapGet(key);
+                if (array != null && IsArrayIndex(key, out var idx) && idx < array.Count) {
+                    return array[idx];
                 }
+                return map == null ? LuaValue.Nil : map[key];
             }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
-                if (TryGetArrayIndex(key, out var idx)) {
-                    if (idx >= arrayCount) {
-                        arrayCount = idx + 1;
-                        EnsureCapacity(ref array, arrayCount);
+                if (IsArrayIndex(key, out var idx)) {
+                    if (array == null) {
+                        if (idx == 0) {
+                            array = new List<LuaValue> { value };
+                        } else {
+                            Map[key] = value;
+                        }
+                    } else if (idx < array.Count) {
+                        array[idx] = value;
+                    } else if (idx == array.Count) {
+                        array.Add(value);
+                        MoveContiguousIntegerKeys();
+                    } else {
+                        Map[key] = value;
                     }
-                    array![idx] = value;
                 } else {
-                    MapSet(key, value);
+                    Map[key] = value;
                 }
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(in LuaValue key, in LuaValue value) {
-            this[key] = value;
-        }
-
-        // This prevents the need for explicit casts for standard library definitions
-        public void Add(in LuaValue key, LuaCFunction value) {
-            this[key] = value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(in LuaValue value) {
-            arrayCount++;
-            EnsureCapacity(ref array, arrayCount);
-            this[arrayCount] = value;
+            Array.Add(value);
+            MoveContiguousIntegerKeys();
         }
 
-        public int Count {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => arrayCount;
-        }
-
-        public bool IsReadOnly => false;
-
-        public void Insert(int pos, in LuaValue value) {
-            if (pos < 0) {
-                throw new ArgumentOutOfRangeException(nameof(pos));
-            }
-            arrayCount++;
-            EnsureCapacity(ref array, arrayCount);
-            Array.Copy(array!, pos, array!, pos + 1, arrayCount - pos - 1);
-            array![pos] = value;
-        }
-
-        public LuaValue RemoveAt(int pos) {
-            if (pos >= arrayCount) {
-                return LuaValue.Nil;
-            }
-            var ret = array![pos];
-            if (pos < arrayCount - 1) {
-                Array.Copy(array!, pos + 1, array!, pos, arrayCount - pos - 1);
-            }
-            array[arrayCount - 1] = LuaValue.Nil;
-            arrayCount--;
-            return ret;
-        }
-
-        public MapEnumerator GetEnumerator() => new MapEnumerator { Table = this, Index = -1 };
-
-        public (LuaValue key, LuaValue value)? Iterate(int i) {
-            if (i < arrayCount) {
-                return (i + 1, array![i]);
-            }
-            var idx = i - arrayCount;
-            if (idx < mapCount) {
-                return (map![idx].key, map[idx].value);
-            }
-            return null;
+        public void Insert(int position, in LuaValue value) {
+            Array.Insert(position, value);
+            MoveContiguousIntegerKeys();
         }
 
         public (LuaValue key, LuaValue value)? Next(in LuaValue key) {
             if (key == LuaValue.Nil) {
-                if (arrayCount > 0) {
-                    return (1, array![0]);
-                } else if (mapCount > 0) {
-                    return (map![0].key, map![0].value);
+                if (array != null) {
+                    return (1, array[0]);
                 }
-                return null;
-            }
-            if (TryGetArrayIndex(key, out var idx) || key == LuaValue.Nil) {
-                if (idx < arrayCount-1) {
-                    return (idx + 2, array![idx + 1]);
-                } else if (mapCount > 0) {
-                    return (map![0].key, map![0].value);
+                if (map != null) {
+                    return map.First();
                 }
-            }
-            if (Lookup(key, out idx) && idx < mapCount-1) {
-                var mapItem = map![idx + 1];
-                return (mapItem.key, mapItem.value);
+            } else if (array != null && IsArrayIndex(key, out var idx)) {
+                if (idx < (array.Count - 1)) {
+                    return (idx + 2, array[idx + 1]);
+                }
+                if (map != null && idx == (array.Count - 1)) {
+                    return map.First();
+                }
+            } else if (map != null) {
+                return map.Next(key);
             }
             return null;
         }
 
-        void ICollection<(LuaValue key, LuaValue value)>.Add((LuaValue key, LuaValue value) item) => Add(item.key, item.value);
+        public void Add(in LuaValue key, in LuaValue value) => this[key] = value;
+        public void Add(in LuaValue key, LuaCFunction value) => this[key] = value;
 
-        public void Clear()
+        public struct Enumerator : IEnumerator<(LuaValue key, LuaValue value)>
         {
-            arrayCount = 0;
-            mapCount = 0;
-            array = null;
-            map = null;
-        }
+            private readonly LuaTable table;
+            private int arrayIdx;
+            private LuaMap.Enumerator mapEnumerator;
 
-        bool ICollection<(LuaValue key, LuaValue value)>.Contains((LuaValue key, LuaValue value) item) => this[item.key].Equals(item.value);
+            public Enumerator(LuaTable table) {
+                this.table = table;
+                arrayIdx = 0;
+                mapEnumerator = table.Map.GetEnumerator();
+            }
 
-        void ICollection<(LuaValue key, LuaValue value)>.CopyTo((LuaValue key, LuaValue value)[] array, int arrayIndex)
-        {
-            foreach (var (key, value) in this) {
-                array[arrayIndex++] = (key, value);
+            public (LuaValue key, LuaValue value) Current {
+                get {
+                    if (arrayIdx < table.Length) {
+                        return (arrayIdx + 1, table.Array[arrayIdx]);
+                    }
+                    var pair = mapEnumerator.Current;
+                    return (pair.Key, pair.Value);
+                }
+            }
+
+            object IEnumerator.Current => Current;
+
+            void IDisposable.Dispose() { }
+
+            public bool MoveNext()
+            {
+                if (arrayIdx < (table.Length - 1)) {
+                    arrayIdx++;
+                    return true;
+                }
+                return mapEnumerator.MoveNext();
+            }
+
+            public void Reset()
+            {
+                arrayIdx = -1;
+                mapEnumerator.Reset();
             }
         }
 
-        bool ICollection<(LuaValue key, LuaValue value)>.Remove((LuaValue key, LuaValue value) item)
-        {
-            if (this[item.key].Equals(item.value)) {
-                this[item.key] = LuaValue.Nil;
-                return true;
-            }
-            return false;
-        }
+
     }
 }
