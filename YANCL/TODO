@@ -45,6 +45,9 @@ Misc language features:
     ☐ Userdata?
     ☐ Common runtime errors
     ☐ Value coercion
+    ☐ Object-oriented string style
+    ☐ Type metatables (number, string, etc.)
+    ☐ Weak tables
 Upvalues:
     ✔ _ENV @done(22-02-15 19:06)
     ✔ In-stack @done(22-02-15 18:38)
@@ -83,8 +86,13 @@ Blocks:
 Metafunctions:
     ✔ Metatable @done(22-06-30 19:07)
     ✔ Index @done(22-06-30 19:07)
-    ☐ Binary operators
+    ✔ Arithmetic operators @done(22-06-30 22:07)
+    ✔ Bitwise operators @done(22-06-30 22:07)
+    ☐ Comparison operators
+    ☐ Unary minus
     ☐ Length
+    ☐ Close
+    ☐ GC
 Basic functions library:
     ☐ assert
     ✔ collectgarbage @done(22-02-14 21:40)

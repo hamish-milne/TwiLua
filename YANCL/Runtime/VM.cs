@@ -335,28 +335,35 @@ namespace YANCL
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void CallMeta2(int op, LuaValue metaFn, LuaValue arg1, LuaValue arg2) {
+            PushCallInfo();
+            R(nSlots + 0) = metaFn;
+            R(nSlots + 1) = arg1;
+            R(nSlots + 2) = arg2;
+            resultsIdx = baseR + GetA(op);
+            Call(nSlots, 3, 2, isTailCall: true);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GetTable(int op, LuaValue table1) {
             var key = RK(GetC(op));
             var table = table1.Table ?? throw new Exception();
             while (!table.TryGetValue(key, out R(GetA(op))) && table.MetaTable != null) {
                 var index = table.MetaTable["__index"];
                 switch (index.Type) {
-                    case LuaType.FUNCTION: {
-                        PushCallInfo();
-                        R(nSlots + 0) = index;
-                        R(nSlots + 1) = table;
-                        R(nSlots + 2) = key;
-                        resultsIdx = baseR + GetA(op);
-                        Call(nSlots, 3, 2, isTailCall: true);
+                    case LuaType.FUNCTION:
+                        CallMeta2(op, index, table, key);
                         return;
-                    }
                     case LuaType.TABLE:
                         table = index.Table!;
                         break;
+                    // TODO: Invalid metamethod?
                 }
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetTable(int op, LuaValue table1) {
             var key = RK(GetB(op));
             var table = table1.Table ?? throw new Exception();
@@ -369,17 +376,58 @@ namespace YANCL
                         R(nSlots + 1) = table;
                         R(nSlots + 2) = key;
                         R(nSlots + 3) = RK(GetC(op));
-                        resultsIdx = baseR + GetA(op);
-                        Call(nSlots, 4, 2, isTailCall: true);
+                        Call(nSlots, 4, 1, isTailCall: false);
                         return;
                     }
                     case LuaType.TABLE:
                         table = index.Table!;
                         break;
+                    // TODO: Invalid metamethod?
                 }
             }
             table[key] = RK(GetC(op));
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool Arithmetic(int op, string method, out double n1, out double n2) {
+            var b = RK(GetB(op));
+            var c = RK(GetC(op));
+            if (b.TryGetNumber(out n1) && c.TryGetNumber(out n2)) {
+                return true;
+            } else if (b.TryGetMetaValue(method, out var meta)) {
+                CallMeta2(op, meta, b, c);
+                n1 = n2 = default;
+                return false;
+            } else if (c.TryGetMetaValue(method, out meta)) {
+                CallMeta2(op, meta, c, b);
+                n1 = n2 = default;
+                return false;
+            } else {
+                throw new LuaRuntimeError($"attempt to perform arithmetic on a {b.Type} and a {c.Type}");
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool Bitwise(int op, string method, out long n1, out long n2) {
+            var b = RK(GetB(op));
+            var c = RK(GetC(op));
+            if (b.TryGetInteger(out n1) && c.TryGetInteger(out n2)) {
+                return true;
+            } else if (b.TryGetMetaValue(method, out var meta)) {
+                CallMeta2(op, meta, b, c);
+                n1 = n2 = default;
+                return false;
+            } else if (c.TryGetMetaValue(method, out meta)) {
+                CallMeta2(op, meta, c, b);
+                n1 = n2 = default;
+                return false;
+            } else {
+                throw new LuaRuntimeError($"attempt to perform arithmetic on a {b.Type} and a {c.Type}");
+            }
+        }
+
+        double n1, n2;
+        long i1, i2;
 
         //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void Execute(int stopAt)
@@ -432,40 +480,64 @@ namespace YANCL
                         R(GetA(op) + 1) = R(GetB(op));
                         continue;
                     case OpCode.ADD:
-                        R(GetA(op)) = (RK(GetB(op)).Number + RK(GetC(op)).Number);
+                        if (Arithmetic(op, "__add", out n1, out n2)) {
+                            R(GetA(op)) = n1 + n2;
+                        }
                         continue;
                     case OpCode.SUB:
-                        R(GetA(op)) = (RK(GetB(op)).Number - RK(GetC(op)).Number);
+                        if (Arithmetic(op, "__sub", out n1, out n2)) {
+                            R(GetA(op)) = n1 - n2;
+                        }
                         continue;
                     case OpCode.MUL:
-                        R(GetA(op)) = (RK(GetB(op)).Number * RK(GetC(op)).Number);
+                        if (Arithmetic(op, "__mul", out n1, out n2)) {
+                            R(GetA(op)) = n1 * n2;
+                        }
                         continue;
                     case OpCode.MOD:
-                        R(GetA(op)) = (RK(GetB(op)).Number % RK(GetC(op)).Number);
+                        if (Arithmetic(op, "__mod", out n1, out n2)) {
+                            R(GetA(op)) = n1 % n2;
+                        }
                         continue;
                     case OpCode.POW:
-                        R(GetA(op)) = (Math.Pow(RK(GetB(op)).Number, RK(GetC(op)).Number));
+                        if (Arithmetic(op, "__pow", out n1, out n2)) {
+                            R(GetA(op)) = Math.Pow(n1, n2);
+                        }
                         continue;
                     case OpCode.DIV:
-                        R(GetA(op)) = (RK(GetB(op)).Number / RK(GetC(op)).Number);
+                        if (Arithmetic(op, "__div", out n1, out n2)) {
+                            R(GetA(op)) = n1 / n2;
+                        }
                         continue;
                     case OpCode.IDIV:
-                        R(GetA(op)) = (Math.Floor(RK(GetB(op)).Number / RK(GetC(op)).Number));
+                        if (Arithmetic(op, "__idiv", out n1, out n2)) {
+                            R(GetA(op)) = Math.Floor(n1 / n2);
+                        }
                         continue;
                     case OpCode.BAND:
-                        R(GetA(op)) = ((long)RK(GetB(op)).Number & (long)RK(GetC(op)).Number);
+                        if (Bitwise(op, "__band", out i1, out i2)) {
+                            R(GetA(op)) = i1 & i2;
+                        }
                         continue;
                     case OpCode.BOR:
-                        R(GetA(op)) = ((long)RK(GetB(op)).Number | (long)RK(GetC(op)).Number);
+                        if (Bitwise(op, "__bor", out i1, out i2)) {
+                            R(GetA(op)) = i1 | i2;
+                        }
                         continue;
                     case OpCode.BXOR:
-                        R(GetA(op)) = ((long)RK(GetB(op)).Number ^ (long)RK(GetC(op)).Number);
+                        if (Bitwise(op, "__bxor", out i1, out i2)) {
+                            R(GetA(op)) = i1 ^ i2;
+                        }
                         continue;
                     case OpCode.SHL:
-                        R(GetA(op)) = ((long)RK(GetB(op)).Number << (int)RK(GetC(op)).Number);
+                        if (Bitwise(op, "__shl", out i1, out i2)) {
+                            R(GetA(op)) = i1 << (int)i2;
+                        }
                         continue;
                     case OpCode.SHR:
-                        R(GetA(op)) = ((long)RK(GetB(op)).Number >> (int)RK(GetC(op)).Number);
+                        if (Bitwise(op, "__shr", out i1, out i2)) {
+                            R(GetA(op)) = i1 >> (int)i2;
+                        }
                         continue;
                     case OpCode.UNM:
                         R(GetA(op)) = -R(GetB(op)).Number;

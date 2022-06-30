@@ -68,6 +68,45 @@ namespace YANCL
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetNumber(out double number) {
+            switch (Type) {
+                case LuaType.NUMBER:
+                    number = Number;
+                    return true;
+                case LuaType.STRING:
+                    if (double.TryParse(String!, out number)) {
+                        return true;
+                    } else {
+                        number = 0;
+                        return false;
+                    }
+                default:
+                    number = 0;
+                    return false;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetInteger(out long intVal) {
+            if (TryGetNumber(out var n) && n % 1 == 0) {
+                intVal = (long)n;
+                return true;
+            } else {
+                intVal = 0;
+                return false;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetMetaValue(in LuaValue key, out LuaValue value) {
+            if (Table?.MetaTable == null) {
+                value = default;
+                return false;
+            }
+            return Table.MetaTable.TryGetValue(key, out value);
+        }
+
         public static readonly LuaValue Nil = new LuaValue();
 
 

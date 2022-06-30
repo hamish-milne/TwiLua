@@ -17,7 +17,7 @@ namespace YANCL
 
         public LuaTable() { }
         public LuaTable(int initialCapacity) {
-            array = new List<LuaValue>(initialCapacity);
+            array = initialCapacity > 0 ? new List<LuaValue>(initialCapacity) : null;
         }
 
         private static bool IsArrayIndex(in LuaValue key, out int idx) {
@@ -93,7 +93,7 @@ namespace YANCL
 
         public (LuaValue key, LuaValue value)? Next(in LuaValue key) {
             if (key == LuaValue.Nil) {
-                if (array != null) {
+                if (array != null && array.Count > 0) {
                     return (1, array[0]);
                 }
                 if (map != null) {
