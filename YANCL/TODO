@@ -81,8 +81,8 @@ Blocks:
     ✔ Generic for @done(22-02-13 21:22)
     ✔ break @done(22-06-25 18:16)
 Metafunctions:
-    ☐ Metatable
-    ☐ Index
+    ✔ Metatable @done(22-06-30 19:07)
+    ✔ Index @done(22-06-30 19:07)
     ☐ Binary operators
     ☐ Length
 Basic functions library:
@@ -104,7 +104,7 @@ Basic functions library:
     ☐ rawlen
     ☐ rawset
     ✔ select @done(22-02-14 21:40)
-    ☐ setmetatable
+    ✔ setmetatable @done(22-06-30 19:07)
     ☐ tonumber
     ☐ tostring
     ✔ type @done(22-06-27 14:45)

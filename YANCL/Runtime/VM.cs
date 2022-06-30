@@ -336,18 +336,18 @@ namespace YANCL
         }
 
         private void GetTable(int op, LuaValue table1) {
+            var key = RK(GetC(op));
             var table = table1.Table ?? throw new Exception();
-            while (table.MetaTable != null) {
+            while (!table.TryGetValue(key, out R(GetA(op))) && table.MetaTable != null) {
                 var index = table.MetaTable["__index"];
                 switch (index.Type) {
                     case LuaType.FUNCTION: {
                         PushCallInfo();
-                        var newBase = baseR + nSlots;
-                        stack[newBase + 0] = index;
-                        stack[newBase + 1] = table;
-                        stack[newBase + 2] = RK(GetC(op));
+                        R(nSlots + 0) = index;
+                        R(nSlots + 1) = table;
+                        R(nSlots + 2) = key;
                         resultsIdx = baseR + GetA(op);
-                        Call(newBase, 3, 2, isTailCall: true);
+                        Call(nSlots, 3, 2, isTailCall: true);
                         return;
                     }
                     case LuaType.TABLE:
@@ -355,23 +355,22 @@ namespace YANCL
                         break;
                 }
             }
-            R(GetA(op)) = table[RK(GetC(op))];
         }
 
         private void SetTable(int op, LuaValue table1) {
+            var key = RK(GetB(op));
             var table = table1.Table ?? throw new Exception();
-            while (table.MetaTable != null) {
+            while (!table.TryGetValue(key, out var _) && table.MetaTable != null) {
                 var index = table.MetaTable["__newindex"];
                 switch (index.Type) {
                     case LuaType.FUNCTION: {
                         PushCallInfo();
-                        var newBase = baseR + nSlots;
-                        stack[newBase + 0] = index;
-                        stack[newBase + 1] = table;
-                        stack[newBase + 2] = RK(GetB(op));
-                        stack[newBase + 3] = RK(GetC(op));
+                        R(nSlots + 0) = index;
+                        R(nSlots + 1) = table;
+                        R(nSlots + 2) = key;
+                        R(nSlots + 3) = RK(GetC(op));
                         resultsIdx = baseR + GetA(op);
-                        Call(newBase, 4, 2, isTailCall: true);
+                        Call(nSlots, 4, 2, isTailCall: true);
                         return;
                     }
                     case LuaType.TABLE:
@@ -379,7 +378,7 @@ namespace YANCL
                         break;
                 }
             }
-            table[RK(GetB(op))] = RK(GetC(op));
+            table[key] = RK(GetC(op));
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveOptimization)]

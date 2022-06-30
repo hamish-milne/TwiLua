@@ -34,7 +34,7 @@ namespace YANCL
 
         public bool Remove(LuaValue key) => Delete(key).HasValue;
 
-        public bool TryGetValue(LuaValue key, out LuaValue value)
+        public bool TryGetValue(in LuaValue key, out LuaValue value)
         {
             var node = Find(key);
             if (node != null) {
@@ -44,6 +44,8 @@ namespace YANCL
             value = LuaValue.Nil;
             return false;
         }
+
+        bool IDictionary<LuaValue, LuaValue>.TryGetValue(LuaValue key, out LuaValue value) => TryGetValue(key, out value);
 
         void ICollection<Pair>.Add(Pair item) => Insert(item.Key, item.Value, allowOverwrite: false);
 

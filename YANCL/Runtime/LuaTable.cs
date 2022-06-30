@@ -44,10 +44,8 @@ namespace YANCL
 
         public LuaValue this[in LuaValue key] {
             get {
-                if (array != null && IsArrayIndex(key, out var idx) && idx < array.Count) {
-                    return array[idx];
-                }
-                return map == null ? LuaValue.Nil : map[key];
+                TryGetValue(key, out var value);
+                return value;
             }
             set {
                 if (IsArrayIndex(key, out var idx)) {
@@ -69,6 +67,18 @@ namespace YANCL
                     Map[key] = value;
                 }
             }
+        }
+
+        public bool TryGetValue(in LuaValue key, out LuaValue value) {
+            if (array != null && IsArrayIndex(key, out var idx) && idx < array.Count) {
+                value = array[idx];
+                return true;
+            }
+            if (map == null) {
+                value = LuaValue.Nil;
+                return false;
+            }
+            return map.TryGetValue(key, out value);
         }
 
         public void Add(in LuaValue value) {
