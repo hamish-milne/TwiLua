@@ -143,6 +143,21 @@ namespace YANCL.StdLib {
                 }
                 return s.Return(table);
             });
+            globals["rawget"] = new LuaCFunction(s => {
+                if (s.Count < 2) {
+                    throw new WrongNumberOfArguments();
+                }
+                var table = s.Table(1);
+                return s.Return(table[s[2]]);
+            });
+            globals["rawset"] = new LuaCFunction(s => {
+                if (s.Count < 3) {
+                    throw new WrongNumberOfArguments();
+                }
+                var table = s.Table(1);
+                table[s[2]] = s[3];
+                return s.Return(table);
+            });
         }
     }
 }
