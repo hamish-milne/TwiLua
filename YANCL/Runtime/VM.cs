@@ -335,6 +335,53 @@ namespace YANCL
             }
         }
 
+        private void GetTable(int op, LuaValue table1) {
+            var table = table1.Table ?? throw new Exception();
+            while (table.MetaTable != null) {
+                var index = table.MetaTable["__index"];
+                switch (index.Type) {
+                    case LuaType.FUNCTION: {
+                        PushCallInfo();
+                        var newBase = baseR + nSlots;
+                        stack[newBase + 0] = index;
+                        stack[newBase + 1] = table;
+                        stack[newBase + 2] = RK(GetC(op));
+                        resultsIdx = baseR + GetA(op);
+                        Call(newBase, 3, 2, isTailCall: true);
+                        return;
+                    }
+                    case LuaType.TABLE:
+                        table = index.Table!;
+                        break;
+                }
+            }
+            R(GetA(op)) = table[RK(GetC(op))];
+        }
+
+        private void SetTable(int op, LuaValue table1) {
+            var table = table1.Table ?? throw new Exception();
+            while (table.MetaTable != null) {
+                var index = table.MetaTable["__newindex"];
+                switch (index.Type) {
+                    case LuaType.FUNCTION: {
+                        PushCallInfo();
+                        var newBase = baseR + nSlots;
+                        stack[newBase + 0] = index;
+                        stack[newBase + 1] = table;
+                        stack[newBase + 2] = RK(GetB(op));
+                        stack[newBase + 3] = RK(GetC(op));
+                        resultsIdx = baseR + GetA(op);
+                        Call(newBase, 4, 2, isTailCall: true);
+                        return;
+                    }
+                    case LuaType.TABLE:
+                        table = index.Table!;
+                        break;
+                }
+            }
+            table[RK(GetB(op))] = RK(GetC(op));
+        }
+
         //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void Execute(int stopAt)
         {
@@ -362,25 +409,26 @@ namespace YANCL
                     case OpCode.GETUPVAL:
                         R(GetA(op)) = UpVal(GetB(op));
                         continue;
-                    case OpCode.GETTABUP:
-                        R(GetA(op)) = UpVal(GetB(op))[RK(GetC(op))];
-                        continue;
+                    case OpCode.GETTABUP: 
+                        GetTable(op, UpVal(GetB(op)));
+                        break;
                     case OpCode.GETTABLE:
-                        R(GetA(op)) = RK(GetB(op))[RK(GetC(op))];
-                        continue;
+                        GetTable(op, RK(GetB(op)));
+                        break;
                     case OpCode.SETTABUP:
-                        UpVal(GetA(op))[RK(GetB(op))] = RK(GetC(op));
+                        SetTable(op, UpVal(GetA(op)));
                         continue;
                     case OpCode.SETUPVAL:
                         UpVal(GetB(op)) = R(GetA(op));
                         continue;
                     case OpCode.SETTABLE:
-                        RK(GetA(op))[RK(GetB(op))] = RK(GetC(op));
+                        SetTable(op, RK(GetA(op)));
                         continue;
                     case OpCode.NEWTABLE:
                         R(GetA(op)) = new LuaTable(GetB(op));
                         continue;
                     case OpCode.SELF:
+                    // TODO: GetTable here?
                         R(GetA(op)) = R(GetB(op))[RK(GetC(op))];
                         R(GetA(op) + 1) = R(GetB(op));
                         continue;

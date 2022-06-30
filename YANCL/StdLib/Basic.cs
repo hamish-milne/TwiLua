@@ -125,6 +125,24 @@ namespace YANCL.StdLib {
                     return 2;
                 }
             });
+            globals["getmetatable"] = new LuaCFunction(s => {
+                if (s.Count == 0) {
+                    throw new WrongNumberOfArguments();
+                }
+                return s.Return(s[1].Table?.MetaTable ?? LuaValue.Nil);
+            });
+            globals["setmetatable"] = new LuaCFunction(s => {
+                if (s.Count < 2) {
+                    throw new WrongNumberOfArguments();
+                }
+                var table = s.Table(1);
+                if (s[2] == LuaValue.Nil) {
+                    table.MetaTable = null;
+                } else {
+                    table.MetaTable = s.Table(2);
+                }
+                return s.Return(table);
+            });
         }
     }
 }

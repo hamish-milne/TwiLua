@@ -44,6 +44,7 @@ Misc language features:
     ☐ Stack overflow check
     ☐ Userdata?
     ☐ Common runtime errors
+    ☐ Value coercion
 Upvalues:
     ✔ _ENV @done(22-02-15 19:06)
     ✔ In-stack @done(22-02-15 18:38)
