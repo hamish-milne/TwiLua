@@ -87,12 +87,13 @@ namespace YANCL.StdLib {
                 if (s.Count < 1) {
                     throw new WrongNumberOfArguments();
                 }
+                var ciptr = s.CallDepth;
                 try {
-                    var nResults = s.Call(1, s.Count, 1);
+                    var nResults = s.Callback(1, s.Count, 1);
                     s[0] = true;
                     return nResults + 1;
                 } catch (Exception e) {
-                    s.ResetCallStack();
+                    s.UnwindStack(ciptr + 1);
                     s[0] = false;
                     s[1] = e is LuaRuntimeError lerror ? lerror.Value : e.Message;
                     return 2;

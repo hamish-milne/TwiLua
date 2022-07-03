@@ -13,13 +13,14 @@ namespace YANCL
         TABLE = 5,
         FUNCTION = 6,
         CFUNCTION = 7,
+        THREAD = 8,
     }
 
 
     class WrongNumberOfArguments : Exception { }
     class NoIntegerRepresentation : Exception { }
 
-    public delegate int LuaCFunction(LuaCallState s);
+    public delegate int LuaCFunction(LuaThread s);
 
     public readonly struct LuaValue : IEquatable<LuaValue> {
         public readonly LuaType Type;
@@ -28,6 +29,7 @@ namespace YANCL
         public readonly LuaTable? Table;
         public readonly LuaClosure? Function;
         public readonly LuaCFunction? CFunction;
+        public readonly LuaThread? Thread;
         public readonly int Hash;
 
         public bool Boolean {
@@ -118,6 +120,7 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = null;
+            Thread = null;
             Hash = value.GetHashCode();
         }
 
@@ -130,6 +133,7 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = null;
+            Thread = null;
             Hash = value.GetHashCode();
         }
 
@@ -141,6 +145,7 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = null;
+            Thread = null;
             Hash = value.GetHashCode();
         }
         
@@ -152,6 +157,7 @@ namespace YANCL
             Table = table;
             Function = null;
             CFunction = null;
+            Thread = null;
             Hash = table.GetHashCode();
         }
 
@@ -163,6 +169,7 @@ namespace YANCL
             Table = null;
             Function = function;
             CFunction = null;
+            Thread = null;
             Hash = function.GetHashCode();
         }
 
@@ -174,7 +181,20 @@ namespace YANCL
             Table = null;
             Function = null;
             CFunction = function;
+            Thread = null;
             Hash = function.GetHashCode();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LuaValue(LuaThread thread) {
+            Type = LuaType.THREAD;
+            Number = 0;
+            String = null;
+            Table = null;
+            Function = null;
+            CFunction = null;
+            Thread = thread;
+            Hash = thread.GetHashCode();
         }
 
         bool IEquatable<LuaValue>.Equals(LuaValue other) => Equals(other);
@@ -195,6 +215,8 @@ namespace YANCL
                     return Function == other.Function;
                 case LuaType.CFUNCTION:
                     return CFunction == other.CFunction;
+                case LuaType.THREAD:
+                    return Thread == other.Thread;
                 default:
                     throw new Exception("Invalid LuaType");
             }
@@ -222,6 +244,8 @@ namespace YANCL
                 case LuaType.CFUNCTION:
                 case LuaType.FUNCTION:
                     return "<function>";
+                case LuaType.THREAD:
+                    return "<thread>";
                 default:
                     throw new Exception("Invalid LuaType");
             }
@@ -263,6 +287,10 @@ namespace YANCL
         }
 
         public static implicit operator LuaValue(LuaCFunction value) {
+            return new LuaValue(value);
+        }
+
+        public static implicit operator LuaValue(LuaThread value) {
             return new LuaValue(value);
         }
     }

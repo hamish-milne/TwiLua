@@ -49,7 +49,7 @@ namespace YANCL.Test
                 nParams = 1,
                 nSlots = 1,
             };
-            var state = new LuaState(3, 1);
+            var state = new LuaThread(3, 1);
             var closure = new LuaClosure(function, new []{new LuaUpValue()});
             var results = state.Execute(closure, a);
             Assert.Equal(new []{expected}, results);
@@ -99,7 +99,7 @@ namespace YANCL.Test
                 nParams = 3,
                 nSlots = 3,
             };
-            var state = new LuaState(4, 1);
+            var state = new LuaThread(4, 1);
             var closure = new LuaClosure(function, new []{new LuaUpValue()});
             var results = state.Execute(closure, "a", "b", "c");
             Assert.Equal(new []{new LuaValue("abc")}, results);
@@ -126,7 +126,7 @@ namespace YANCL.Test
                 nParams = 0,
                 nSlots = 2,
             };
-            var state = new LuaState(3, 2);
+            var state = new LuaThread(3, 2);
             var closure = new LuaClosure(function, new []{new LuaUpValue()});
             var results = state.Execute(closure);
             Assert.Equal(new LuaValue[]{"bar"}, results);

@@ -7,7 +7,7 @@ namespace YANCL.Test
     {
         void AssertEqual(string str, params LuaValue[] expected) {
             var f = Lua.Compile("return " + str);
-            var s = new LuaState(16, 2);
+            var s = new LuaThread(16, 2);
             var g = new LuaTable();
             StdLib.String.Load(g);
             var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});

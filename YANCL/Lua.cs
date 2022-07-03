@@ -4,7 +4,7 @@ namespace YANCL
     {
         public const int FieldsPerFlush = 50;
 
-        private readonly LuaState state = new LuaState(1024, 256);
+        private readonly LuaThread state = new LuaThread(1024, 256);
         public LuaTable Globals { get; } = new LuaTable();
 
         private readonly LuaUpValue[] globalsUpValue;

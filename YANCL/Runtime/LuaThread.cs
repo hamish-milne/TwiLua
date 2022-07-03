@@ -46,7 +46,6 @@ namespace YANCL
         public LuaFunction[] prototypes;
         public LocalVarInfo[] locals;
         public Location[] locations;
-        public LuaFunction? parent;
         public int nParams;
         public int nSlots;
         public string chunkName;
@@ -92,44 +91,18 @@ namespace YANCL
         public int expResults;
     }
 
-    public struct LuaCallState {
-        // TODO: make these readonly
-        internal LuaValue[] stack;
-        internal LuaState state;
-        internal int Base;
-        internal int CIPtr;
-        public int Count;
-        public LuaValue this[int idx] {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => stack[Base + idx];
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set => stack[Base + idx] = value;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public double Number(int idx = 1) => this[idx].Number;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public long Integer(int idx = 1) => (long)this[idx].Number;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string String(int idx = 1) => this[idx].ToString();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LuaTable Table(int idx = 1) => this[idx].Table!;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Return(LuaValue v) {
-            stack[Base] = v;
-            return 1;
-        }
-        public int Call(int callee, int nArgs, int resultsIdx) => state.Callback(callee - 1, nArgs, resultsIdx - 1);
-        public void ResetCallStack() => state.ResetCallStack(CIPtr + 1);
-    }
-
-    public class LuaState {
+    public class LuaThread {
 
         readonly LuaValue[] stack;
         readonly LuaUpValue?[] upValueStack;
         readonly CallInfo[] callStack;
         int callStackPtr;
 
-        internal void ResetCallStack(int ciptr) {
+        public int CallDepth => callStackPtr;
+
+        public int Count => top - func;
+
+        public void UnwindStack(int ciptr) {
             if (ciptr >= callStackPtr) {
                 throw new InvalidOperationException($"Tried to reset call stack pointer to {ciptr} but it is already at {callStackPtr}");
             }
@@ -138,7 +111,9 @@ namespace YANCL
             Return(0, 1); // Reset call info vars
         }
 
-        internal int Callback(int callee, int nArgs, int resultsIdx) {
+        public int Callback(int callee, int nArgs, int resultsIdx) {
+            callee--;
+            resultsIdx--;
             var stopAt = callStackPtr;
             PushCallInfo();
             this.resultsIdx = baseR + resultsIdx;
@@ -155,9 +130,9 @@ namespace YANCL
         int nVarargs;
         int expResults;
 
-        int[] code;
-        LuaUpValue[] parentUpValues;
-        LuaValue[] constants;
+        int[] code = null!;
+        LuaUpValue[] parentUpValues = null!;
+        LuaValue[] constants = null!;
         int nSlots;
 
         void SetFunc(int func) {
@@ -174,25 +149,51 @@ namespace YANCL
             }
         }
 
-        public LuaState(int stackSize, int callStackSize) {
+        public LuaThread(int stackSize = 1024, int callStackSize = 256) {
             stack = new LuaValue[stackSize];
             upValueStack = new LuaUpValue[stackSize];
             callStack = new CallInfo[callStackSize];
         }
 
-        public LuaValue[] Execute(LuaClosure closure, params LuaValue[] args) {
-            var callee = baseR;
-            stack[callee] = closure;
-            // TODO: Allow calling this from within a CFunction
-            Array.Copy(args, 0, stack, callee + 1, args.Length);
+        public ref LuaValue this[int n] {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => ref stack[func + n];
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public double Number(int idx = 1) => this[idx].Number;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long Integer(int idx = 1) => (long)this[idx].Number;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string String(int idx = 1) => this[idx].ToString();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LuaTable Table(int idx = 1) => this[idx].Table!;
+        public int Return(LuaValue v) {
+            this[0] = v;
+            return 1;
+        }
+
+        public void SetMainFunction(LuaClosure mainFunction) {
+            if (callStackPtr != 0) {
+                throw new InvalidOperationException();
+            }
+            stack[0] = mainFunction;
+            SetFunc(0);
+        }
+
+        public LuaValue[] Execute(LuaClosure mainFunction, params LuaValue[] args) {
+            SetMainFunction(mainFunction);
+            return Run(args);
+        }
+
+        public LuaValue[] Run(params LuaValue[] args) {
+            Array.Copy(args, 0, stack, func + 1, args.Length);
             PushCallInfo();
             Call(0, args.Length + 1, 0, isTailCall: false);
             var ci = callStackPtr;
             try {
                 Execute(ci - 1);
             } catch {
-                callStackPtr = ci;
-                Return(func, 1);
+                UnwindStack(ci);
                 throw;
             }
             var nResults = top;
@@ -204,7 +205,9 @@ namespace YANCL
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PushCallInfo() {
-            // TODO: Catch stack overflow here
+            if (callStackPtr >= callStack.Length) {
+                throw new LuaRuntimeError("Call stack overflow");
+            }
             callStack[callStackPtr++] = new CallInfo {
                 resultsIdx = resultsIdx,
                 func = func,
@@ -278,14 +281,8 @@ namespace YANCL
                 pc = 0;
                 break;
             case LuaType.CFUNCTION: {
-                var callState = new LuaCallState {
-                    state = this,
-                    stack = stack,
-                    Base = func,
-                    Count = nArgs,
-                    CIPtr = callStackPtr
-                };
-                var nReturns = stack[func].CFunction!.Invoke(callState);
+                top = func + nArgs;
+                var nReturns = stack[func].CFunction!.Invoke(this);
                 nSlots = nArgs;
                 Return(func, nReturns + 1);
                 break;
