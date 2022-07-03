@@ -3,7 +3,7 @@ using System;
 
 namespace YANCL
 {
-    public class LuaRuntimeError : Exception {
+    public sealed class LuaRuntimeError : Exception {
         public LuaValue Value { get; }
 
         public LuaRuntimeError(LuaValue value) {

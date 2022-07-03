@@ -1,6 +1,6 @@
 namespace YANCL
 {
-    public class Lua
+    public sealed class Lua
     {
         public const int FieldsPerFlush = 50;
 

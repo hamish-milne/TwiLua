@@ -91,12 +91,16 @@ namespace YANCL
         public int expResults;
     }
 
-    public class LuaThread {
+    public sealed class LuaThread {
 
         readonly LuaValue[] stack;
         readonly LuaUpValue?[] upValueStack;
         readonly CallInfo[] callStack;
         int callStackPtr;
+        
+        public bool IsRunning { get; private set; }
+        public bool IsMain { get; }
+        public bool IsDead { get; }
 
         public int CallDepth => callStackPtr;
 
@@ -178,24 +182,38 @@ namespace YANCL
             }
             stack[0] = mainFunction;
             SetFunc(0);
+            top = 1;
+        }
+
+        public void Push(in LuaValue arg) {
+            stack[top++] = arg;
         }
 
         public LuaValue[] Execute(LuaClosure mainFunction, params LuaValue[] args) {
             SetMainFunction(mainFunction);
-            return Run(args);
+            foreach (var arg in args) {
+                Push(arg);
+            }
+            Run();
+            return GetResults();
         }
 
-        public LuaValue[] Run(params LuaValue[] args) {
-            Array.Copy(args, 0, stack, func + 1, args.Length);
+        public bool Run() {
             PushCallInfo();
-            Call(0, args.Length + 1, 0, isTailCall: false);
+            Call(0, top, 0, isTailCall: false);
             var ci = callStackPtr;
             try {
                 Execute(ci - 1);
-            } catch {
+                return true;
+            } catch (Exception e) {
+                var err = e is LuaRuntimeError lerror ? lerror.Value : e.Message;
                 UnwindStack(ci);
-                throw;
+                this[0] = err;
+                return false;
             }
+        }
+
+        public LuaValue[] GetResults() {
             var nResults = top;
             var results = new LuaValue[nResults];
             Array.Copy(stack, resultsIdx, results, 0, nResults);
@@ -426,8 +444,17 @@ namespace YANCL
         double n1, n2;
         long i1, i2;
 
+        private void Execute(int stopAt) {
+            try {
+                IsRunning = true;
+                _Execute(stopAt);
+            } finally {
+                IsRunning = false;
+            }
+        }
+
         //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private void Execute(int stopAt)
+        private void _Execute(int stopAt)
         {
             while (true) {
                 var op = code[pc++];

@@ -12,7 +12,7 @@ namespace YANCL
     /// This class is a custom dictionary implementation that allows for stateless iteration.
     /// It does not implement Lua semantics regarding nil keys and values.
     /// </remarks>
-    public class LuaMap : IDictionary<LuaValue, LuaValue>
+    public sealed class LuaMap : IDictionary<LuaValue, LuaValue>
     {
         public KeyCollection Keys => new KeyCollection(this);
         public ValueCollection Values => new ValueCollection(this);

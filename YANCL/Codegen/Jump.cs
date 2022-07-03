@@ -5,7 +5,7 @@ using static YANCL.OpCode;
 
 namespace YANCL
 {
-    public class Label
+    public sealed class Label
     {
         internal int Location = -1;
         internal readonly List<int> References = new List<int>();

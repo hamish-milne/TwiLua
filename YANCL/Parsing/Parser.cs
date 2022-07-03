@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace YANCL
 {
-    internal class Parser
+    internal sealed class Parser
     {
         readonly Lexer lexer;
         readonly Compiler C;

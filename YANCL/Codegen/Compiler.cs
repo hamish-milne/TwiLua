@@ -6,7 +6,7 @@ using static YANCL.OpCode;
 
 namespace YANCL
 {
-    public partial class Compiler
+    public sealed partial class Compiler
     {
         public Compiler(string chunkName) {
             this.chunkName = chunkName;

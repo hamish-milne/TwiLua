@@ -5,7 +5,7 @@ using static YANCL.TokenType;
 
 namespace YANCL
 {
-    class Lexer
+    sealed class Lexer
     {
         public Lexer(string source) {
             str = source;
