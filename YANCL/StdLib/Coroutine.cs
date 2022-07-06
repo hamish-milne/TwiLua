@@ -32,7 +32,7 @@ namespace YANCL
                     for (int i = 2; i <= s.Count; i++) {
                         thread.Push(s[i]);
                     }
-                    s[0] = thread.Run();
+                    s[0] = thread.Resume();
                     for (int i = 0; i < thread.Count; i++) {
                         s[i + 1] = thread[i];
                     }
@@ -58,7 +58,12 @@ namespace YANCL
                         return s.Return("dead");
                     }
                     return s.Return("suspended");
-                }}
+                }},
+                {"yield", s => {
+                    s.Yield();
+                    return 0;
+                }},
+                {"isyieldable", s => s.Return(s.IsYieldable) }
             };
         }
     }

@@ -89,6 +89,7 @@ namespace YANCL
         public int baseR;
         public int nVarargs;
         public int expResults;
+        public bool isYieldable;
     }
 
     public sealed class LuaThread {
@@ -101,6 +102,7 @@ namespace YANCL
         public bool IsRunning { get; private set; }
         public bool IsMain { get; }
         public bool IsDead { get; }
+        public bool IsYieldable { get; private set; }
 
         public int CallDepth => callStackPtr;
 
@@ -108,7 +110,7 @@ namespace YANCL
 
         public void UnwindStack(int ciptr) {
             if (ciptr >= callStackPtr) {
-                throw new InvalidOperationException($"Tried to reset call stack pointer to {ciptr} but it is already at {callStackPtr}");
+                throw new InvalidOperationException($"Tried to unwind stack to {ciptr} but it is already at {callStackPtr}");
             }
             Array.Clear(callStack, ciptr, callStackPtr - ciptr);
             callStackPtr = ciptr;
@@ -120,10 +122,18 @@ namespace YANCL
             resultsIdx--;
             var stopAt = callStackPtr;
             PushCallInfo();
+            IsYieldable = false;
             this.resultsIdx = baseR + resultsIdx;
             Call(callee, nArgs, 0, isTailCall: true);
             Execute(stopAt);
             return top - callee - baseR;
+        }
+
+        public void Yield() {
+            if (!IsYieldable) {
+                throw new LuaRuntimeError("Cannot yield from this coroutine");
+            }
+            IsRunning = false;
         }
 
         int resultsIdx;
@@ -194,13 +204,21 @@ namespace YANCL
             foreach (var arg in args) {
                 Push(arg);
             }
-            Run();
+            Resume();
             return GetResults();
         }
 
-        public bool Run() {
-            PushCallInfo();
-            Call(0, top, 0, isTailCall: false);
+        public bool Resume() {
+            if (callStackPtr == 0) {
+                PushCallInfo();
+                Call(0, top, 0, isTailCall: false);
+            } else {
+                Return(func, 0);
+            }
+            return Run();
+        }
+
+        private bool Run() {
             var ci = callStackPtr;
             try {
                 Execute(ci - 1);
@@ -233,7 +251,8 @@ namespace YANCL
                 baseR = baseR,
                 top = top,
                 nVarargs = nVarargs,
-                expResults = expResults
+                expResults = expResults,
+                isYieldable = IsYieldable
             };
         }
 
@@ -300,8 +319,14 @@ namespace YANCL
                 break;
             case LuaType.CFUNCTION: {
                 top = func + nArgs;
-                var nReturns = stack[func].CFunction!.Invoke(this);
                 nSlots = nArgs;
+                var nReturns = stack[func].CFunction!.Invoke(this);
+                if (!IsRunning) {
+                    // Yield was called
+                    Array.Clear(stack, func, nArgs);
+                    top = func;
+                    return;
+                }
                 Return(func, nReturns + 1);
                 break;
             }
@@ -338,6 +363,7 @@ namespace YANCL
             nVarargs = callInfo.nVarargs;
             expResults = callInfo.expResults;
             resultsIdx = callInfo.resultsIdx;
+            IsYieldable = callInfo.isYieldable;
         }
 
         void Close(int downTo) {
@@ -456,7 +482,7 @@ namespace YANCL
         //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void _Execute(int stopAt)
         {
-            while (true) {
+            while (IsRunning) {
                 var op = code[pc++];
                 var opcode = GetOpCode(op);
                 switch (opcode) {
