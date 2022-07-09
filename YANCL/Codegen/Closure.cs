@@ -13,7 +13,7 @@ namespace YANCL
         {
             public readonly int Index;
             public TClosure(int index) => Index = index;
-            public override void Load(Compiler c, int dst) => c.Emit(Build2(CLOSURE, dst, Index));
+            public override void Load(Compiler c, int dst) => c.Emit(Build2x(CLOSURE, dst, Index));
         }
 
         public Compiler Closure() {

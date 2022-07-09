@@ -101,7 +101,7 @@ namespace YANCL
         
         public bool IsRunning { get; private set; }
         public bool IsMain { get; }
-        public bool IsDead { get; }
+        public bool IsDead { get; set; }
         public bool IsYieldable { get; set; }
 
         public int CallDepth => callStackPtr;
@@ -163,7 +163,8 @@ namespace YANCL
             }
         }
 
-        public LuaThread(int stackSize = 1024, int callStackSize = 256) {
+        public LuaThread(bool isMain = true, int stackSize = 1024, int callStackSize = 256) {
+            IsMain = isMain;
             stack = new LuaValue[stackSize];
             upValueStack = new LuaUpValue[stackSize];
             callStack = new CallInfo[callStackSize];
@@ -223,12 +224,16 @@ namespace YANCL
             var ci = callStackPtr;
             try {
                 Execute(ci - 1);
+                IsDead = callStackPtr == 0;
                 return true;
             } catch (Exception e) {
                 var err = e is LuaRuntimeError lerror ? lerror.Value : e.Message;
                 UnwindStack(ci);
                 this[0] = err;
+                IsDead = true;
                 return false;
+            } finally {
+                IsRunning = false;
             }
         }
 
@@ -697,7 +702,8 @@ namespace YANCL
                         continue;
                     }
                     case OpCode.CLOSURE: {
-                        var proto = stack[func].Function!.Function.prototypes[GetBx(op)];
+                        var protoIdx = GetBx(op);
+                        var proto = stack[func].Function!.Function.prototypes[protoIdx];
                         var upValues = new LuaUpValue[proto.upvalues.Length];
                         for (int i = 0; i < upValues.Length; i++) {
                             var upValInfo = proto.upvalues[i];

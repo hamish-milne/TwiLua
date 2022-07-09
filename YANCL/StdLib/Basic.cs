@@ -96,6 +96,7 @@ namespace YANCL.StdLib {
                     s.UnwindStack(ciptr + 1);
                     s[0] = false;
                     s[1] = e is LuaRuntimeError lerror ? lerror.Value : e.Message;
+                    s.IsDead = false;
                     return 2;
                 }
             });

@@ -787,7 +787,7 @@ namespace YANCL.Test
                 "local a = function (a) print(b) end",
                 new LuaValue[] { },
                 new [] {
-                    Build2(CLOSURE, 0, 0),
+                    Build2x(CLOSURE, 0, 0),
                     Build2(RETURN, 0, 1),
                 },
                 new [] {
@@ -817,7 +817,7 @@ namespace YANCL.Test
                 "local function foo() end",
                 new LuaValue[] { },
                 new [] {
-                    Build2(CLOSURE, 0, 0),
+                    Build2x(CLOSURE, 0, 0),
                     Build2(RETURN, 0, 1),
                 },
                 new [] {
@@ -842,7 +842,7 @@ namespace YANCL.Test
                 "function foo() end",
                 new LuaValue[] { "foo" },
                 new [] {
-                    Build2(CLOSURE, 0, 0),
+                    Build2x(CLOSURE, 0, 0),
                     Build3(SETTABUP, 0, 0 | KFlag, 0),
                     Build2(RETURN, 0, 1),
                 },
@@ -868,7 +868,7 @@ namespace YANCL.Test
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(GETTABLE, 0, 0, 1 | KFlag),
-                    Build2(CLOSURE, 1, 0),
+                    Build2x(CLOSURE, 1, 0),
                     Build3(SETTABLE, 0, 2 | KFlag, 1),
                     Build2(RETURN, 0, 1),
                 },
@@ -894,7 +894,7 @@ namespace YANCL.Test
                 new [] {
                     Build3(GETTABUP, 0, 0, 0 | KFlag),
                     Build3(GETTABLE, 0, 0, 1 | KFlag),
-                    Build2(CLOSURE, 1, 0),
+                    Build2x(CLOSURE, 1, 0),
                     Build3(SETTABLE, 0, 2 | KFlag, 1),
                     Build2(RETURN, 0, 1),
                 },
@@ -1820,7 +1820,7 @@ namespace YANCL.Test
                     Build3(TEST, 0, 0, 0),
                     Build2sx(JMP, 0, 5),
                     Build2(LOADNIL, 0, 0),
-                    Build2(CLOSURE, 1, 0),
+                    Build2x(CLOSURE, 1, 0),
                     Build3(SETTABUP, 0, 1 | KFlag, 1),
                     Build2sx(JMP, 1, 8),
                     Build2sx(JMP, 0, 7),
@@ -1828,7 +1828,7 @@ namespace YANCL.Test
                     Build3(TEST, 0, 0, 0),
                     Build2sx(JMP, 0, 4),
                     Build2(LOADNIL, 0, 0),
-                    Build2(CLOSURE, 1, 1),
+                    Build2x(CLOSURE, 1, 1),
                     Build3(SETTABUP, 0, 3 | KFlag, 1),
                     Build2sx(JMP, 1, 0),
                     Build2(RETURN, 0, 1),

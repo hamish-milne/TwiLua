@@ -4,7 +4,7 @@ namespace YANCL
     {
         public const int FieldsPerFlush = 50;
 
-        private readonly LuaThread state = new LuaThread(1024, 256);
+        private readonly LuaThread mainThread = new LuaThread(isMain: true, 1024, 256);
         public LuaTable Globals { get; } = new LuaTable();
 
         private readonly LuaUpValue[] globalsUpValue;
@@ -14,7 +14,7 @@ namespace YANCL
         }
 
         public LuaValue[] DoString(string str) {
-            return state.Execute(new LuaClosure(Compile(str), globalsUpValue));
+            return mainThread.Execute(new LuaClosure(Compile(str), globalsUpValue));
         }
 
         public static LuaFunction Compile(string str, string chunkName = "chunk") {

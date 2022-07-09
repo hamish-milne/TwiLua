@@ -121,12 +121,12 @@ Basic functions library:
     ☐ xpcall
 Coroutines:
     ✔ coroutine.create @done(22-07-09 01:19)
-    ☐ coroutine.isyieldable
+    ✔ coroutine.isyieldable @done(22-07-09 10:43)
     ✔ coroutine.resume @done(22-07-09 01:19)
-    ☐ coroutine.running
-    ☐ coroutine.status
+    ✔ coroutine.running @done(22-07-09 10:43)
+    ✔ coroutine.status @done(22-07-09 15:51)
     ☐ coroutine.wrap
-    ☐ coroutine.yield
+    ✔ coroutine.yield @done(22-07-09 10:43)
 Modules:
     ☐ require
     ☐ package.config

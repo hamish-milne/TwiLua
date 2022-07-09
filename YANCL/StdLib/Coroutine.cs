@@ -17,8 +17,9 @@ namespace YANCL.StdLib
                     if (func == null) {
                         throw new LuaRuntimeError("Argument to 'coroutine.create' must be a function");
                     }
-                    var thread = new LuaThread();
+                    var thread = new LuaThread(isMain: false);
                     thread.SetMainFunction(func);
+                    thread.IsYieldable = true;
                     return s.Return(thread);
                 }},
                 {"resume", s => {
@@ -28,6 +29,9 @@ namespace YANCL.StdLib
                     var thread = s[1].Thread;
                     if (thread == null) {
                         throw new LuaRuntimeError("Argument to 'coroutine.resume' must be a thread");
+                    }
+                    if (thread.IsDead) {
+                        throw new LuaRuntimeError("Cannot resume dead thread");
                     }
                     for (int i = 2; i <= s.Count; i++) {
                         thread.Push(s[i]);
@@ -55,6 +59,9 @@ namespace YANCL.StdLib
                     if (thread == s) {
                         return s.Return("running");
                     }
+                    if (thread.IsRunning) {
+                        return s.Return("normal");
+                    }
                     if (thread.IsDead) {
                         return s.Return("dead");
                     }
@@ -64,7 +71,17 @@ namespace YANCL.StdLib
                     s.Yield();
                     return 0;
                 }},
-                {"isyieldable", s => s.Return(s.IsYieldable) }
+                {"isyieldable", s => {
+                    var co = s;
+                    if (s.Count > 0) {
+                        var thread = s[1].Thread;
+                        if (thread == null) {
+                            throw new LuaRuntimeError("Argument to 'coroutine.isyieldable' must be a thread");
+                        }
+                        co = thread;
+                    }
+                    return s.Return(co.IsYieldable);
+                }}
             };
         }
     }
