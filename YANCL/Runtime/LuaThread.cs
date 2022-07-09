@@ -102,14 +102,14 @@ namespace YANCL
         public bool IsRunning { get; private set; }
         public bool IsMain { get; }
         public bool IsDead { get; }
-        public bool IsYieldable { get; private set; }
+        public bool IsYieldable { get; set; }
 
         public int CallDepth => callStackPtr;
 
         public int Count => top - func;
 
         public void UnwindStack(int ciptr) {
-            if (ciptr >= callStackPtr) {
+            if (ciptr > callStackPtr) {
                 throw new InvalidOperationException($"Tried to unwind stack to {ciptr} but it is already at {callStackPtr}");
             }
             Array.Clear(callStack, ciptr, callStackPtr - ciptr);
@@ -204,6 +204,7 @@ namespace YANCL
             foreach (var arg in args) {
                 Push(arg);
             }
+            IsYieldable = false;
             Resume();
             return GetResults();
         }
@@ -475,7 +476,6 @@ namespace YANCL
                 IsRunning = true;
                 _Execute(stopAt);
             } finally {
-                IsRunning = false;
             }
         }
 

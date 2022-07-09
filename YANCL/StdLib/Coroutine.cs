@@ -1,6 +1,6 @@
 using System;
 
-namespace YANCL
+namespace YANCL.StdLib
 {
 
     public static class Coroutine
@@ -8,7 +8,7 @@ namespace YANCL
 
         public static void Load(LuaTable globals)
         {
-            globals["coroutines"] = new LuaTable {
+            globals["coroutine"] = new LuaTable {
                 {"create", s => {
                     if (s.Count < 1) {
                         throw new WrongNumberOfArguments();
@@ -32,6 +32,7 @@ namespace YANCL
                     for (int i = 2; i <= s.Count; i++) {
                         thread.Push(s[i]);
                     }
+                    thread.IsYieldable = true;
                     s[0] = thread.Resume();
                     for (int i = 0; i < thread.Count; i++) {
                         s[i + 1] = thread[i];

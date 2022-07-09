@@ -558,6 +558,8 @@ namespace YANCL
                 ResolveOperations(order, isLogical);
                 if (isLogical) {
                     C.Test(keepConstantTrue: bop.Value.type == TokenType.And);
+                } else if (bop.Value.type == TokenType.DoubleDot) {
+                    C.ConcatArg();
                 }
                 operations.Push(new Operation {
                     token = bop.Value,

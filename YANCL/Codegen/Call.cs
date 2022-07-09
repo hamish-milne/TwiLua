@@ -36,6 +36,7 @@ namespace YANCL
                 var tmpSlots = 0;
                 var r = GetR(c, ref tmpSlots);
                 if (dst != r) c.Emit(Build2(MOVE, dst, r));
+                c.Top -= tmpSlots;
             }
 
             public override void LoadVaradic(Compiler c, int limit) => c.Emit(Build3(CALL, Func, B, limit));
@@ -51,7 +52,8 @@ namespace YANCL
         public void Vararg() => Push(new Varargs());
 
         public void Argument() {
-            Pop().Load(this, PushS());
+            Pop().Load(this, Top);
+            PushS();
         }
 
         public void Callee() => Argument();

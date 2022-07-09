@@ -1965,5 +1965,24 @@ namespace YANCL.Test
                 51
             );
         }
+
+        [Fact]
+        public void ConcatCall()
+        {
+            DoCompilerTest(
+                "return a .. b()",
+                new LuaValue[] { "a", "b" },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build3(GETTABUP, 1, 0, 1 | KFlag),
+                    Build3(CALL, 1, 1, 2),
+                    Build3(CONCAT, 0, 0, 1),
+                    Build2(RETURN, 0, 2),
+                    Build2(RETURN, 0, 1),
+                },
+                new LocalVarInfo[] { },
+                2
+            );
+        }
     }
 }

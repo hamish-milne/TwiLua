@@ -120,9 +120,9 @@ Basic functions library:
     ☐ warn
     ☐ xpcall
 Coroutines:
-    ☐ coroutine.create
+    ✔ coroutine.create @done(22-07-09 01:19)
     ☐ coroutine.isyieldable
-    ☐ coroutine.resume
+    ✔ coroutine.resume @done(22-07-09 01:19)
     ☐ coroutine.running
     ☐ coroutine.status
     ☐ coroutine.wrap
