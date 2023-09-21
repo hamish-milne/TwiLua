@@ -48,6 +48,8 @@ Misc language features:
     ☐ Object-oriented string style
     ☐ Type metatables (number, string, etc.)
     ☐ Weak tables
+    ☐ Variable attributes
+    ☐ Lua 5.4 opcodes
 Upvalues:
     ✔ _ENV @done(22-02-15 19:06)
     ✔ In-stack @done(22-02-15 18:38)

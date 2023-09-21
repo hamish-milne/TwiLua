@@ -143,6 +143,22 @@ namespace YANCL
                 }
             }
 
+            if (c == '0' && position < str.Length - 1 && (str[position] == 'x' || str[position] == 'X')) {
+                position++;
+                do {
+                    if (position >= str.Length) {
+                        break;
+                    }
+                    c = str[position++];
+                } while (char.IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+                start += 2;
+                return new Token {
+                    type = TokenType.Number,
+                    number = long.Parse(str.Substring(start, position - start), System.Globalization.NumberStyles.HexNumber),
+                    location = new Location(lines, start - lineStart)
+                };
+            }
+
             if (char.IsDigit(c) || (c == '.' && position < str.Length && char.IsDigit(str[position]))) {
                 position--;
                 bool hasDp = false;

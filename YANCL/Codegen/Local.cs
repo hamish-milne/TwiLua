@@ -15,7 +15,10 @@ namespace YANCL
                 Index = index;
                 stackSlots = isVar ? 0 : 1;
             }
-            public override int GetR(Compiler c, ref int tmpSlots) => Index;
+            public override int GetR(Compiler c, ref int tmpSlots) {
+                tmpSlots += stackSlots;
+                return Index;
+            }
             public override void Load(Compiler c, int dst) {
                 if (dst == Index) return;
                 c.Emit(Build2(MOVE, dst, Index));

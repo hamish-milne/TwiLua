@@ -43,12 +43,12 @@ namespace YANCL
         }
 
         public void Indexee() {
-            // var op = Peek(0);
-            // if (op is TLocal || op is TUpvalue) {
-            //     return;
-            // }
-            // Pop().Load(this, Top);
-            // Push(new TLocal(Top, isVar: false));
+            var op = Peek(0);
+            if (op is TLocal || op is TUpvalue) {
+                return;
+            }
+            Pop().Load(this, Top);
+            Push(new TLocal(PushS(), isVar: false));
         }
 
         public void Index() {

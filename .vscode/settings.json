@@ -4,5 +4,6 @@
         "coverage.info",
     ],
     "coverage-gutters.showLineCoverage": true,
-    "coverage-gutters.showGutterCoverage": false
+    "coverage-gutters.showGutterCoverage": false,
+    "omnisharp.enableImportCompletion": true
 }

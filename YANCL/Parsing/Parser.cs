@@ -677,7 +677,9 @@ namespace YANCL
             while (Peek().type != TokenType.CloseParen) {
                 if (TryTake(TokenType.TripleDot)) {
                     scope.IsVaradic = true;
-                    Expect(TokenType.CloseParen, "function varadic specifier");
+                    if (Peek().type != TokenType.CloseParen) {
+                        throw new Exception($"Expected ')' but got {Peek()}");
+                    }
                     break;
                 }
                 scope.Reserve(Expect(TokenType.Identifier, "function argument")!);

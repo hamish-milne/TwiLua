@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Xunit;
 
 namespace YANCL.Test
@@ -97,5 +98,11 @@ namespace YANCL.Test
 
         [Fact]
         public void LongComment() => AssertEqual("--[[ ]] foo\nbar\n]] return 1", 1);
+
+        [Fact]
+        public void Hex() => AssertEqual("return 0xFF", 255);
+
+        [Fact]
+        public void BigFile() => Lua.Compile(File.ReadAllText("../../../../YANCL.Benchmark/lua/loadBigFile.lua"));
     }
 }

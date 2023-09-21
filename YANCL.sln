@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YANCL.Test", "YANCL.Test\YA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YANCL.Exe", "YANCL.Exe\YANCL.Exe.csproj", "{3387F582-4FBF-46E5-89CA-A8D7A6FE95B5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YANCL.Benchmark", "YANCL.Benchmark\YANCL.Benchmark.csproj", "{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,5 +60,17 @@ Global
 		{3387F582-4FBF-46E5-89CA-A8D7A6FE95B5}.Release|x64.Build.0 = Release|Any CPU
 		{3387F582-4FBF-46E5-89CA-A8D7A6FE95B5}.Release|x86.ActiveCfg = Release|Any CPU
 		{3387F582-4FBF-46E5-89CA-A8D7A6FE95B5}.Release|x86.Build.0 = Release|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Debug|x64.Build.0 = Debug|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Debug|x86.Build.0 = Debug|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Release|x64.ActiveCfg = Release|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Release|x64.Build.0 = Release|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Release|x86.ActiveCfg = Release|Any CPU
+		{E76F7B6A-D52F-46B9-B67F-51F5D29E70AA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
