@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System;
 using System.Runtime.CompilerServices;
 using System.Collections;
+using YANCL.StdLib;
+using System.Reflection;
 
 namespace YANCL
 {
@@ -22,7 +24,7 @@ namespace YANCL
 
     public delegate int LuaCFunction(LuaThread s);
 
-    public readonly struct LuaValue : IEquatable<LuaValue> {
+    public readonly partial struct LuaValue : IEquatable<LuaValue> {
         public readonly LuaType Type;
         public readonly double Number;
         public readonly string? String;
@@ -111,6 +113,109 @@ namespace YANCL
 
         public static readonly LuaValue Nil = new LuaValue();
 
+        private static class Caster<T> {
+            public static Func<LuaValue, LuaThread?, T>? As;
+            public static Func<T, LuaValue>? From;
+
+            public static bool Exists => As != null && From != null;
+
+            public static void Set(Func<LuaValue, LuaThread?, T> asFunc, Func<T, LuaValue> fromFunc) {
+                As = asFunc;
+                From = fromFunc;
+            }
+        }
+
+        T AssertType<T>(LuaType type, T returns) {
+            if (Type != type) {
+                throw new Exception($"Expected {type}, got {Type}");
+            }
+            return returns;
+        }
+
+        T AssertDelegate<T>(LuaThread? thread, T returns) {
+            if (Type != LuaType.CFUNCTION && Type != LuaType.FUNCTION) {
+                throw new Exception($"Expected a function, got {Type}");
+            }
+            if (thread == null) {
+                throw new Exception("A LuaThread must be provided to convert to a delegate");
+            }
+            return returns;
+        }
+
+        static LuaValue() {
+
+            Caster<bool>.Set(
+                (v, _) => v.AssertType(LuaType.BOOLEAN, v.Boolean),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<double>.Set(
+                (v, _) => v.AssertType(LuaType.NUMBER, v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<int>.Set(
+                (v, _) => v.AssertType(LuaType.NUMBER, (int)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<string>.Set(
+                (v, _) => v.AssertType(LuaType.STRING, v.String!),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<LuaTable>.Set(
+                (v, _) => v.AssertType(LuaType.TABLE, v.Table!),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<LuaMap>.Set(
+                (v, _) => v.AssertType(LuaType.TABLE, v.Table!.Map),
+                (v) => new LuaValue(new LuaTable(null, v))
+            );
+
+            Caster<List<LuaValue>>.Set(
+                (v, _) => v.AssertType(LuaType.TABLE, v.Table!.Array),
+                (v) => new LuaValue(new LuaTable(v, null))
+            );
+
+            Caster<LuaClosure>.Set(
+                (v, _) => v.AssertType(LuaType.FUNCTION, v.Function!),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<LuaCFunction>.Set(
+                (v, _) => v.AssertType(LuaType.CFUNCTION, v.CFunction!),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<Action>.Set(
+                (v, s) => v.AssertDelegate<Action>(s, () => {
+                    s!.Push(v);
+                    s.Call(0, 0);
+                }),
+                (v) => new LuaValue((s) => {
+                    v();
+                    return 0;
+                })
+            );
+        }
+
+        public T As<T>(LuaThread? thread = null) {
+            SetDelegateCaster<T>();
+            if (Caster<T>.As == null) {
+                throw new Exception("Invalid type: " + typeof(T));
+            }
+            return Caster<T>.As(this, thread);
+        }
+
+        public static LuaValue From<T>(T value) {
+            SetDelegateCaster<T>();
+            if (Caster<T>.From == null) {
+                throw new Exception("Invalid type" + typeof(T));
+            }
+            return Caster<T>.From(value);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(bool value) {
@@ -251,45 +356,57 @@ namespace YANCL
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(in LuaValue left, in LuaValue right) {
             return left.Equals(right);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(in LuaValue left, in LuaValue right) {
             return !left.Equals(right);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(bool value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(double value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(int value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(long value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(string value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(LuaClosure value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(LuaTable value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(LuaCFunction value) {
             return new LuaValue(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(LuaThread value) {
             return new LuaValue(value);
         }

@@ -5,5 +5,7 @@
     ],
     "coverage-gutters.showLineCoverage": true,
     "coverage-gutters.showGutterCoverage": false,
-    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
+    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+    "omnisharp.enableRoslynAnalyzers": true,
+    "dotnet.backgroundAnalysis.analyzerDiagnosticsScope": "fullSolution"
 }

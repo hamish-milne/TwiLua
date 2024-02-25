@@ -200,6 +200,10 @@ namespace YANCL
             stack[top++] = arg;
         }
 
+        public LuaValue Pop() {
+            return stack[--top];
+        }
+
         public LuaValue[] Execute(LuaClosure mainFunction, params LuaValue[] args) {
             SetMainFunction(mainFunction);
             foreach (var arg in args) {
@@ -208,6 +212,10 @@ namespace YANCL
             IsYieldable = false;
             Resume();
             return GetResults();
+        }
+
+        public void Call(int nArgs, int nReturns) {
+            // TODO:
         }
 
         public bool Resume() {

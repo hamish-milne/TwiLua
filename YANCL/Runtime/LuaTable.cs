@@ -19,6 +19,10 @@ namespace YANCL
         public LuaTable(int initialCapacity) {
             array = initialCapacity > 0 ? new List<LuaValue>(initialCapacity) : null;
         }
+        public LuaTable(List<LuaValue>? array, LuaMap? map) {
+            this.array = array;
+            this.map = map;
+        }
 
         private static bool IsArrayIndex(in LuaValue key, out int idx) {
             if (key.Type == LuaType.NUMBER && key.Number > 0 && key.Number % 1 == 0) {
