@@ -103,6 +103,6 @@ namespace YANCL.Test
         public void Hex() => AssertEqual("return 0xFF", 255);
 
         [Fact]
-        public void BigFile() => Lua.Compile(File.ReadAllText("../../../../YANCL.Benchmark/lua/loadBigFile.lua"));
+        public void BigFile() => new Lua().DoString(File.ReadAllText("../../../../YANCL.Benchmark/lua/loadBigFile.lua"));
     }
 }

@@ -56,6 +56,12 @@ namespace YANCL
         public bool IsVaradic { get; set; }
         public Location Location { get; set; }
 
+        internal void AssertStatementEnd() {
+            // if (Top != locals.Count) {
+            //     throw new InvalidOperationException("Stack not empty");
+            // }
+        }
+
         private int PushS() {
             var idx = Top++;
             SetMaxStack();

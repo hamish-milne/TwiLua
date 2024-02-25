@@ -5,5 +5,5 @@
     ],
     "coverage-gutters.showLineCoverage": true,
     "coverage-gutters.showGutterCoverage": false,
-    "omnisharp.enableImportCompletion": true
+    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
 }

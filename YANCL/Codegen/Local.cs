@@ -16,7 +16,7 @@ namespace YANCL
                 stackSlots = isVar ? 0 : 1;
             }
             public override int GetR(Compiler c, ref int tmpSlots) {
-                tmpSlots += stackSlots;
+                // tmpSlots += stackSlots;
                 return Index;
             }
             public override void Load(Compiler c, int dst) {

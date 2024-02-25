@@ -257,6 +257,28 @@ namespace YANCL.Test
         }
 
         [Fact]
+        public void LocalCallIndex()
+        {
+            DoCompilerTest(
+                "local y, z; local x = y[z()]",
+                new LuaValue[] {},
+                new [] {
+                    Build2(LOADNIL, 0, 1),
+                    Build2(MOVE, 2, 1),
+                    Build3(CALL, 2, 1, 2),
+                    Build3(GETTABLE, 2, 0, 2),
+                    Build2(RETURN, 0, 1),
+                },
+                new [] {
+                    new LocalVarInfo("y", 1, 5),
+                    new LocalVarInfo("z", 1, 5),
+                    new LocalVarInfo("x", 4, 5),
+                },
+                3
+            );
+        }
+
+        [Fact]
         public void LocalMemberRead()
         {
             DoCompilerTest(

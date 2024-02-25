@@ -55,9 +55,10 @@ namespace YANCL
             C.PushScope();
             while (!TryTake(TokenType.Eof)) {
                 ParseStat();
+                C.AssertStatementEnd();
             }
-            C.Return(0);
             C.PopScope();
+            C.Return(0);
             return C.MakeFunction();
         }
 
@@ -185,6 +186,7 @@ namespace YANCL
                         PushBreak();
                         C.PushScope();
                         C.Reserve(tmpLocals[0]);
+                        tmpLocals.Clear();
                         ParseBlock();
                         C.PopScope();
                         C.ForLoop(state);
@@ -199,12 +201,13 @@ namespace YANCL
                         foreach (var l in tmpLocals) {
                             C.Reserve(l);
                         }
+                        var localCount = tmpLocals.Count;
+                        tmpLocals.Clear();
                         ParseBlock();
                         C.PopScope();
-                        C.GForLoop(state, tmpLocals.Count);
+                        C.GForLoop(state, localCount);
                         PopBreak();
                     }
-                    tmpLocals.Clear();
                     C.PopScope();
                     break;
                 }

@@ -536,18 +536,18 @@ Colors = {
     yellowgreen = "#9acd32",
 }
 
----Colours the text with the given colour name (not case sensitive).
----@type table<string, changer>
-Color = setmetatable({}, {
-    __index = function(t, k)
-        local c = Colors[string.lower(k)] or k
-        return function(content)
-            Push('color', c)
-            Show(content)
-            Pop()
-        end
-    end
-})
+-- ---Colours the text with the given colour name (not case sensitive).
+-- ---@type table<string, changer>
+-- Color = setmetatable({}, {
+--     __index = function(t, k)
+--         local c = Colors[string.lower(k)] or k
+--         return function(content)
+--             Push('color', c)
+--             Show(content)
+--             Pop()
+--         end
+--     end
+-- })
 
 ---Draws an image ('img' entity) with the given path
 ---@param src string
@@ -624,7 +624,7 @@ function Combine(...)
     return agg
 end
 
-LinkStyle = Hover(Color.red, Color.darkred)
+-- LinkStyle = Hover(Color.red, Color.darkred)
 
 ---Jumps to a passage when the content is clicked
 ---@param target string

@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Running;
 
 namespace YANCL.Benchmark
 {
     [MemoryDiagnoser]
+    [WarmupCount(3)]
+    [IterationCount(10)]
+    [EventPipeProfiler(EventPipeProfile.CpuSampling)]
     public class Benchmarks
     {
         public IEnumerable<string> GetCode()
