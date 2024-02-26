@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System;
+﻿using System;
 using static YANCL.Instruction;
 using System.Runtime.CompilerServices;
 
@@ -40,15 +39,15 @@ namespace YANCL
 
     public sealed class LuaFunction
     {
-        public int[] code;
-        public LuaValue[] constants;
-        public UpValueInfo[] upvalues;
-        public LuaFunction[] prototypes;
-        public LocalVarInfo[] locals;
-        public Location[] locations;
+        public int[] code = Array.Empty<int>();
+        public LuaValue[] constants = Array.Empty<LuaValue>();
+        public UpValueInfo[] upvalues = Array.Empty<UpValueInfo>();
+        public LuaFunction[] prototypes = Array.Empty<LuaFunction>();
+        public LocalVarInfo[] locals = Array.Empty<LocalVarInfo>();
+        public Location[] locations = Array.Empty<Location>();
         public int nParams;
         public int nSlots;
-        public string chunkName;
+        public string chunkName = string.Empty;
         public bool IsVaradic;
     }
 
@@ -115,6 +114,21 @@ namespace YANCL
             Array.Clear(callStack, ciptr, callStackPtr - ciptr);
             callStackPtr = ciptr;
             Return(0, 1); // Reset call info vars
+        }
+
+        public void Call(int nArgs, int nReturns) {
+            if (nArgs < 0 || nArgs > top - func) {
+                throw new ArgumentOutOfRangeException(nameof(nArgs));
+            }
+            if (nReturns < 0) {
+                throw new ArgumentOutOfRangeException(nameof(nReturns));
+            }
+            var callee = top - nArgs - 1;
+            var stopAt = callStackPtr;
+            PushCallInfo();
+            IsYieldable = false;
+            Call(callee - baseR, nArgs + 1, nReturns + 1, isTailCall: false);
+            Execute(stopAt);
         }
 
         public int Callback(int callee, int nArgs, int resultsIdx) {
@@ -212,10 +226,6 @@ namespace YANCL
             IsYieldable = false;
             Resume();
             return GetResults();
-        }
-
-        public void Call(int nArgs, int nReturns) {
-            // TODO:
         }
 
         public bool Resume() {
@@ -492,7 +502,9 @@ namespace YANCL
             }
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#if NET5_0_OR_GREATER
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+#endif
         private void _Execute(int stopAt)
         {
             while (IsRunning) {

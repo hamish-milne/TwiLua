@@ -6,7 +6,7 @@ namespace YANCL
 {
     public readonly partial struct LuaValue
     {
-        static void SetFuncCaster<T>() {
+        public static void SetCasterFunc<T>() {
             Caster<Func<T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T>>(s, () => {
                     s!.Push(v);
@@ -19,7 +19,7 @@ namespace YANCL
             );
         }
 
-        static void SetFuncCaster<T1, T>() {
+        public static void SetCasterFunc<T1, T>() {
             Caster<Func<T1, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T>>(s, (a1) => {
                     s!.Push(v);
@@ -33,7 +33,7 @@ namespace YANCL
             );
         }
 
-        static void SetFuncCaster<T1, T2, T>() {
+        public static void SetCasterFunc<T1, T2, T>() {
             Caster<Func<T1, T2, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T2, T>>(s, (a1, a2) => {
                     s!.Push(v);
@@ -48,7 +48,7 @@ namespace YANCL
             );
         }
 
-        static void SetFuncCaster<T1, T2, T3, T>() {
+        public static void SetCasterFunc<T1, T2, T3, T>() {
             Caster<Func<T1, T2, T3, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T2, T3, T>>(s, (a1, a2, a3) => {
                     s!.Push(v);
@@ -64,7 +64,7 @@ namespace YANCL
             );
         }
 
-        static void SetFuncCaster<T1, T2, T3, T4, T>() {
+        public static void SetCasterFunc<T1, T2, T3, T4, T>() {
             Caster<Func<T1, T2, T3, T4, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T2, T3, T4, T>>(s, (a1, a2, a3, a4) => {
                     s!.Push(v);
@@ -81,7 +81,7 @@ namespace YANCL
             );
         }
         
-        static void SetActionCaster<T1>() {
+        public static void SetCasterAction<T1>() {
             Caster<Action<T1>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1>>(s, (a1) => {
                     s!.Push(v);
@@ -95,7 +95,7 @@ namespace YANCL
             );
         }
 
-        static void SetActionCaster<T1, T2>() {
+        public static void SetCasterAction<T1, T2>() {
             Caster<Action<T1, T2>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1, T2>>(s, (a1, a2) => {
                     s!.Push(v);
@@ -110,7 +110,7 @@ namespace YANCL
             );
         }
 
-        static void SetActionCaster<T1, T2, T3>() {
+        public static void SetCasterAction<T1, T2, T3>() {
             Caster<Action<T1, T2, T3>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1, T2, T3>>(s, (a1, a2, a3) => {
                     s!.Push(v);
@@ -126,7 +126,7 @@ namespace YANCL
             );
         }
 
-        static void SetActionCaster<T1, T2, T3, T4>() {
+        public static void SetCasterAction<T1, T2, T3, T4>() {
             Caster<Action<T1, T2, T3, T4>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1, T2, T3, T4>>(s, (a1, a2, a3, a4) => {
                     s!.Push(v);
@@ -153,15 +153,15 @@ namespace YANCL
             }
             try {
                 SetDelegateCasterMethods = new Dictionary<Type, MethodInfo>() {
-                    { typeof(Func<>), ToMethod(SetFuncCaster<int>) },
-                    { typeof(Func<,>), ToMethod(SetFuncCaster<int, int>) },
-                    { typeof(Func<,,>), ToMethod(SetFuncCaster<int, int, int>) },
-                    { typeof(Func<,,,>), ToMethod(SetFuncCaster<int, int, int, int>) },
-                    { typeof(Func<,,,,>), ToMethod(SetFuncCaster<int, int, int, int, int>) },
-                    { typeof(Action<>), ToMethod(SetActionCaster<int>) },
-                    { typeof(Action<,>), ToMethod(SetActionCaster<int, int>) },
-                    { typeof(Action<,,>), ToMethod(SetActionCaster<int, int, int>) },
-                    { typeof(Action<,,,>), ToMethod(SetActionCaster<int, int, int, int>) },
+                    { typeof(Func<>), ToMethod(SetCasterFunc<int>) },
+                    { typeof(Func<,>), ToMethod(SetCasterFunc<int, int>) },
+                    { typeof(Func<,,>), ToMethod(SetCasterFunc<int, int, int>) },
+                    { typeof(Func<,,,>), ToMethod(SetCasterFunc<int, int, int, int>) },
+                    { typeof(Func<,,,,>), ToMethod(SetCasterFunc<int, int, int, int, int>) },
+                    { typeof(Action<>), ToMethod(SetCasterAction<int>) },
+                    { typeof(Action<,>), ToMethod(SetCasterAction<int, int>) },
+                    { typeof(Action<,,>), ToMethod(SetCasterAction<int, int, int>) },
+                    { typeof(Action<,,,>), ToMethod(SetCasterAction<int, int, int, int>) },
                 };
             } catch {
                 // Reflection is disabled
@@ -179,8 +179,13 @@ namespace YANCL
             var type = typeof(T).GetGenericTypeDefinition();
             CreateDelegateCasterMethodsCache();
             if (SetDelegateCasterMethods.TryGetValue(type, out var method)) {
-                method.MakeGenericMethod(type.GetGenericArguments()).Invoke(null, null);
-                return true;
+                try {
+                    #pragma warning disable IL3050 // We're OK with a runtime error here
+                    method.MakeGenericMethod(type.GetGenericArguments()).Invoke(null, null);
+                    return true;
+                } catch {
+                    throw new Exception($"AOT error: please call LuaValue.SetCaster{type}() manually during initialization");
+                }
             }
             return false;
         }
