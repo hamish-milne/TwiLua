@@ -54,5 +54,21 @@ namespace YANCL.Test
             Assert.Equal(new LuaValue[] { 1, 2, 3 }, results);
         }
 
+        [Fact]
+        public void Sort() {
+            var s = new Lua();
+            StdLib.Table.Load(s.Globals);
+            var results = s.DoString("local t = {3, 2, 1}; table.sort(t); return table.unpack(t)");
+            Assert.Equal(new LuaValue[] { 1, 2, 3 }, results);
+        }
+
+        [Fact]
+        public void SortWithComparator() {
+            var s = new Lua();
+            StdLib.Table.Load(s.Globals);
+            var results = s.DoString("local t = {1, 2, 3}; table.sort(t, function(a, b) return a > b end); return table.unpack(t)");
+            Assert.Equal(new LuaValue[] { 3, 2, 1 }, results);
+        }
+
     }
 }

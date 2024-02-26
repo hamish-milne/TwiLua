@@ -170,7 +170,7 @@ Tables:
     ✔ table.move @done(22-06-27 12:31)
     ✔ table.pack @done(22-06-27 12:31)
     ✔ table.remove @done(22-06-27 12:31)
-    ☐ table.sort
+    ✔ table.sort @done(24-02-26 11:37)
     ✔ table.unpack @done(22-06-27 12:31)
 Math:
     ✔ math.abs @done(21-10-26 14:14)

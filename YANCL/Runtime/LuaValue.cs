@@ -1,9 +1,6 @@
 using System.Collections.Generic;
 using System;
 using System.Runtime.CompilerServices;
-using System.Collections;
-using YANCL.StdLib;
-using System.Reflection;
 
 namespace YANCL
 {
@@ -24,7 +21,7 @@ namespace YANCL
 
     public delegate int LuaCFunction(LuaThread s);
 
-    public readonly partial struct LuaValue : IEquatable<LuaValue> {
+    public readonly partial struct LuaValue : IEquatable<LuaValue>, IComparable<LuaValue> {
         public readonly LuaType Type;
         public readonly double Number;
         public readonly string? String;
@@ -143,6 +140,11 @@ namespace YANCL
         }
 
         static LuaValue() {
+
+            Caster<LuaValue>.Set(
+                (v, _) => v,
+                (v) => v
+            );
 
             Caster<bool>.Set(
                 (v, _) => v.AssertType(LuaType.BOOLEAN, v.Boolean),
@@ -354,6 +356,19 @@ namespace YANCL
                 default:
                     throw new Exception("Invalid LuaType");
             }
+        }
+
+        public int CompareTo(LuaValue other)
+        {
+            if (Type != other.Type) {
+                throw new Exception($"Cannot compare {Type} with {other.Type}");
+            }
+            return Type switch
+            {
+                LuaType.NUMBER => Number.CompareTo(other.Number),
+                LuaType.STRING => String!.CompareTo(other.String),
+                _ => throw new Exception($"Cannot compare two {Type} values"),
+            };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

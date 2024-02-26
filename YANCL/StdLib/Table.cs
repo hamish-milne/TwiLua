@@ -1,8 +1,11 @@
+using System;
 using System.Text;
 
 namespace YANCL.StdLib {
     public static class Table {
         public static void Load(LuaTable globals) {
+            LuaValue.SetCasterFunc<LuaValue, LuaValue, LuaValue>();
+
             globals["table"] = new LuaTable {
                 {"concat", s => {
                     var sb = new StringBuilder();
@@ -67,6 +70,19 @@ namespace YANCL.StdLib {
                         s[k] = list[i];
                     }
                     return k;
+                }},
+                {"sort", s => {
+                    var list = s.Table(1);
+                    if (s.Count < 2) {
+                        list.Array.Sort();
+                    } else {
+                        var comp = s[2].As<Func<LuaValue, LuaValue, LuaValue>>(s);
+                        list.Array.Sort((a, b) => {
+                            var result = comp(a, b);
+                            return result.Type == LuaType.NUMBER ? (int)result.Number : result.Boolean ? -1 : 1;
+                        });
+                    }
+                    return 0;
                 }}
             };
         }
