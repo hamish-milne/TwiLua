@@ -92,18 +92,21 @@ namespace YANCL
                         }
                     } while (str[position] != ']' || str[position + 1] != ']');
                     position += 2;
+                } else {
+                    position++;
                 }
                 return Next();
             }
 
             if (char.IsWhiteSpace(c)) {
-                while (position < str.Length && char.IsWhiteSpace(str[position])) {
+                position--;
+                do {
                     if (str[position] == '\n') {
                         lines++;
                         lineStart = position + 1;
                     }
                     position++;
-                }
+                } while (position < str.Length && char.IsWhiteSpace(str[position]));
                 return Next();
             }
 

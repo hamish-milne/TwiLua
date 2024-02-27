@@ -37,7 +37,7 @@ namespace YANCL
         LuaValue Arithmetic(LuaThread s, ArithmeticOp op, LuaValue value);
         bool Compare(LuaThread s, CompareOp op, LuaValue value);
         LuaValue Unm(LuaThread s);
-        void Call(LuaThread s);
+        int Call(LuaThread s);
         LuaValue Concat(LuaThread s);
     }
 
@@ -45,7 +45,7 @@ namespace YANCL
     {
         public virtual object Value => this;
         public virtual LuaValue Arithmetic(LuaThread s, ArithmeticOp op, LuaValue value) => throw new NotSupportedException();
-        public virtual void Call(LuaThread s) => throw new NotSupportedException();
+        public virtual int Call(LuaThread s) => throw new NotSupportedException();
         public virtual bool Compare(LuaThread s, CompareOp op, LuaValue value) => throw new NotSupportedException();
         public virtual LuaValue Concat(LuaThread s) => throw new NotSupportedException();
         public virtual LuaValue Index(LuaThread s, LuaValue key) => throw new NotSupportedException();
@@ -86,7 +86,7 @@ namespace YANCL
             if (parameters.Length != args.Length) {
                 return false;
             }
-            for (var j = 0; j < s.Count; j++) {
+            for (var j = 0; j < args.Length; j++) {
                 if (!s[j + 1 + offset].TryConvertTo(parameters[j].ParameterType, out args[j])) {
                     return false;
                 }
@@ -99,17 +99,16 @@ namespace YANCL
             if (parameters.Length != args.Length) {
                 throw new Exception($"{methodName} expects {parameters.Length} arguments, got {args.Length}");
             }
-            for (var j = 0; j < s.Count; j++) {
-                args[j] = s[j + 1 + offset].ConvertTo(parameters[j].ParameterType, parameters[j].Name);
+            for (var j = 0; j < args.Length; j++) {
+                args[j] = s[j + 1 + offset].ConvertTo(parameters[j].ParameterType, s, parameters[j].Name);
             }
         }
     }
 
     public abstract class ReflectionUserdata : Userdata
     {
-        object? FindMember(string key)
+        object? FindMember(string key, MethodInfo[] methods, Dictionary<string, object> members)
         {
-            var (methods, members) = GetMembersCache();
             var type = GetTargetType();
             var bindingFlags = GetBindingFlags();
             if (members.TryGetValue(key, out var value)) {
@@ -141,39 +140,52 @@ namespace YANCL
         protected abstract (MethodInfo[], Dictionary<string, object>) GetMembersCache();
         protected abstract object? GetSelf();
 
+        protected virtual LuaValue TryIndexerGet(LuaValue key) => LuaValue.Nil;
+        protected virtual bool TryIndexerSet(LuaValue key, LuaValue luaValue) => false;
+
         public override LuaValue Index(LuaThread s, LuaValue key)
         {
+            var (methods, members) = GetMembersCache();
             if (key.String == null) {
-                return LuaValue.Nil;
+                return TryIndexerGet(key);
             }
-            var member = FindMember(key.String);
+            var member = FindMember(key.String, methods, members);
             return member switch
             {
                 PropertyInfo prop => LuaValue.ConvertFrom(prop.GetValue(GetSelf())),
                 FieldInfo field => LuaValue.ConvertFrom(field.GetValue(GetSelf())),
                 MethodInfo method => LuaValue.From(method),
                 Userdata ud => ud,
-                _ => LuaValue.Nil,
+                _ => TryIndexerGet(key),
             };
         }
 
         public override void NewIndex(LuaThread s, LuaValue key, LuaValue value)
         {
-            var str = key.String ?? throw new Exception("Index must be a string");
-            var member = FindMember(str);
+            var (methods, members) = GetMembersCache();
+            var str = key.String;
+            if (str == null) {
+                if (TryIndexerSet(key, value)) {
+                    return;
+                }
+                throw new Exception($"Cannot index with {key}");
+            }
+            var member = FindMember(str, methods, members);
 
             if (member is PropertyInfo prop) {
-                prop.SetValue(GetSelf(), value.ConvertTo(prop.PropertyType));
+                prop.SetValue(GetSelf(), value.ConvertTo(prop.PropertyType, s, str));
                 return;
             }
             if (member is FieldInfo field) {
-                field.SetValue(GetSelf(), value.ConvertTo(field.FieldType));
+                field.SetValue(GetSelf(), value.ConvertTo(field.FieldType, s, str));
                 return;
             }
             if (member is Userdata) {
                 throw new Exception($"Cannot assign to method");
             }
-            throw new Exception($"No such property or field");
+            if (!TryIndexerSet(key, value)) {
+                throw new Exception($"No such property or field");
+            }
         }
     }
 
@@ -186,7 +198,8 @@ namespace YANCL
             Value = value;
         }
 
-        private static readonly Dictionary<Type, (MethodInfo[], Dictionary<string, object>)> _cache = new Dictionary<Type, (MethodInfo[], Dictionary<string, object>)>();
+        private static readonly Dictionary<Type, (MethodInfo[] methods, (MethodInfo, Type)[] indexGet, (MethodInfo, Type, Type)[] indexSet, Dictionary<string, object> cache)> _cache
+            = new Dictionary<Type, (MethodInfo[], (MethodInfo, Type)[], (MethodInfo, Type, Type)[], Dictionary<string, object>)>();
 
         const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
 
@@ -195,13 +208,54 @@ namespace YANCL
         protected override (MethodInfo[], Dictionary<string, object>) GetMembersCache() {
             var type = Value.GetType();
             if (!_cache.TryGetValue(type, out var members)) {
-                members = (type.GetMethods(flags), new Dictionary<string, object>());
+                var methods = type.GetMethods(flags);
+                var indexerName = type.GetCustomAttribute<DefaultMemberAttribute>()?.MemberName;
+                var getterName = $"get_{indexerName}";
+                var setterName = $"set_{indexerName}";
+                var indexGetters = indexerName == null
+                    ? Array.Empty<(MethodInfo, Type)>()
+                    : methods.Where(m => m.Name == getterName).Select(m => (m, m.GetParameters()[0].ParameterType)).ToArray();
+                var indexSetters = indexerName == null
+                    ? Array.Empty<(MethodInfo, Type, Type)>()
+                    : methods.Where(m => m.Name == setterName).Select(m => {
+                        var parameters = m.GetParameters();
+                        return (m, parameters[0].ParameterType, parameters[1].ParameterType);
+                    }).ToArray();
+                members = (methods, indexGetters, indexSetters, new Dictionary<string, object>());
                 _cache[type] = members;
             }
-            return members;
+            return (members.methods, members.cache);
         }
         protected override object? GetSelf() => Value;
 
+        protected override LuaValue TryIndexerGet(LuaValue key)
+        {
+            var indexers = _cache[Value.GetType()].indexGet;
+            if (indexers.Length == 0) {
+                return LuaValue.Nil;
+            }
+            foreach (var (method, type) in indexers) {
+                if (key.TryConvertTo(type, out var index)) {
+                    return LuaValue.ConvertFrom(method.Invoke(Value, new object?[] { index }));
+                }
+            }
+            throw new Exception($"{Value.GetType()} has no suitable indexer for {key}");
+        }
+
+        protected override bool TryIndexerSet(LuaValue key, LuaValue value)
+        {
+            var indexers = _cache[Value.GetType()].indexSet;
+            if (indexers.Length == 0) {
+                return false;
+            }
+            foreach (var (method, keyType, valueType) in indexers) {
+                if (key.TryConvertTo(keyType, out var cKey) && value.TryConvertTo(valueType, out var cValue)) {
+                    method.Invoke(Value, new object?[] { cKey, cValue });
+                    return true;
+                }
+            }
+            throw new Exception($"{Value.GetType()} has no suitable indexer for [{key}]={value}");
+        }
 
         public override LuaValue Arithmetic(LuaThread s, ArithmeticOp op, LuaValue value)
         {
@@ -224,12 +278,12 @@ namespace YANCL
             };
             var method = type.GetMethod(operationName, flags);
             if (method != null) {
-                return LuaValue.ConvertFrom(method.Invoke(Value, new object[] { value }));
+                return LuaValue.ConvertFrom(method.Invoke(Value, new object?[] { value }));
             }
             throw new Exception($"No such operation {op} for type {type}");
         }
 
-        public override void Call(LuaThread s)
+        public override int Call(LuaThread s)
         {
             if (Value is Delegate d) {
                 var args = new LuaValue[s.Count];
@@ -238,10 +292,11 @@ namespace YANCL
                 }
                 var result = d.DynamicInvoke(args);
                 if (result != null) {
-                    s.Return(LuaValue.From(result));
+                    return s.Return(LuaValue.From(result));
                 }
+                return 0;
             } else {
-                base.Call(s);
+                return base.Call(s);
             }
         }
     }
@@ -259,16 +314,17 @@ namespace YANCL
             _parameters = method.GetParameters();
         }
 
-        public override void Call(LuaThread s)
+        public override int Call(LuaThread s)
         {
             var offset = Method.IsStatic ? 0 : 1;
-            var self = Method.IsStatic ? null : s[1].ConvertTo(Method.DeclaringType);
+            var self = Method.IsStatic ? null : s[1].ConvertTo(Method.DeclaringType!, s, "self");
             var args = new object?[s.Count - offset];
             ReflectionUtils.ExpectArgs(s, _parameters, args, offset, Method.Name);
             var result = Method.Invoke(self, args);
             if (result != null) {
-                s.Return(LuaValue.ConvertFrom(result));
+                return s.Return(LuaValue.ConvertFrom(result));
             }
+            return 0;
         }
     }
 
@@ -285,16 +341,17 @@ namespace YANCL
             _parameters = Array.ConvertAll(methods, m => m.GetParameters());
         }
 
-        public override void Call(LuaThread s)
+        public override int Call(LuaThread s)
         {
             var offset = _methods[0].IsStatic ? 0 : 1;
-            var self = _methods[0].IsStatic ? null : s[1].ConvertTo(_methods[0].DeclaringType);
+            var self = _methods[0].IsStatic ? null : s[1].ConvertTo(_methods[0].DeclaringType, s, "self");
             var overloadIdx = ReflectionUtils.ChooseOverload(s, _parameters, out var args, offset, _methods[0].Name);
             var method = _methods[overloadIdx];
             var result = method.Invoke(self, args);
             if (result != null) {
-                s.Return(LuaValue.ConvertFrom(result));
+                return s.Return(LuaValue.ConvertFrom(result));
             }
+            return 0;
         }
     }
 
@@ -336,15 +393,15 @@ namespace YANCL
 
         const BindingFlags flags = BindingFlags.Public | BindingFlags.Static;
 
-        public override void Call(LuaThread s)
+        public override int Call(LuaThread s)
         {
             if (_constructors.Length == 0) {
                 throw new Exception($"Type {Type} has no constructors");
             }
-            var overloadIdx = ReflectionUtils.ChooseOverload(s, _constructorParameters, out var args, 1, _constructorName);
+            var overloadIdx = ReflectionUtils.ChooseOverload(s, _constructorParameters, out var args, 0, _constructorName);
             var ctor = _constructors[overloadIdx];
             var result = ctor.Invoke(args)!;
-            s.Return(LuaValue.From(result));
+            return s.Return(LuaValue.ConvertFrom(result));
         }
     }
 }

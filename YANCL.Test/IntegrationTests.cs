@@ -103,6 +103,20 @@ namespace YANCL.Test
         public void Hex() => AssertEqual("return 0xFF", 255);
 
         [Fact]
-        public void BigFile() => new Lua().DoString(File.ReadAllText("../../../../YANCL.Benchmark/lua/loadBigFile.lua"));
+        public void BigFile() {
+            var lua = new Lua();
+            StdLib.Basic.Load(lua.Globals);
+            lua.DoString(File.ReadAllText("../../../../YANCL.Benchmark/lua/loadBigFile.lua"));
+        }
+
+        
+        [Fact]
+        public void GlobalFn() {
+            var lua = new Lua();
+            lua.Globals["globalFn"] = (LuaCFunction)((LuaThread s) => {
+                return s.Return(s.Number(1) + s.Number(2));
+            });
+            lua.DoString(File.ReadAllText("../../../../YANCL.Benchmark/lua/call.lua"));
+        }
     }
 }

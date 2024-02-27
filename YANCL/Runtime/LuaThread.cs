@@ -98,7 +98,11 @@ namespace YANCL
         readonly CallInfo[] callStack;
         int callStackPtr;
         
-        public bool IsRunning { get; private set; }
+        public bool IsRunning {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            private set;
+        }
         public bool IsMain { get; }
         public bool IsDead { get; set; }
         public bool IsYieldable { get; set; }
@@ -161,8 +165,10 @@ namespace YANCL
         int[] code = null!;
         LuaUpValue[] parentUpValues = null!;
         LuaValue[] constants = null!;
+        Location[]? locations;
         int nSlots;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void SetFunc(int func) {
             this.func = func;
             var closure = stack[func].Function;
@@ -174,6 +180,7 @@ namespace YANCL
                 constants = closure.Function.constants;
                 parentUpValues = closure.UpValues;
                 nSlots = closure.Function.nSlots;
+                locations = closure.Function.locations;
             }
         }
 
@@ -246,10 +253,12 @@ namespace YANCL
                 return true;
             } catch (Exception e) {
                 var err = e is LuaRuntimeError lerror ? lerror.Value : e.Message;
+                var location = locations?[pc - 1];
                 UnwindStack(ci);
                 this[0] = err;
                 IsDead = true;
-                return false;
+                throw new Exception($"At {location}: {err}", e);
+                // return false;
             } finally {
                 IsRunning = false;
             }
@@ -354,8 +363,21 @@ namespace YANCL
                 Return(func, nReturns + 1);
                 break;
             }
+            case LuaType.USERDATA: {
+                top = func + nArgs;
+                nSlots = nArgs;
+                var nReturns = stack[func].Userdata!.Call(this);
+                if (!IsRunning) {
+                    // Yield was called
+                    Array.Clear(stack, func, nArgs);
+                    top = func;
+                    return;
+                }
+                Return(func, nReturns + 1);
+                break;
+            }
             default:
-                throw new Exception("Tried to call a thing that isn't a function");
+                throw new Exception($"Tried to call `{stack[func]}` which isn't a function");
             }
         }
 
@@ -401,7 +423,7 @@ namespace YANCL
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CallMeta2(int op, LuaValue metaFn, LuaValue arg1, LuaValue arg2) {
+        private void CallMeta2(int op, in LuaValue metaFn, in LuaValue arg1, in LuaValue arg2) {
             PushCallInfo();
             R(nSlots + 0) = metaFn;
             R(nSlots + 1) = arg1;
@@ -411,7 +433,7 @@ namespace YANCL
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void GetTable(int op, LuaValue table1) {
+        private void GetTable(int op, in LuaValue table1) {
             var key = RK(GetC(op));
             if (table1.Userdata != null) {
                 R(GetA(op)) = table1.Userdata.Index(this, key);
@@ -433,8 +455,12 @@ namespace YANCL
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetTable(int op, LuaValue table1) {
+        private void SetTable(int op, in LuaValue table1) {
             var key = RK(GetB(op));
+            if (table1.Userdata != null) {
+                table1.Userdata.NewIndex(this, key, RK(GetC(op)));
+                return;
+            }
             var table = table1.Table ?? throw new Exception();
             while (!table.TryGetValue(key, out var _) && table.MetaTable != null) {
                 var index = table.MetaTable["__newindex"];
@@ -536,7 +562,7 @@ namespace YANCL
                         GetTable(op, UpVal(GetB(op)));
                         break;
                     case OpCode.GETTABLE:
-                        GetTable(op, RK(GetB(op)));
+                        GetTable(op, R(GetB(op)));
                         break;
                     case OpCode.SETTABUP:
                         SetTable(op, UpVal(GetA(op)));
@@ -545,16 +571,18 @@ namespace YANCL
                         UpVal(GetB(op)) = R(GetA(op));
                         continue;
                     case OpCode.SETTABLE:
-                        SetTable(op, RK(GetA(op)));
+                        SetTable(op, R(GetA(op)));
                         continue;
                     case OpCode.NEWTABLE:
                         R(GetA(op)) = new LuaTable(GetB(op));
                         continue;
-                    case OpCode.SELF:
-                    // TODO: GetTable here?
-                        R(GetA(op)) = R(GetB(op))[RK(GetC(op))];
-                        R(GetA(op) + 1) = R(GetB(op));
+                    case OpCode.SELF: {
+                        // We need to copy 'b' here because it might be overwritten
+                        var b = R(GetB(op));
+                        R(GetA(op) + 1) = b;
+                        GetTable(op, b);
                         continue;
+                    }
                     case OpCode.ADD:
                         if (Arithmetic(op, "__add", out n1, out n2)) {
                             R(GetA(op)) = n1 + n2;
@@ -675,13 +703,14 @@ namespace YANCL
                         PushCallInfo();
                         Call(GetA(op), GetB(op), GetC(op), isTailCall: false);
                         continue;
-                    case OpCode.TAILCALL:
-                        if ( R(GetA(op)).Type == LuaType.CFUNCTION ) {
+                    case OpCode.TAILCALL: {
+                        if ( R(GetA(op)).Type != LuaType.FUNCTION ) {
                             goto case OpCode.CALL;
                         }
                         Close(baseR);
                         Call(GetA(op), GetB(op), GetC(op), isTailCall: true);
                         continue;
+                    }
                     case OpCode.RETURN: {
                         Return(baseR + GetA(op), GetB(op));
                         if (callStackPtr == stopAt) {
