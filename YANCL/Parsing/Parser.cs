@@ -57,7 +57,7 @@ namespace YANCL
                 ParseStat();
                 C.AssertStatementEnd();
             }
-            C.PopScope();
+            C.PopScope(localsOffset: 1);
             C.Return(0);
             return C.MakeFunction();
         }

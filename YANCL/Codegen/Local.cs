@@ -62,7 +62,7 @@ namespace YANCL
 
         public void PushScope() => currentScope = new Scope(currentScope);
 
-        public void PopScope() {
+        public void PopScope(int localsOffset = 0) {
             if (currentScope == null) {
                 throw new InvalidOperationException();
             }
@@ -71,7 +71,7 @@ namespace YANCL
             }
             for (int i = 0; i < currentScope.Locals.Count; i++) {
                 var local = currentScope.Locals[i];
-                locals[local.infoIdx] = new LocalVarInfo(local.name, local.startPC, code.Count);
+                locals[local.infoIdx] = new LocalVarInfo(local.name, local.startPC, code.Count + localsOffset);
             }
             if (Top != currentScope.Count) {
                 throw new InvalidOperationException("Stack is not empty");
