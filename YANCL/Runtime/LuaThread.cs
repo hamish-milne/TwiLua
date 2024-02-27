@@ -189,13 +189,13 @@ namespace YANCL
             get => ref stack[func + n];
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public double Number(int idx = 1) => this[idx].Number;
+        public double Number(int idx = 1) => this[idx].ExpectNumber();
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public long Integer(int idx = 1) => (long)this[idx].Number;
+        public long Integer(int idx = 1) => this[idx].ExpectInteger();
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string String(int idx = 1) => this[idx].ToString();
+        public string String(int idx = 1) => this[idx].ExpectString();
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LuaTable Table(int idx = 1) => this[idx].Table!;
+        public LuaTable Table(int idx = 1) => this[idx].ExpectTable();
         public int Return(LuaValue v) {
             this[0] = v;
             return 1;
@@ -413,6 +413,10 @@ namespace YANCL
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GetTable(int op, LuaValue table1) {
             var key = RK(GetC(op));
+            if (table1.Userdata != null) {
+                R(GetA(op)) = table1.Userdata.Index(this, key);
+                return;
+            }
             var table = table1.Table ?? throw new Exception();
             while (!table.TryGetValue(key, out R(GetA(op))) && table.MetaTable != null) {
                 var index = table.MetaTable["__index"];
@@ -495,11 +499,8 @@ namespace YANCL
         long i1, i2;
 
         private void Execute(int stopAt) {
-            try {
-                IsRunning = true;
-                _Execute(stopAt);
-            } finally {
-            }
+            IsRunning = true;
+            _Execute(stopAt);
         }
 
 #if NET5_0_OR_GREATER

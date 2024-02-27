@@ -13,6 +13,7 @@ namespace YANCL
         FUNCTION = 6,
         CFUNCTION = 7,
         THREAD = 8,
+        USERDATA = 9,
     }
 
 
@@ -29,6 +30,7 @@ namespace YANCL
         public readonly LuaClosure? Function;
         public readonly LuaCFunction? CFunction;
         public readonly LuaThread? Thread;
+        public readonly IUserdata? Userdata;
         public readonly int Hash;
 
         public bool Boolean {
@@ -69,35 +71,7 @@ namespace YANCL
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetNumber(out double number) {
-            switch (Type) {
-                case LuaType.NUMBER:
-                    number = Number;
-                    return true;
-                case LuaType.STRING:
-                    if (double.TryParse(String!, out number)) {
-                        return true;
-                    } else {
-                        number = 0;
-                        return false;
-                    }
-                default:
-                    number = 0;
-                    return false;
-            }
-        }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetInteger(out long intVal) {
-            if (TryGetNumber(out var n) && n % 1 == 0) {
-                intVal = (long)n;
-                return true;
-            } else {
-                intVal = 0;
-                return false;
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetMetaValue(in LuaValue key, out LuaValue value) {
@@ -110,6 +84,8 @@ namespace YANCL
 
         public static readonly LuaValue Nil = new LuaValue();
 
+        private static readonly Dictionary<Type, (Delegate asFunc, Delegate fromFunc)> BuiltInConverters = new Dictionary<Type, (Delegate, Delegate)>();
+
         private static class Caster<T> {
             public static Func<LuaValue, LuaThread?, T>? As;
             public static Func<T, LuaValue>? From;
@@ -119,6 +95,7 @@ namespace YANCL
             public static void Set(Func<LuaValue, LuaThread?, T> asFunc, Func<T, LuaValue> fromFunc) {
                 As = asFunc;
                 From = fromFunc;
+                BuiltInConverters[typeof(T)] = (asFunc, fromFunc);
             }
         }
 
@@ -201,6 +178,11 @@ namespace YANCL
                     return 0;
                 })
             );
+
+            Caster<IUserdata>.Set(
+                (v, _) => v.AssertType(LuaType.USERDATA, v.Userdata!),
+                (v) => new LuaValue(v)
+            );
         }
 
         public T As<T>(LuaThread? thread = null) {
@@ -228,6 +210,7 @@ namespace YANCL
             Function = null;
             CFunction = null;
             Thread = null;
+            Userdata = null;
             Hash = value.GetHashCode();
         }
 
@@ -241,6 +224,7 @@ namespace YANCL
             Function = null;
             CFunction = null;
             Thread = null;
+            Userdata = null;
             Hash = value.GetHashCode();
         }
 
@@ -253,6 +237,7 @@ namespace YANCL
             Function = null;
             CFunction = null;
             Thread = null;
+            Userdata = null;
             Hash = value.GetHashCode();
         }
         
@@ -265,6 +250,7 @@ namespace YANCL
             Function = null;
             CFunction = null;
             Thread = null;
+            Userdata = null;
             Hash = table.GetHashCode();
         }
 
@@ -277,6 +263,7 @@ namespace YANCL
             Function = function;
             CFunction = null;
             Thread = null;
+            Userdata = null;
             Hash = function.GetHashCode();
         }
 
@@ -289,6 +276,7 @@ namespace YANCL
             Function = null;
             CFunction = function;
             Thread = null;
+            Userdata = null;
             Hash = function.GetHashCode();
         }
 
@@ -301,7 +289,21 @@ namespace YANCL
             Function = null;
             CFunction = null;
             Thread = thread;
+            Userdata = null;
             Hash = thread.GetHashCode();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LuaValue(IUserdata userdata) {
+            Type = LuaType.USERDATA;
+            Number = 0;
+            String = null;
+            Table = null;
+            Function = null;
+            CFunction = null;
+            Thread = null;
+            Userdata = userdata;
+            Hash = userdata.GetHashCode();
         }
 
         bool IEquatable<LuaValue>.Equals(LuaValue other) => Equals(other);
@@ -353,6 +355,8 @@ namespace YANCL
                     return "<function>";
                 case LuaType.THREAD:
                     return "<thread>";
+                case LuaType.USERDATA:
+                    return "<userdata>";
                 default:
                     throw new Exception("Invalid LuaType");
             }
@@ -423,6 +427,11 @@ namespace YANCL
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator LuaValue(LuaThread value) {
+            return new LuaValue(value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator LuaValue(Userdata value) {
             return new LuaValue(value);
         }
     }
