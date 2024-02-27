@@ -1,16 +1,14 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace YANCL
 {
     public static class CLR
     {
-        public static void Load(LuaTable globals)
+        public static void Load(LuaTable globals, IEnumerable<Assembly> assemblies)
         {
             globals["clr"] = new LuaTable {
-                {"assemblies", new LuaTable()},
-                {"load", new LuaCFunction(s => throw new System.NotImplementedException())},
-                {"loadfile", new LuaCFunction(s => throw new System.NotImplementedException())},
-                {"loadstring", new LuaCFunction(s => throw new System.NotImplementedException())},
                 {"typeof", new LuaCFunction(s => {
                     if (s.Count != 1) throw new WrongNumberOfArguments();
                     var ud = s[1].ExpectUserdata();
@@ -21,8 +19,32 @@ namespace YANCL
                     } else {
                         throw new Exception($"Expected CLR type, got `{ud}`");
                     }
+                })},
+                {"import", new LuaCFunction(s => {
+                    var typeName = s[1].ExpectString("typeName");
+                    foreach (var a in assemblies) {
+                        var type = a.GetType(typeName);
+                        if (type != null) {
+                            return s.Return(TypeUserdata.From(type));
+                        }
+                    }
+                    throw new Exception($"Type `{typeName}` not found in any assembly.");
                 })}
             };
+        }
+
+        public static IEnumerable<Assembly> MakeAssemblyList() {
+            var domain = AppDomain.CurrentDomain;
+            var assemblies = new List<Assembly>();
+            foreach (var a in domain.GetAssemblies()) {
+                if (a.IsDynamic) continue;
+                assemblies.Add(a);
+            }
+            domain.AssemblyLoad += (sender, args) => {
+                if (args.LoadedAssembly.IsDynamic) return;
+                assemblies.Add(args.LoadedAssembly);
+            };
+            return assemblies;
         }
     }
 }

@@ -11,7 +11,7 @@ namespace YANCL.Benchmark
 {
     [MemoryDiagnoser]
     [WarmupCount(3)]
-    [IterationCount(10)]
+    [IterationCount(3)]
     // [EventPipeProfiler(EventPipeProfile.CpuSampling)]
     // [DotTraceDiagnoser]
     [InProcess]
