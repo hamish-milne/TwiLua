@@ -23,58 +23,84 @@ namespace YANCL
     public delegate int LuaCFunction(LuaThread s);
 
     public readonly partial struct LuaValue : IEquatable<LuaValue>, IComparable<LuaValue> {
-        public readonly LuaType Type;
         public readonly double Number;
-        public readonly string? String;
-        public readonly LuaTable? Table;
-        public readonly LuaClosure? Function;
-        public readonly LuaCFunction? CFunction;
-        public readonly LuaThread? Thread;
-        public readonly IUserdata? Userdata;
+        public readonly object? Object;
+        public readonly LuaType Type;
         public readonly int Hash;
 
-        public bool Boolean {
+        public readonly string? String {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Object as string;
+        }
+
+        public readonly LuaTable? Table {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Object as LuaTable;
+        }
+
+        public readonly LuaClosure? Function {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Object as LuaClosure;
+        }
+
+        public readonly LuaCFunction? CFunction {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Object as LuaCFunction;
+        }
+
+        public readonly LuaThread? Thread {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Object as LuaThread;
+        }
+
+        public readonly IUserdata? Userdata {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Object as IUserdata;
+        }
+
+        public readonly bool Boolean {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 return !(Type == LuaType.NIL || (Type == LuaType.BOOLEAN && Number == 0));
             }
         }
 
-        public int Length {
+        public readonly int Length {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if (Type == LuaType.STRING) {
-                    return String!.Length;
-                } else if (Type == LuaType.TABLE) {
-                    return Table!.Length;
-                } else {
-                    throw new Exception("Not a string or table");
-                }
+                return Object switch
+                {
+                    string String => String.Length,
+                    LuaTable Table => Table.Length,
+                    _ => throw new Exception("Not a string or table"),
+                };
+
             }
         }
 
-        public LuaValue this[in LuaValue key] {
+        public readonly LuaValue this[in LuaValue key] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if (Table == null) {
-                    throw new Exception("Not a table");
-                }
-                return Table[key];
+                return Object switch
+                {
+                    LuaTable Table => Table[key],
+                    _ => throw new Exception("Not a table"),
+                };
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
-                if (Table == null) {
+                if (Object is LuaTable Table) {
+                    Table[key] = value;
+                } else {
                     throw new Exception("Not a table");
                 }
-                Table[key] = value;
             }
         }
 
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetMetaValue(in LuaValue key, out LuaValue value) {
+        public readonly bool TryGetMetaValue(in LuaValue key, out LuaValue value) {
+            var Table = Object as LuaTable;
             if (Table?.MetaTable == null) {
                 value = default;
                 return false;
@@ -99,14 +125,14 @@ namespace YANCL
             }
         }
 
-        T AssertType<T>(LuaType type, T returns) {
+        readonly T AssertType<T>(LuaType type, T returns) {
             if (Type != type) {
                 throw new Exception($"Expected {type}, got {Type}");
             }
             return returns;
         }
 
-        T AssertDelegate<T>(LuaThread? thread, T returns) {
+        readonly T AssertDelegate<T>(LuaThread? thread, T returns) {
             if (Type != LuaType.CFUNCTION && Type != LuaType.FUNCTION) {
                 throw new Exception($"Expected a function, got {Type}");
             }
@@ -139,32 +165,32 @@ namespace YANCL
             );
 
             Caster<string>.Set(
-                (v, _) => v.AssertType(LuaType.STRING, v.String!),
+                (v, _) => v.AssertType(LuaType.STRING, v.Object as string),
                 (v) => new LuaValue(v)
             );
 
             Caster<LuaTable>.Set(
-                (v, _) => v.AssertType(LuaType.TABLE, v.Table!),
+                (v, _) => v.AssertType(LuaType.TABLE, v.Object as LuaTable),
                 (v) => new LuaValue(v)
             );
 
             Caster<LuaMap>.Set(
-                (v, _) => v.AssertType(LuaType.TABLE, v.Table!.Map),
+                (v, _) => v.AssertType(LuaType.TABLE, (v.Object as LuaTable)?.Map),
                 (v) => new LuaValue(new LuaTable(null, v))
             );
 
             Caster<List<LuaValue>>.Set(
-                (v, _) => v.AssertType(LuaType.TABLE, v.Table!.Array),
+                (v, _) => v.AssertType(LuaType.TABLE, (v.Object as LuaTable)?.Array),
                 (v) => new LuaValue(new LuaTable(v, null))
             );
 
             Caster<LuaClosure>.Set(
-                (v, _) => v.AssertType(LuaType.FUNCTION, v.Function!),
+                (v, _) => v.AssertType(LuaType.FUNCTION, v.Object as LuaClosure),
                 (v) => new LuaValue(v)
             );
 
             Caster<LuaCFunction>.Set(
-                (v, _) => v.AssertType(LuaType.CFUNCTION, v.CFunction!),
+                (v, _) => v.AssertType(LuaType.CFUNCTION, v.Object as LuaCFunction),
                 (v) => new LuaValue(v)
             );
 
@@ -180,7 +206,7 @@ namespace YANCL
             );
 
             Caster<IUserdata>.Set(
-                (v, _) => v.AssertType(LuaType.USERDATA, v.Userdata!),
+                (v, _) => v.AssertType(LuaType.USERDATA, v.Object as IUserdata),
                 (v) => new LuaValue(v)
             );
         }
@@ -205,12 +231,7 @@ namespace YANCL
         public LuaValue(bool value) {
             Type = LuaType.BOOLEAN;
             Number = value ? 1 : 0;
-            String = null;
-            Table = null;
-            Function = null;
-            CFunction = null;
-            Thread = null;
-            Userdata = null;
+            Object = null;
             Hash = value.GetHashCode();
         }
 
@@ -219,12 +240,7 @@ namespace YANCL
         public LuaValue(double value) {
             Type = LuaType.NUMBER;
             Number = value;
-            String = null;
-            Table = null;
-            Function = null;
-            CFunction = null;
-            Thread = null;
-            Userdata = null;
+            Object = null;
             Hash = value.GetHashCode();
         }
 
@@ -232,12 +248,7 @@ namespace YANCL
         public LuaValue(string value) {
             Type = LuaType.STRING;
             Number = 0;
-            String = value;
-            Table = null;
-            Function = null;
-            CFunction = null;
-            Thread = null;
-            Userdata = null;
+            Object = value;
             Hash = value.GetHashCode();
         }
         
@@ -245,12 +256,7 @@ namespace YANCL
         public LuaValue(LuaTable table) {
             Type = LuaType.TABLE;
             Number = 0;
-            String = null;
-            Table = table;
-            Function = null;
-            CFunction = null;
-            Thread = null;
-            Userdata = null;
+            Object = table;
             Hash = table.GetHashCode();
         }
 
@@ -258,12 +264,7 @@ namespace YANCL
         public LuaValue(LuaClosure function) {
             Type = LuaType.FUNCTION;
             Number = 0;
-            String = null;
-            Table = null;
-            Function = function;
-            CFunction = null;
-            Thread = null;
-            Userdata = null;
+            Object = function;
             Hash = function.GetHashCode();
         }
 
@@ -271,12 +272,7 @@ namespace YANCL
         public LuaValue(LuaCFunction function) {
             Type = LuaType.CFUNCTION;
             Number = 0;
-            String = null;
-            Table = null;
-            Function = null;
-            CFunction = function;
-            Thread = null;
-            Userdata = null;
+            Object = function;
             Hash = function.GetHashCode();
         }
 
@@ -284,12 +280,7 @@ namespace YANCL
         public LuaValue(LuaThread thread) {
             Type = LuaType.THREAD;
             Number = 0;
-            String = null;
-            Table = null;
-            Function = null;
-            CFunction = null;
-            Thread = thread;
-            Userdata = null;
+            Object = thread;
             Hash = thread.GetHashCode();
         }
 
@@ -297,18 +288,13 @@ namespace YANCL
         public LuaValue(IUserdata userdata) {
             Type = LuaType.USERDATA;
             Number = 0;
-            String = null;
-            Table = null;
-            Function = null;
-            CFunction = null;
-            Thread = null;
-            Userdata = userdata;
+            Object = userdata;
             Hash = userdata.GetHashCode();
         }
 
         bool IEquatable<LuaValue>.Equals(LuaValue other) => Equals(other);
 
-        public bool Equals(in LuaValue other) {
+        public readonly bool Equals(in LuaValue other) {
             if (Type != other.Type) return false;
             switch (Type) {
                 case LuaType.NIL:
@@ -317,27 +303,19 @@ namespace YANCL
                 case LuaType.NUMBER:
                     return Number == other.Number;
                 case LuaType.STRING:
-                    return String == other.String;
-                case LuaType.TABLE:
-                    return Table == other.Table;
-                case LuaType.FUNCTION:
-                    return Function == other.Function;
-                case LuaType.CFUNCTION:
-                    return CFunction == other.CFunction;
-                case LuaType.THREAD:
-                    return Thread == other.Thread;
+                    return (Object as string) == (other.Object as string);
                 default:
-                    throw new Exception("Invalid LuaType");
+                    return Object == other.Object;
             }
         }
 
-        public override bool Equals(object? obj) {
+        public readonly override bool Equals(object? obj) {
             return obj is LuaValue other && Equals(other);
         }
 
-        public override int GetHashCode() => Hash;
+        public readonly override int GetHashCode() => Hash;
 
-        public override string ToString()
+        public readonly override string ToString()
         {
             switch (Type) {
                 case LuaType.NIL:
@@ -347,7 +325,7 @@ namespace YANCL
                 case LuaType.NUMBER:
                     return Number.ToString();
                 case LuaType.STRING:
-                    return String!;
+                    return (string)Object!;
                 case LuaType.TABLE:
                     return "<table>";
                 case LuaType.CFUNCTION:
@@ -362,7 +340,7 @@ namespace YANCL
             }
         }
 
-        public int CompareTo(LuaValue other)
+        public readonly int CompareTo(LuaValue other)
         {
             if (Type != other.Type) {
                 throw new Exception($"Cannot compare {Type} with {other.Type}");
@@ -370,7 +348,7 @@ namespace YANCL
             return Type switch
             {
                 LuaType.NUMBER => Number.CompareTo(other.Number),
-                LuaType.STRING => String!.CompareTo(other.String),
+                LuaType.STRING => ((string)Object!).CompareTo((string)other.Object!),
                 _ => throw new Exception($"Cannot compare two {Type} values"),
             };
         }

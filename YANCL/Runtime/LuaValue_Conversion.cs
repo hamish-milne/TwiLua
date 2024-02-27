@@ -19,7 +19,7 @@ namespace YANCL
                     number = Number;
                     return true;
                 case LuaType.STRING:
-                    if (allowCoercion && double.TryParse(String!, out number)) {
+                    if (allowCoercion && double.TryParse(Object as string, out number)) {
                         return true;
                     }
                     break;
@@ -59,7 +59,7 @@ namespace YANCL
         public bool TryGetString(out string str) {
             switch (Type) {
                 case LuaType.STRING:
-                    str = String!;
+                    str = (string)Object;
                     return true;
                 case LuaType.NUMBER:
                     str = Number.ToString();
@@ -80,7 +80,7 @@ namespace YANCL
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaTable ExpectTable(string? parameterName = null) {
-            if (Table != null) {
+            if (Object is LuaTable Table) {
                 return Table;
             }
             throw TypeError(parameterName, "table");
@@ -88,7 +88,7 @@ namespace YANCL
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IUserdata ExpectUserdata(string? parameterName = null) {
-            if (Userdata != null) {
+            if (Object is IUserdata Userdata) {
                 return Userdata;
             }
             throw TypeError(parameterName, "userdata");
@@ -99,7 +99,7 @@ namespace YANCL
                 result = conv.asFunc.DynamicInvoke(this, thread)!;
                 return true;
             }
-            if (Userdata is IUserdata ud && ud.Value != null && type.IsAssignableFrom(ud.Value.GetType())) {
+            if (Object is IUserdata ud && ud.Value != null && type.IsAssignableFrom(ud.Value.GetType())) {
                 result = ud.Value;
                 return true;
             }
