@@ -2006,5 +2006,27 @@ namespace YANCL.Test
                 2
             );
         }
+
+        [Fact]
+        public void CallSelfCall()
+        {
+            DoCompilerTest(
+                "return x(1, 2):y(3)",
+                new LuaValue[] { "x", 1, 2, "y", 3 },
+                new [] {
+                    Build3(GETTABUP, 0, 0, 0 | KFlag),
+                    Build2x(LOADK, 1, 1),
+                    Build2x(LOADK, 2, 2),
+                    Build3(CALL, 0, 3, 2),
+                    Build3(SELF, 0, 0, 3 | KFlag),
+                    Build2x(LOADK, 2, 4),
+                    Build3(TAILCALL, 0, 3, 0),
+                    Build2(RETURN, 0, 0),
+                    Build2(RETURN, 0, 1),
+                },
+                new LocalVarInfo[] { },
+                3
+            );
+        }
     }
 }

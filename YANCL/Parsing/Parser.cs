@@ -111,7 +111,7 @@ namespace YANCL
                         case TokenType.End:
                             break;
                         default:
-                            argc = ParseArgumentList(0);
+                            argc = ParseArgumentList();
                             break;
                     }
                     C.Return(argc);
@@ -193,7 +193,7 @@ namespace YANCL
                         PopBreak();
                     } else {
                         Expect(TokenType.In, "generic for loop");
-                        var argc = ParseArgumentList(0);
+                        var argc = ParseArgumentList();
                         Expect(TokenType.Do, "for loop body");
                         var state = C.GForInit(argc);
                         PushBreak();
@@ -309,7 +309,7 @@ namespace YANCL
             var token = Next();
             switch (token.type) {
                 case TokenType.Equal:
-                    int argc = ParseArgumentList(0);
+                    int argc = ParseArgumentList();
                     C.Assign(argc, nTargets);
                     break;
                 case TokenType.Comma:
@@ -367,7 +367,7 @@ namespace YANCL
                 case TokenType.OpenBrace:
                     C.Callee();
                     ParseTerm();
-                    C.Call(1);
+                    C.Call(0, 1);
                     endsInCall = true;
                     break;
                 default:
@@ -375,12 +375,13 @@ namespace YANCL
             }
         }
 
-        void ParseCall(int argc) {
+        void ParseCall(int prefix) {
+            var argc = 0;
             if (!TryTake(TokenType.CloseParen)) {
-                argc = ParseArgumentList(argc);
+                argc = ParseArgumentList();
                 Expect(TokenType.CloseParen, "argument list");
             }
-            C.Call(argc);
+            C.Call(prefix, argc);
         }
 
         void ParseTerm() {
@@ -662,7 +663,7 @@ namespace YANCL
             } while (TryTake(TokenType.Comma));
             int argc = 0;
             if (TryTake(TokenType.Equal)) {
-                argc = ParseArgumentList(0);
+                argc = ParseArgumentList();
             }
             C.InitLocals(tmpLocals.Count, argc);
             foreach (var l in tmpLocals) {
@@ -701,9 +702,9 @@ namespace YANCL
             C.EndClosure(scope);
         }
 
-        int ParseArgumentList(int argc) {
+        int ParseArgumentList() {
             ParseExpression();
-            argc++;
+            var argc = 1;
             while (TryTake(TokenType.Comma)) {
                 C.Argument();
                 ParseExpression();

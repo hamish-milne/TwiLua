@@ -10,9 +10,9 @@ namespace YANCL.Test
         public void Import()
         {
             var l = new Lua();
-            CLR.Load(l.Globals, new[]{typeof(double).Assembly});
+            CLR.Load(l.Globals);
             Assert.Equal(new LuaValue[]{ 1.23 }, l.DoString(@"
-                local Double = clr.import('System.Double')
+                local Double = import('System.Double')
                 return Double.Parse('1.23')
             "));
         }
@@ -21,10 +21,32 @@ namespace YANCL.Test
         public void Typeof()
         {
             var l = new Lua();
-            CLR.Load(l.Globals, new[]{typeof(double).Assembly});
+            CLR.Load(l.Globals);
             Assert.Equal(new LuaValue[]{ "System.Double" }, l.DoString(@"
-                local Double = clr.import('System.Double')
-                return clr.typeof(Double).FullName
+                local Double = import('System.Double')
+                return typeof(Double).FullName
+            "));
+        }
+
+        [Fact]
+        public void ToClr()
+        {
+            var l = new Lua();
+            CLR.Load(l.Globals);
+            Assert.Equal(new LuaValue[]{ "1.23" }, l.DoString(@"
+                local Double = import('System.Double')
+                return toClr(1.23, Double):ToString()
+            "));
+        }
+
+        [Fact]
+        public void FromClr()
+        {
+            var l = new Lua();
+            CLR.Load(l.Globals);
+            Assert.Equal(new LuaValue[]{ 1.23 }, l.DoString(@"
+                local Double = import('System.Double')
+                return fromClr(toClr(1.23, Double))
             "));
         }
     }

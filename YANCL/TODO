@@ -60,7 +60,7 @@ Reflection:
     ✔ typeof @done(24-02-27 21:58)
     ✔ Indexers @done(24-02-27 21:58)
     ☐ Operators
-    ☐ To/from CLR functions
+    ✔ To/from CLR functions @done(24-02-28 16:50)
 Upvalues:
     ✔ _ENV @done(22-02-15 19:06)
     ✔ In-stack @done(22-02-15 18:38)

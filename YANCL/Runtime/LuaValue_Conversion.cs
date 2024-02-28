@@ -95,10 +95,6 @@ namespace YANCL
         }
 
         public bool TryConvertTo(Type type, out object? result, LuaThread? thread = null) {
-            if (BuiltInConverters.TryGetValue(type, out var conv)) {
-                result = conv.asFunc.DynamicInvoke(this, thread)!;
-                return true;
-            }
             if (Object is IUserdata ud && ud.Value != null && type.IsAssignableFrom(ud.Value.GetType())) {
                 result = ud.Value;
                 return true;
@@ -107,13 +103,17 @@ namespace YANCL
                 result = null;
                 return true;
             }
+            if (BuiltInConverters.TryGetValue(type, out var conv)) {
+                result = conv.asFunc.DynamicInvoke(this, thread)!;
+                return true;
+            }
             result = null;
             return false;
         }
 
-        public object? ConvertTo(Type type, LuaThread? thread = null, string? parameterName = null) {
+        public object ConvertTo(Type type, LuaThread? thread = null, string? parameterName = null) {
             if (TryConvertTo(type, out var result, thread)) {
-                return result;
+                return result!;
             }
             throw TypeError(parameterName, type.Name);
         }

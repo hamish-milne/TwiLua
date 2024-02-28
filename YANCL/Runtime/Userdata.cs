@@ -344,7 +344,7 @@ namespace YANCL
         public override int Call(LuaThread s)
         {
             var offset = _methods[0].IsStatic ? 0 : 1;
-            var self = _methods[0].IsStatic ? null : s[1].ConvertTo(_methods[0].DeclaringType, s, "self");
+            var self = _methods[0].IsStatic ? null : s[1].ConvertTo(_methods[0].DeclaringType!, s, "self");
             var overloadIdx = ReflectionUtils.ChooseOverload(s, _parameters, out var args, offset, _methods[0].Name);
             var method = _methods[overloadIdx];
             var result = method.Invoke(self, args);

@@ -73,8 +73,8 @@ namespace YANCL
             return hasDispatch ? 0 : arguments+1;
         }
 
-        public void Call(int argCount) {
-            Push(new TCall(this, argCount, isVaradic: Dispatch(argCount, 0) == 0));
+        public void Call(int prefix, int argCount) {
+            Push(new TCall(this, prefix + argCount, isVaradic: Dispatch(argCount, 0) == 0));
         }
 
         public void Discard() {
