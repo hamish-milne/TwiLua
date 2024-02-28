@@ -42,7 +42,7 @@ Misc language features:
     ✔ Hashbang @done(22-02-15 19:44)
     ☐ Compile error handling
     ☐ Stack overflow check
-    ☐ Userdata?
+    ✔ Userdata @done(24-02-27 21:57)
     ☐ Common runtime errors
     ☐ Value coercion
     ☐ Object-oriented string style
@@ -50,6 +50,17 @@ Misc language features:
     ☐ Weak tables
     ☐ Variable attributes
     ☐ Lua 5.4 opcodes
+Reflection:
+    ✔ Instance fields/properties @done(24-02-27 21:58)
+    ✔ Static fields/properties @done(24-02-27 21:58)
+    ✔ Instance methods @done(24-02-27 21:58)
+    ✔ Static methods @done(24-02-27 21:58)
+    ✔ Constructors @done(24-02-27 21:58)
+    ✔ import @done(24-02-27 21:58)
+    ✔ typeof @done(24-02-27 21:58)
+    ✔ Indexers @done(24-02-27 21:58)
+    ☐ Operators
+    ☐ To/from CLR functions
 Upvalues:
     ✔ _ENV @done(22-02-15 19:06)
     ✔ In-stack @done(22-02-15 18:38)

@@ -181,10 +181,10 @@ namespace YANCL
             if (SetDelegateCasterMethods.TryGetValue(type, out var method)) {
                 try {
                     #pragma warning disable IL3050 // We're OK with a runtime error here
-                    method.MakeGenericMethod(type.GetGenericArguments()).Invoke(null, null);
+                    method.MakeGenericMethod(typeof(T).GetGenericArguments()).Invoke(null, null);
                     return true;
-                } catch {
-                    throw new Exception($"AOT error: please call LuaValue.SetCaster{type}() manually during initialization");
+                } catch (Exception e) {
+                    throw new Exception($"AOT error: please call LuaValue.SetCaster{type}() manually during initialization", e);
                 }
             }
             return false;

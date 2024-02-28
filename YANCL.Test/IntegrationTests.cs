@@ -109,13 +109,19 @@ namespace YANCL.Test
             lua.DoString(File.ReadAllText("../../../../YANCL.Benchmark/lua/loadBigFile.lua"));
         }
 
-        
         [Fact]
         public void GlobalFn() {
             var lua = new Lua();
             lua.Globals["globalFn"] = (LuaCFunction)((LuaThread s) => {
                 return s.Return(s.Number(1) + s.Number(2));
             });
+            lua.DoString(File.ReadAllText("../../../../YANCL.Benchmark/lua/call.lua"));
+        }
+
+        [Fact]
+        public void GlobalDelegate() {
+            var lua = new Lua();
+            lua.Globals["globalFn"] = LuaValue.From<Func<int, int, int>>((a, b) => a + b);
             lua.DoString(File.ReadAllText("../../../../YANCL.Benchmark/lua/call.lua"));
         }
     }
