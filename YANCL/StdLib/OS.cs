@@ -1,27 +1,94 @@
 using System;
+using System.Text;
 
 namespace YANCL
 {
     public static class OS
     {
+        static readonly DateTime unixEpochOffset = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        static double FromTimeSpan(TimeSpan timeSpan) => (double)timeSpan.Ticks / TimeSpan.TicksPerSecond;
+        static double FromDateTime(DateTime dateTime) => FromTimeSpan(dateTime - unixEpochOffset);
+        static DateTime ToDateTime(double time) => unixEpochOffset + TimeSpan.FromSeconds(time);
+
+        static string ConvertFormatString(string str)
+        {
+            switch (str) {
+                case "%c": return "g";
+                case "%x": return "d";
+                case "%X": return "t";
+            }
+            var output = new StringBuilder();
+            for (var i = 0; i < str.Length; i++)
+            {
+                output.Append(str[i] switch {
+                    'd' or 'f' or 'F' or 'g' or 'h' or 'H' or 'K' or 'm' or 'M' or 's' or 't' or 'y' or 'z' or ':' or '/' => @"\",
+                    _ => null
+                });
+                if (str[i] != '%') {
+                    output.Append(str[i]);
+                    continue;
+                }
+                var spec = str[++i] switch {
+                    'a' => "ddd",
+                    'A' => "dddd",
+                    'b' => "MMM",
+                    'B' => "MMMM",
+                    'd' => "dd",
+                    'D' => "MM/dd/yy",
+                    'e' => "d",
+                    'F' => "yyyy-MM-dd",
+                    'h' => "MMM",
+                    'H' => "HH",
+                    'I' => "hh",
+                    'j' => "ddd",
+                    'k' => "H",
+                    'l' => "h",
+                    'm' => "MM",
+                    'M' => "mm",
+                    'n' => "\n",
+                    'p' => "tt",
+                    'r' => "hh:mm:ss tt",
+                    'R' => "HH:mm",
+                    'S' => "ss",
+                    't' => "\t",
+                    'T' => "HH:mm:ss",
+                    'y' => "yy",
+                    'Y' => "yyyy",
+                    'z' => "zzz",
+                    '%' => "%",
+                    'c' or 'x' or 'X' => throw new NotSupportedException($"The format %{str[i]} must be used by itself"),
+                    _ => throw new NotSupportedException($"The format %{str[i]} is not supported")
+                };
+                if (output.Length > 0 && output[^1] == spec[0]) {
+                    throw new NotSupportedException($"Please add a space between the format %{str[i]} and the previous format");
+                }
+                output.Append(spec);
+            }
+            if (output.Length == 1) {
+                output.Insert(0, '%');
+            }
+            return output.ToString();
+        }
+
         public static void Load(LuaTable globals, bool includeUnsafe = false)
         {
-            var startTime = DateTime.Now.Ticks;
             var unsafeFn = new LuaValue(s => {
                 throw new LuaRuntimeError("Unsafe functions are not available");
             });
+            var startTime = DateTime.Now;
+
             globals["os"] = new LuaTable
             {
-                {"clock", s => s.Return((double)(DateTime.Now.Ticks - startTime) / TimeSpan.TicksPerSecond)},
+                {"clock", s => s.Return(FromTimeSpan(DateTime.Now - startTime))},
                 {"date", s => {
                     var format = s.Count >= 1 ? s.String(1) : "%c";
-                    var time = s.Count >= 2 ? s.Number(2) : (double)DateTime.Now.Ticks / TimeSpan.TicksPerSecond;
-                    return s.Return(DateTimeOffset.FromUnixTimeSeconds((long)time).ToString(format));
+                    var time = s.Count >= 2 ? ToDateTime(s.Number(2)) : DateTime.Now;
+                    return s.Return(time.ToString(ConvertFormatString(format)));
                 }},
                 {"difftime", s => s.Return(s.Number(1) - s.Number(2))},
                 {"time", s => {
                     if (s.Count == 0) {
-                        return s.Return((double)DateTime.Now.Ticks / TimeSpan.TicksPerSecond);
+                        return s.Return(FromDateTime(DateTime.Now));
                     } else {
                         var t = s.Table(1).Map;
                         var year = t["year"].As<int>();
@@ -30,8 +97,11 @@ namespace YANCL
                         t.TryGetValue("hour", out var hour);
                         t.TryGetValue("min", out var min);
                         t.TryGetValue("sec", out var sec);
-                        var dt = new DateTime(year, month, day, (int)hour.Number, (int)min.Number, (int)sec.Number, DateTimeKind.Utc);
-                        return s.Return((double)dt.Ticks / TimeSpan.TicksPerSecond);
+                        return s.Return(FromDateTime(new DateTime(
+                            year, month, day,
+                            (int)hour.Number, (int)min.Number, (int)sec.Number,
+                            DateTimeKind.Utc
+                        )));
                     }
                 }},
                 {"execute", includeUnsafe ? new LuaValue(s => {

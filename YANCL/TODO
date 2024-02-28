@@ -233,16 +233,16 @@ IO:
     ☐ io.stdout
     ☐ io.stderr
 OS:
-    ☐ os.clock
-    ☐ os.date
-    ☐ os.difftime
+    ✔ os.clock @done(24-02-28 18:33)
+    ✔ os.date @done(24-02-28 18:33)
+    ✔ os.difftime @done(24-02-28 18:33)
     ☐ os.execute
     ☐ os.exit
     ☐ os.getenv
     ☐ os.remove
     ☐ os.rename
     ☐ os.setlocale
-    ☐ os.time
+    ✔ os.time @done(24-02-28 18:33)
     ☐ os.tmpname
 Debug:
     ☐ debug.debug
