@@ -1,5 +1,5 @@
 {
-    "coverage-gutters.coverageBaseDir": "YANCL.Test/TestResults/",
+    "coverage-gutters.coverageBaseDir": "TwiLua.Test/TestResults/",
     "coverage-gutters.coverageFileNames": [
         "coverage.info",
     ],
