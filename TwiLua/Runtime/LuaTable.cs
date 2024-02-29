@@ -25,8 +25,8 @@ namespace TwiLua
         }
 
         private static bool IsArrayIndex(in LuaValue key, out int idx) {
-            if (key.Type == LuaType.NUMBER && key.Number > 0 && key.Number % 1 == 0) {
-                idx = (int)key.Number - 1;
+            if (key.TryGetInteger(out var i) && i > 0) {
+                idx = (int)i - 1;
                 return true;
             }
             idx = -1;

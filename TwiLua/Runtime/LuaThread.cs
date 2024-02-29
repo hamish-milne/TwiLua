@@ -328,9 +328,9 @@ namespace TwiLua
             } else {
                 nArgs--;
             }
-            switch (stack[func].Type) {
-            case LuaType.FUNCTION:
-                var function = stack[func].Function!.Function;
+            switch (stack[func].Object) {
+            case LuaClosure closure:
+                var function = closure.Function;
                 var nParams = function.nParams;
 
                 // Populate unset fixed parameters with nil
@@ -350,10 +350,10 @@ namespace TwiLua
 
                 pc = 0;
                 break;
-            case LuaType.CFUNCTION: {
+            case LuaCFunction cFunction: {
                 top = func + nArgs;
                 nSlots = nArgs;
-                var nReturns = stack[func].CFunction!.Invoke(this);
+                var nReturns = cFunction.Invoke(this);
                 if (!IsRunning) {
                     // Yield was called
                     Array.Clear(stack, func, nArgs);
@@ -363,10 +363,10 @@ namespace TwiLua
                 Return(func, nReturns + 1);
                 break;
             }
-            case LuaType.USERDATA: {
+            case IUserdata userdata: {
                 top = func + nArgs;
                 nSlots = nArgs;
-                var nReturns = stack[func].Userdata!.Call(this);
+                var nReturns = userdata.Call(this);
                 if (!IsRunning) {
                     // Yield was called
                     Array.Clear(stack, func, nArgs);
@@ -439,17 +439,14 @@ namespace TwiLua
                 R(GetA(op)) = table1.Userdata.Index(this, key);
                 return;
             }
-            var table = table1.Table ?? throw new Exception();
+            var table = table1.ExpectTable();
             while (!table.TryGetValue(key, out R(GetA(op))) && table.MetaTable != null) {
                 var index = table.MetaTable["__index"];
-                switch (index.Type) {
-                    case LuaType.FUNCTION:
-                        CallMeta2(op, index, table, key);
-                        return;
-                    case LuaType.TABLE:
-                        table = index.Table!;
-                        break;
-                    // TODO: Invalid metamethod?
+                if (index.Object is LuaTable table2) {
+                    table = table2;
+                } else {
+                    CallMeta2(op, index, table, key);
+                    return;
                 }
             }
         }
@@ -464,20 +461,16 @@ namespace TwiLua
             var table = table1.Table ?? throw new Exception();
             while (!table.TryGetValue(key, out var _) && table.MetaTable != null) {
                 var index = table.MetaTable["__newindex"];
-                switch (index.Type) {
-                    case LuaType.FUNCTION: {
-                        PushCallInfo();
-                        R(nSlots + 0) = index;
-                        R(nSlots + 1) = table;
-                        R(nSlots + 2) = key;
-                        R(nSlots + 3) = RK(GetC(op));
-                        Call(nSlots, 4, 1, isTailCall: false);
-                        return;
-                    }
-                    case LuaType.TABLE:
-                        table = index.Table!;
-                        break;
-                    // TODO: Invalid metamethod?
+                if (index.Object is LuaTable table2) {
+                    table = table2;
+                } else {
+                    PushCallInfo();
+                    R(nSlots + 0) = index;
+                    R(nSlots + 1) = table;
+                    R(nSlots + 2) = key;
+                    R(nSlots + 3) = RK(GetC(op));
+                    Call(nSlots, 4, 1, isTailCall: false);
+                    return;
                 }
             }
             table[key] = RK(GetC(op));
@@ -704,7 +697,7 @@ namespace TwiLua
                         Call(GetA(op), GetB(op), GetC(op), isTailCall: false);
                         continue;
                     case OpCode.TAILCALL: {
-                        if ( R(GetA(op)).Type != LuaType.FUNCTION ) {
+                        if ( R(GetA(op)).Object is not LuaClosure ) {
                             goto case OpCode.CALL;
                         }
                         Close(baseR);
@@ -719,8 +712,8 @@ namespace TwiLua
                         continue;
                     }
                     case OpCode.FORLOOP: {
-                        var step = R(GetA(op) + 2).Number;
-                        var limit = R(GetA(op) + 1).Number;
+                        var step = (int)R(GetA(op) + 2).ExpectNumber();
+                        var limit = (int)R(GetA(op) + 1).ExpectNumber();
                         var i = R(GetA(op)).Number + step;
                         R(GetA(op)) = i;
                         if ( (step > 0 && i <= limit) || (step < 0 && i >= limit) ) {
@@ -730,11 +723,11 @@ namespace TwiLua
                         continue;
                     }
                     case OpCode.FORPREP:
-                        R(GetA(op)) = (R(GetA(op)).Number - R(GetA(op) + 2).Number);
+                        R(GetA(op)) = (int)R(GetA(op)).ExpectNumber() - (int)R(GetA(op) + 2).ExpectNumber();
                         pc += GetSbx(op);
                         continue;
                     case OpCode.SETLIST: {
-                        var list = R(GetA(op)).Table!;
+                        var list = R(GetA(op)).ExpectTable();
                         var block = GetC(op) - 1;
                         if (block < 0) {
                             block = code[pc++];

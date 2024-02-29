@@ -59,7 +59,7 @@ namespace TwiLua
                     'c' or 'x' or 'X' => throw new NotSupportedException($"The format %{str[i]} must be used by itself"),
                     _ => throw new NotSupportedException($"The format %{str[i]} is not supported")
                 };
-                if (output.Length > 0 && output[^1] == spec[0]) {
+                if (output.Length > 0 && output[output.Length - 1] == spec[0]) {
                     throw new NotSupportedException($"Please add a space between the format %{str[i]} and the previous format");
                 }
                 output.Append(spec);

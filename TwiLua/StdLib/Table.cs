@@ -79,7 +79,7 @@ namespace TwiLua.StdLib {
                         var comp = s[2].As<Func<LuaValue, LuaValue, LuaValue>>(s);
                         list.Array.Sort((a, b) => {
                             var result = comp(a, b);
-                            return result.Type == LuaType.NUMBER ? (int)result.Number : result.Boolean ? -1 : 1;
+                            return result.IsNumber ? (int)result.Number : result.Boolean ? -1 : 1;
                         });
                     }
                     return 0;

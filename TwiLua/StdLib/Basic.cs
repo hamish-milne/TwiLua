@@ -66,18 +66,17 @@ namespace TwiLua.StdLib {
                 if (s.Count < 1) {
                     throw new WrongNumberOfArguments();
                 }
-                switch (s[1].Type) {
-                case LuaType.NIL: return s.Return("nil");
-                case LuaType.BOOLEAN: return s.Return("boolean");
-                case LuaType.NUMBER: return s.Return("number");
-                case LuaType.STRING: return s.Return("string");
-                case LuaType.TABLE: return s.Return("table");
-                case LuaType.CFUNCTION:
-                case LuaType.FUNCTION:
-                    return s.Return("function");
-                default:
-                    throw new Exception("Unknown type");
-                }
+                return s.Return(s[1].Type switch {
+                    TypeTag.Nil => "nil",
+                    TypeTag.True or TypeTag.False => "boolean",
+                    TypeTag.Number => "number",
+                    _ => s[1].Object switch {
+                        string => "string",
+                        LuaTable => "table",
+                        LuaFunction or LuaCFunction => "function",
+                        _ => "userdata"
+                    }
+                });
             });
             globals["error"] = new LuaCFunction(s => {
                 // TODO: Error position

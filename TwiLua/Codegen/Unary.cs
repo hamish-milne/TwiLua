@@ -20,8 +20,8 @@ namespace TwiLua
 
         public void Unm() {
             var op = Pop();
-            if (op is TConstant c && c.Value.Type == LuaType.NUMBER) {
-                Push(new TConstant(-c.Value.Number));
+            if (op is TConstant c && c.Value.TryGetNumber(out var n)) {
+                Push(new TConstant(-n));
             } else {
                 Push(new TUnary(this, UNM, op));
             }
@@ -45,13 +45,7 @@ namespace TwiLua
                 return;
             }
             var op = Pop();
-            if (op is TConstant c && c.Value.Type switch {
-                LuaType.NIL => true,
-                LuaType.BOOLEAN => true,
-                LuaType.STRING => true,
-                LuaType.NUMBER => true,
-                _ => false
-            }) {
+            if (op is TConstant c) {
                 Push(new TConstant(!c.Value.Boolean));
             } else {
                 Push(new TUnary(this, NOT, op));
@@ -60,8 +54,8 @@ namespace TwiLua
         
         public void BNot() {
             var op = Pop();
-            if (op is TConstant c && c.Value.Type == LuaType.NUMBER && c.Value.Number % 1 == 0) {
-                Push(new TConstant(~(long)c.Value.Number));
+            if (op is TConstant c && c.Value.TryGetInteger(out var i)) {
+                Push(new TConstant(~i));
             } else {
                 Push(new TUnary(this, BNOT, op));
             }

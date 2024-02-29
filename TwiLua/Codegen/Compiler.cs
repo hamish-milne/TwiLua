@@ -39,8 +39,8 @@ namespace TwiLua
             public TConstant(LuaValue value) => Value = value;
             public override int GetRK(Compiler c, ref int tmpSlots)  => c.K(Value) | KFlag;
             public override void Load(Compiler c, int dst) => c.Emit(Value.Type switch {
-                LuaType.NIL => Build2(LOADNIL, dst, 0),
-                LuaType.BOOLEAN => Build3(LOADBOOL, dst, Value.Boolean ? 1 : 0, 0),
+                TypeTag.Nil => Build2(LOADNIL, dst, 0),
+                TypeTag.True or TypeTag.False => Build3(LOADBOOL, dst, Value.Boolean ? 1 : 0, 0),
                 _ => Build2x(LOADK, dst, c.K(Value))
             });
         }

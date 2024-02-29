@@ -14,7 +14,7 @@ namespace TwiLua.Test
             var result = l.DoString(@"
                 return os.clock()
             ")[0];
-            Assert.Equal(LuaType.NUMBER, result.Type);
+            Assert.True(result.ExpectNumber() >= 0);
         }
 
         [Fact]
@@ -37,7 +37,7 @@ namespace TwiLua.Test
             var result = l.DoString(@"
                 return os.date()
             ")[0];
-            Assert.Equal(LuaType.STRING, result.Type);
+            Assert.IsType<string>(result.Object);
         }
 
         [Fact]

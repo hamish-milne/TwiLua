@@ -28,9 +28,9 @@ namespace TwiLua
             var opA = Pop();
             if (opB is TConstant cB &&
                 opA is TConstant cA &&
-                cB.Value.Type == LuaType.NUMBER &&
-                cA.Value.Type == LuaType.NUMBER) {
-                Push(new TConstant(operation(cA.Value.Number, cB.Value.Number)));
+                cB.Value.TryGetNumber(out var b) &&
+                cA.Value.TryGetNumber(out var a)) {
+                Push(new TConstant(operation(a, b)));
             } else {
                 Push(new TBinary(this, opcode, opA, opB));
             }
@@ -50,11 +50,9 @@ namespace TwiLua
             var opA = Pop();
             if (opB is TConstant cB &&
                 opA is TConstant cA &&
-                cB.Value.Type == LuaType.NUMBER &&
-                cA.Value.Type == LuaType.NUMBER &&
-                cB.Value.Number % 1 == 0 &&
-                cA.Value.Number % 1 == 0) {
-                Push(new TConstant(operation((long)cA.Value.Number, (long)cB.Value.Number)));
+                cB.Value.TryGetInteger(out var b) &&
+                cA.Value.TryGetInteger(out var a)) {
+                Push(new TConstant(operation(a, b)));
             } else {
                 Push(new TBinary(this, opcode, opA, opB));
             }

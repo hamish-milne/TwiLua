@@ -6,30 +6,28 @@ namespace TwiLua
     public partial struct LuaValue
     {
         Exception TypeError(string? parameterName, string expectedType) {
-            if (parameterName == null)
+            if (parameterName == null) {
                 return new Exception($"Expected `{this}` to be a {expectedType}");
-            else
+            } else {
                 return new Exception($"Expected `{this}` to be a {expectedType} for parameter `{parameterName}`");
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetNumber(out double number, bool allowCoercion = true) {
-            switch (Type) {
-                case LuaType.NUMBER:
-                    number = Number;
-                    return true;
-                case LuaType.STRING:
-                    if (allowCoercion && double.TryParse(Object as string, out number)) {
-                        return true;
-                    }
-                    break;
             }
-            number = 0;
-            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public double ExpectNumber(string? parameterName = null, bool allowCoercion = true) {
+        public bool TryGetNumber(out double number, bool allowCoercion = false) {
+            if (IsNumber) {
+                number = Number;
+                return true;
+            } else if (allowCoercion && Object is string s && double.TryParse(s, out number)) {
+                return true;
+            } else {
+                number = 0;
+                return false;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public double ExpectNumber(string? parameterName = null, bool allowCoercion = false) {
             if (TryGetNumber(out var n, allowCoercion)) {
                 return n;
             }
@@ -37,7 +35,7 @@ namespace TwiLua
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetInteger(out long intVal, bool allowCoercion = true) {
+        public bool TryGetInteger(out long intVal, bool allowCoercion = false) {
             if (TryGetNumber(out var n, allowCoercion) && n % 1 == 0) {
                 intVal = (long)n;
                 return true;
@@ -48,7 +46,7 @@ namespace TwiLua
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public long ExpectInteger(string? parameterName = null, bool allowCoercion = true) {
+        public long ExpectInteger(string? parameterName = null, bool allowCoercion = false) {
             if (TryGetInteger(out var n, allowCoercion)) {
                 return n;
             }
@@ -57,16 +55,15 @@ namespace TwiLua
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetString(out string str) {
-            switch (Type) {
-                case LuaType.STRING:
-                    str = (string)Object;
-                    return true;
-                case LuaType.NUMBER:
-                    str = Number.ToString();
-                    return true;
-                default:
-                    str = "";
-                    return false;
+            if (Object is string s) {
+                str = s;
+                return true;
+            } else if (IsNumber) {
+                str = Number.ToString();
+                return true;
+            } else {
+                str = "";
+                return false;
             }
         }
 
@@ -99,7 +96,7 @@ namespace TwiLua
                 result = ud.Value;
                 return true;
             }
-            if (!type.IsValueType && Type == LuaType.NIL) {
+            if (!type.IsValueType && Type == TypeTag.Nil) {
                 result = null;
                 return true;
             }

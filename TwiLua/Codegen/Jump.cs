@@ -53,13 +53,7 @@ namespace TwiLua
             JumpAt(label, code.Count - 1);
         }
 
-        private bool IsConstantTrue(Operand op) => op is TConstant c && (c.Value.Type switch {
-            LuaType.NIL => false,
-            LuaType.BOOLEAN => c.Value.Boolean,
-            LuaType.STRING => true,
-            LuaType.NUMBER => true,
-            _ => false
-        });
+        private bool IsConstantTrue(Operand op) => op is TConstant c && c.Value.Boolean;
 
         public void JumpIf(Label label, bool value) {
             if (IsConstantTrue(Peek(0))) {

@@ -4,16 +4,12 @@ using System.Runtime.CompilerServices;
 
 namespace TwiLua
 {
-    public enum LuaType {
-        NIL = 0,
-        BOOLEAN = 1,
-        NUMBER = 3,
-        STRING = 4,
-        TABLE = 5,
-        FUNCTION = 6,
-        CFUNCTION = 7,
-        THREAD = 8,
-        USERDATA = 9,
+    public enum TypeTag : byte {
+        Nil,
+        False,
+        True,
+        Number,
+        Object,
     }
 
 
@@ -25,8 +21,7 @@ namespace TwiLua
     public readonly partial struct LuaValue : IEquatable<LuaValue>, IComparable<LuaValue> {
         public readonly double Number;
         public readonly object? Object;
-        public readonly LuaType Type;
-        public readonly int Hash;
+        public readonly TypeTag Type;
 
         public readonly string? String {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -61,7 +56,14 @@ namespace TwiLua
         public readonly bool Boolean {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                return !(Type == LuaType.NIL || (Type == LuaType.BOOLEAN && Number == 0));
+                return Type > TypeTag.False;
+            }
+        }
+
+        public readonly bool IsNumber {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get {
+                return Type == TypeTag.Number;
             }
         }
 
@@ -108,7 +110,7 @@ namespace TwiLua
             return Table.MetaTable.TryGetValue(key, out value);
         }
 
-        public static readonly LuaValue Nil = new LuaValue();
+        public static readonly LuaValue Nil = default;
 
         private static readonly Dictionary<Type, (Delegate asFunc, Delegate fromFunc)> BuiltInConverters = new Dictionary<Type, (Delegate, Delegate)>();
 
@@ -125,19 +127,26 @@ namespace TwiLua
             }
         }
 
-        readonly T AssertType<T>(LuaType type, T returns) {
-            if (Type != type) {
-                throw new Exception($"Expected {type}, got {Type}");
+        readonly T AssertDelegate<T>(LuaThread? thread, T returns) {
+            if (Object is not LuaClosure and not LuaCFunction) {
+                throw new Exception($"Expected a function, got {this}");
+            }
+            if (thread == null) {
+                throw new Exception("A LuaThread must be provided to convert to a delegate");
             }
             return returns;
         }
 
-        readonly T AssertDelegate<T>(LuaThread? thread, T returns) {
-            if (Type != LuaType.CFUNCTION && Type != LuaType.FUNCTION) {
-                throw new Exception($"Expected a function, got {Type}");
+        readonly T CastObj<T>() where T : class {
+            if (Object is T t) {
+                return t;
             }
-            if (thread == null) {
-                throw new Exception("A LuaThread must be provided to convert to a delegate");
+            throw new Exception($"Expected {typeof(T)}, got {this}");
+        }
+
+        readonly T AssertNumber<T>(T returns) {
+            if (!IsNumber) {
+                throw new Exception($"Expected number, got {this}");
             }
             return returns;
         }
@@ -150,47 +159,96 @@ namespace TwiLua
             );
 
             Caster<bool>.Set(
-                (v, _) => v.AssertType(LuaType.BOOLEAN, v.Boolean),
+                (v, _) => v.Type switch {
+                    TypeTag.True => true,
+                    TypeTag.False => false,
+                    _ => throw new Exception("Expected boolean, got " + v)
+                },
                 (v) => new LuaValue(v)
             );
 
             Caster<double>.Set(
-                (v, _) => v.AssertType(LuaType.NUMBER, v.Number),
+                (v, _) => v.AssertNumber(v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<float>.Set(
+                (v, _) => v.AssertNumber((float)v.Number),
                 (v) => new LuaValue(v)
             );
 
             Caster<int>.Set(
-                (v, _) => v.AssertType(LuaType.NUMBER, (int)v.Number),
+                (v, _) => v.AssertNumber((int)v.Number),
                 (v) => new LuaValue(v)
             );
 
+            Caster<long>.Set(
+                (v, _) => v.AssertNumber((long)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<short>.Set(
+                (v, _) => v.AssertNumber((short)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<byte>.Set(
+                (v, _) => v.AssertNumber((byte)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<uint>.Set(
+                (v, _) => v.AssertNumber((uint)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<ulong>.Set(
+                (v, _) => v.AssertNumber((ulong)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<ushort>.Set(
+                (v, _) => v.AssertNumber((ushort)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<sbyte>.Set(
+                (v, _) => v.AssertNumber((sbyte)v.Number),
+                (v) => new LuaValue(v)
+            );
+
+            Caster<decimal>.Set(
+                (v, _) => v.AssertNumber((decimal)v.Number),
+                (v) => new LuaValue((double)v)
+            );
+
             Caster<string>.Set(
-                (v, _) => v.AssertType(LuaType.STRING, v.Object as string),
+                (v, _) => v.CastObj<string>(),
                 (v) => new LuaValue(v)
             );
 
             Caster<LuaTable>.Set(
-                (v, _) => v.AssertType(LuaType.TABLE, v.Object as LuaTable),
+                (v, _) => v.CastObj<LuaTable>(),
                 (v) => new LuaValue(v)
             );
 
             Caster<LuaMap>.Set(
-                (v, _) => v.AssertType(LuaType.TABLE, (v.Object as LuaTable)?.Map),
+                (v, _) => v.CastObj<LuaTable>().Map,
                 (v) => new LuaValue(new LuaTable(null, v))
             );
 
             Caster<List<LuaValue>>.Set(
-                (v, _) => v.AssertType(LuaType.TABLE, (v.Object as LuaTable)?.Array),
+                (v, _) => v.CastObj<LuaTable>().Array,
                 (v) => new LuaValue(new LuaTable(v, null))
             );
 
             Caster<LuaClosure>.Set(
-                (v, _) => v.AssertType(LuaType.FUNCTION, v.Object as LuaClosure),
+                (v, _) => v.CastObj<LuaClosure>(),
                 (v) => new LuaValue(v)
             );
 
             Caster<LuaCFunction>.Set(
-                (v, _) => v.AssertType(LuaType.CFUNCTION, v.Object as LuaCFunction),
+                (v, _) => v.CastObj<LuaCFunction>(),
                 (v) => new LuaValue(v)
             );
 
@@ -206,7 +264,7 @@ namespace TwiLua
             );
 
             Caster<IUserdata>.Set(
-                (v, _) => v.AssertType(LuaType.USERDATA, v.Object as IUserdata),
+                (v, _) => v.CastObj<IUserdata>(),
                 (v) => new LuaValue(v)
             );
         }
@@ -229,128 +287,112 @@ namespace TwiLua
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(bool value) {
-            Type = LuaType.BOOLEAN;
-            Number = value ? 1 : 0;
-            Object = null;
-            Hash = value.GetHashCode();
+            Type = value ? TypeTag.True : TypeTag.False;
+            Number = default;
+            Object = default;
         }
 
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(double value) {
-            Type = LuaType.NUMBER;
+            Type = TypeTag.Number;
             Number = value;
-            Object = null;
-            Hash = value.GetHashCode();
+            Object = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(string value) {
-            Type = LuaType.STRING;
-            Number = 0;
+            Type = TypeTag.Object;
+            Number = default;
             Object = value;
-            Hash = value.GetHashCode();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(LuaTable table) {
-            Type = LuaType.TABLE;
-            Number = 0;
+            Type = TypeTag.Object;
+            Number = default;
             Object = table;
-            Hash = table.GetHashCode();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(LuaClosure function) {
-            Type = LuaType.FUNCTION;
-            Number = 0;
+            Type = TypeTag.Object;
+            Number = default;
             Object = function;
-            Hash = function.GetHashCode();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(LuaCFunction function) {
-            Type = LuaType.CFUNCTION;
-            Number = 0;
+            Type = TypeTag.Object;
+            Number = default;
             Object = function;
-            Hash = function.GetHashCode();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(LuaThread thread) {
-            Type = LuaType.THREAD;
-            Number = 0;
+            Type = TypeTag.Object;
+            Number = default;
             Object = thread;
-            Hash = thread.GetHashCode();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaValue(IUserdata userdata) {
-            Type = LuaType.USERDATA;
-            Number = 0;
+            Type = TypeTag.Object;
+            Number = default;
             Object = userdata;
-            Hash = userdata.GetHashCode();
         }
 
         bool IEquatable<LuaValue>.Equals(LuaValue other) => Equals(other);
 
         public readonly bool Equals(in LuaValue other) {
             if (Type != other.Type) return false;
-            switch (Type) {
-                case LuaType.NIL:
-                    return true;
-                case LuaType.BOOLEAN:
-                case LuaType.NUMBER:
-                    return Number == other.Number;
-                case LuaType.STRING:
-                    return (Object as string) == (other.Object as string);
-                default:
-                    return Object == other.Object;
-            }
+            return Type switch {
+                TypeTag.Object => Object is string str && other.Object is string otherStr
+                    ? str == otherStr
+                    : Object == other.Object,
+                TypeTag.Number => Number == other.Number,
+                _ => true
+            };
         }
 
         public readonly override bool Equals(object? obj) {
             return obj is LuaValue other && Equals(other);
         }
 
-        public readonly override int GetHashCode() => Hash;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly override int GetHashCode() => Type switch {
+            TypeTag.Object => Object!.GetHashCode(),
+            TypeTag.Number => Number.GetHashCode(),
+            _ => (int)Type            
+        };
+
+        public readonly int Hash {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => GetHashCode();
+        }
 
         public readonly override string ToString()
         {
-            switch (Type) {
-                case LuaType.NIL:
-                    return "nil";
-                case LuaType.BOOLEAN:
-                    return Boolean ? "true" : "false";
-                case LuaType.NUMBER:
-                    return Number.ToString();
-                case LuaType.STRING:
-                    return (string)Object!;
-                case LuaType.TABLE:
-                    return "<table>";
-                case LuaType.CFUNCTION:
-                case LuaType.FUNCTION:
-                    return "<function>";
-                case LuaType.THREAD:
-                    return "<thread>";
-                case LuaType.USERDATA:
-                    return "<userdata>";
-                default:
-                    throw new Exception("Invalid LuaType");
-            }
+            return Type switch
+            {
+                TypeTag.Nil => "nil",
+                TypeTag.True => "true",
+                TypeTag.False => "false",
+                TypeTag.Number => Number.ToString(),
+                _ => Object?.ToString()!,
+            };
+
         }
 
         public readonly int CompareTo(LuaValue other)
         {
-            if (Type != other.Type) {
-                throw new Exception($"Cannot compare {Type} with {other.Type}");
+            if (IsNumber && other.IsNumber) {
+                return Number.CompareTo(other.Number);
             }
-            return Type switch
-            {
-                LuaType.NUMBER => Number.CompareTo(other.Number),
-                LuaType.STRING => ((string)Object!).CompareTo((string)other.Object!),
-                _ => throw new Exception($"Cannot compare two {Type} values"),
-            };
+            if (Object is string str && other.Object is string otherStr) {
+                return str.CompareTo(otherStr);
+            }
+            throw new Exception($"Cannot compare {this} with {other}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

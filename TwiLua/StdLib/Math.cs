@@ -69,12 +69,10 @@ namespace TwiLua.StdLib {
                     }
                 }},
                 {"type", s => {
-                    if (s[1].Type == LuaType.NUMBER) {
-                        if (s[1].Number % 1 == 0.0) {
-                            return s.Return("integer");
-                        } else {
-                            return s.Return("float");
-                        }
+                    if (s[1].TryGetInteger(out _)) {
+                        return s.Return("integer");
+                    } else if (s[1].IsNumber) {
+                        return s.Return("float");
                     } else {
                         return s.Return(LuaValue.Nil);
                     }
