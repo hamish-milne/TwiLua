@@ -65,11 +65,33 @@ namespace TwiLua
         In,
     }
 
-    struct Token {
-        public TokenType type;
-        public string? text;
-        public double number;
-        public Location location;
+    readonly struct Token
+    {
+        public readonly TokenType type;
+        public readonly string? text;
+        public readonly double number;
+        public readonly Location location;
+
+        public Token(TokenType type, Location location) {
+            this.type = type;
+            text = null;
+            number = 0;
+            this.location = location;
+        }
+
+        public Token(double number, Location location) {
+            type = TokenType.Number;
+            text = null;
+            this.number = number;
+            this.location = location;
+        }
+
+        public Token(string identifier, Location location) {
+            type = TokenType.Identifier;
+            text = identifier;
+            number = 0;
+            this.location = location;
+        }
 
         public override string ToString() => TypeString(type);
 

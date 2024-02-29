@@ -5,7 +5,7 @@ using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
         public void InitLocals(int count, int arguments)
         {

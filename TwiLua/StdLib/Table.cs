@@ -1,8 +1,10 @@
 using System;
 using System.Text;
 
-namespace TwiLua.StdLib {
-    public static class Table {
+namespace TwiLua.StdLib
+{
+    public static class Table
+    {
         public static void Load(LuaTable globals) {
             LuaValue.SetCasterFunc<LuaValue, LuaValue, LuaValue>();
 

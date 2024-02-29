@@ -14,8 +14,8 @@ namespace TwiLua
     /// </remarks>
     public sealed class LuaMap : IDictionary<LuaValue, LuaValue>
     {
-        public KeyCollection Keys => new KeyCollection(this);
-        public ValueCollection Values => new ValueCollection(this);
+        public KeyCollection Keys => new(this);
+        public ValueCollection Values => new(this);
         ICollection<LuaValue> IDictionary<LuaValue, LuaValue>.Keys => Keys;
         ICollection<LuaValue> IDictionary<LuaValue, LuaValue>.Values => Values;
 
@@ -300,7 +300,7 @@ namespace TwiLua
 
         #region Enumeration
 
-        public Enumerator GetEnumerator() => new Enumerator(this);
+        public Enumerator GetEnumerator() => new(this);
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -308,7 +308,7 @@ namespace TwiLua
 
         public struct Enumerator : IEnumerator<Pair>
         {
-            private LuaMap obj;
+            private readonly LuaMap obj;
             private Node? node;
 
             public Enumerator(LuaMap obj) {
@@ -316,7 +316,7 @@ namespace TwiLua
                 this.node = null;
             }
 
-            public Pair Current {
+            public readonly Pair Current {
                 get {
                     if (node == null) {
                         throw new InvalidOperationException();
@@ -325,9 +325,9 @@ namespace TwiLua
                 }
             }
 
-            object IEnumerator.Current => Current;
+            readonly object IEnumerator.Current => Current;
 
-            void IDisposable.Dispose()
+            readonly void IDisposable.Dispose()
             {
             }
 
@@ -366,9 +366,9 @@ namespace TwiLua
 
         #region Key collection
 
-        public struct KeyCollection : ICollection<LuaValue>
+        public readonly struct KeyCollection : ICollection<LuaValue>
         {
-            private LuaMap obj;
+            private readonly LuaMap obj;
             public KeyCollection(LuaMap obj) {
                 this.obj = obj;
             }
@@ -378,7 +378,7 @@ namespace TwiLua
             public void Clear() => throw new NotSupportedException();
             public bool Remove(LuaValue item) => throw new NotSupportedException();
             public bool Contains(LuaValue item) => obj.ContainsKey(item);
-            public KeyEnumerator GetEnumerator() => new KeyEnumerator(obj);
+            public KeyEnumerator GetEnumerator() => new(obj);
             IEnumerator<LuaValue> IEnumerable<LuaValue>.GetEnumerator() => GetEnumerator();
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -394,9 +394,9 @@ namespace TwiLua
         {
             private Enumerator inner;
             public KeyEnumerator(LuaMap obj) => inner = obj.GetEnumerator();
-            public LuaValue Current => inner.Current.Key;
-            object IEnumerator.Current => Current;
-            void IDisposable.Dispose() { }
+            public readonly LuaValue Current => inner.Current.Key;
+            readonly object IEnumerator.Current => Current;
+            readonly void IDisposable.Dispose() { }
             public bool MoveNext() => inner.MoveNext();
             public void Reset() => inner.Reset();
         }
@@ -405,9 +405,9 @@ namespace TwiLua
 
         #region Value collection
 
-        public struct ValueCollection : ICollection<LuaValue>
+        public readonly struct ValueCollection : ICollection<LuaValue>
         {
-            private LuaMap obj;
+            private readonly LuaMap obj;
             public ValueCollection(LuaMap obj) {
                 this.obj = obj;
             }
@@ -416,7 +416,7 @@ namespace TwiLua
             public void Add(LuaValue item) => throw new NotSupportedException();
             public void Clear() => throw new NotSupportedException();
             public bool Remove(LuaValue item) => throw new NotSupportedException();
-            public ValueEnumerator GetEnumerator() => new ValueEnumerator(obj);
+            public ValueEnumerator GetEnumerator() => new(obj);
             IEnumerator<LuaValue> IEnumerable<LuaValue>.GetEnumerator() => GetEnumerator();
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
             public bool Contains(LuaValue item) {
@@ -440,9 +440,9 @@ namespace TwiLua
         {
             private Enumerator inner;
             public ValueEnumerator(LuaMap obj) => inner = obj.GetEnumerator();
-            public LuaValue Current => inner.Current.Value;
-            object IEnumerator.Current => Current;
-            void IDisposable.Dispose() { }
+            public readonly LuaValue Current => inner.Current.Value;
+            readonly object IEnumerator.Current => Current;
+            readonly void IDisposable.Dispose() { }
             public bool MoveNext() => inner.MoveNext();
             public void Reset() => inner.Reset();
         }

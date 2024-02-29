@@ -6,7 +6,7 @@ using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
         class TLocal : Operand
         {
@@ -34,7 +34,7 @@ namespace TwiLua
         {
             public readonly Scope? Parent;
             public readonly int StartIdx;
-            public readonly List<(string name, int startPC, int infoIdx)> Locals = new List<(string, int, int)>();
+            public readonly List<(string name, int startPC, int infoIdx)> Locals = new();
             public bool HasUpvalues { get; private set; }
 
             public int Count => Locals.Count + (Parent?.Count ?? 0);
@@ -58,7 +58,7 @@ namespace TwiLua
         }
 
         private Scope? currentScope;
-        private readonly List<LocalVarInfo> locals = new List<LocalVarInfo>();
+        private readonly List<LocalVarInfo> locals = new();
 
         public void PushScope() => currentScope = new Scope(currentScope);
 

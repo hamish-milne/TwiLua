@@ -1,7 +1,9 @@
 using System;
 
-namespace TwiLua.StdLib {
-    public static class Basic {
+namespace TwiLua.StdLib
+{
+    public static class Basic
+    {
         public static void Load(LuaTable globals) {
             globals["collectgarbage"] = new LuaCFunction(s => {
                 switch (s.Count >= 1 ? s.String(1) : "collect") {

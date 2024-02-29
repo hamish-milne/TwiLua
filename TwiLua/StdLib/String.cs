@@ -1,5 +1,9 @@
-namespace TwiLua.StdLib {
-    public static class String {
+using System.Text;
+
+namespace TwiLua.StdLib
+{
+    public static class String
+    {
         public static void Load(LuaTable globals) {
             globals["string"] = new LuaTable {
                 {"byte", s => {
@@ -34,7 +38,7 @@ namespace TwiLua.StdLib {
                     return s.Return(new string(buf));
                 }},
                 {"rep", s => {
-                    var sb = new System.Text.StringBuilder();
+                    var sb = new StringBuilder();
                     var t = s.String(1);
                     var n = s.Integer(2);
                     var sep = s.Count >= 3 ? s.String(3) : "";

@@ -62,7 +62,7 @@ namespace TwiLua
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Close(LuaValue value) {
+        public void Close(in LuaValue value) {
             Value = value;
             Index = -1;
         }
@@ -203,7 +203,7 @@ namespace TwiLua
         public string String(int idx = 1) => this[idx].ExpectString();
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaTable Table(int idx = 1) => this[idx].ExpectTable();
-        public int Return(LuaValue v) {
+        public int Return(in LuaValue v) {
             this[0] = v;
             return 1;
         }
@@ -277,7 +277,7 @@ namespace TwiLua
             if (callStackPtr >= callStack.Length) {
                 throw new LuaRuntimeError("Call stack overflow");
             }
-            callStack[callStackPtr++] = new CallInfo {
+            callStack[callStackPtr++] = new () {
                 resultsIdx = resultsIdx,
                 func = func,
                 pc = pc,
@@ -491,7 +491,7 @@ namespace TwiLua
                 n1 = n2 = default;
                 return false;
             } else {
-                throw new LuaRuntimeError($"attempt to perform arithmetic on a {b.Type} and a {c.Type}");
+                throw new LuaRuntimeError($"attempt to perform arithmetic on `{b}` and `{c}`");
             }
         }
 
@@ -510,7 +510,7 @@ namespace TwiLua
                 n1 = n2 = default;
                 return false;
             } else {
-                throw new LuaRuntimeError($"attempt to perform arithmetic on a {b.Type} and a {c.Type}");
+                throw new LuaRuntimeError($"attempt to perform arithmetic on `{b}` and `{c}`");
             }
         }
 
@@ -754,7 +754,7 @@ namespace TwiLua
                                 var idx = baseR + upValInfo.Index;
                                 var upValObj = upValueStack[idx];
                                 if (upValObj == null) {
-                                    upValueStack[idx] = upValObj = new LuaUpValue { Index = idx };
+                                    upValueStack[idx] = upValObj = new () { Index = idx };
                                 }
                                 upValues[i] = upValObj;
                             } else {

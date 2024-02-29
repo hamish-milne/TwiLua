@@ -1,6 +1,6 @@
 namespace TwiLua
 {
-    public struct Location {
+    public readonly struct Location {
         public int Line { get; }
         public int Column { get; }
         public Location(int line, int column) {
@@ -8,6 +8,6 @@ namespace TwiLua
             Column = column;
         }
 
-        public override string ToString() => $"{Line+1}:{Column+1}";
+        public readonly override string ToString() => $"{Line+1}:{Column+1}";
     }
 }

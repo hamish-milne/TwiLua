@@ -6,7 +6,7 @@ using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public sealed partial class Compiler
+    internal sealed partial class Compiler
     {
         public Compiler(string chunkName) {
             this.chunkName = chunkName;
@@ -46,10 +46,10 @@ namespace TwiLua
         }
 
         private readonly string chunkName;
-        private readonly List<Operand> operands = new List<Operand>();
-        private readonly List<int> code = new List<int>();
-        private readonly List<Location> locations = new List<Location>();
-        private readonly List<LuaValue> constants = new List<LuaValue>();
+        private readonly List<Operand> operands = new();
+        private readonly List<int> code = new();
+        private readonly List<Location> locations = new();
+        private readonly List<LuaValue> constants = new();
         int Top;
         int maxStack;
 

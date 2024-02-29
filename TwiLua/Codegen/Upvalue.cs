@@ -5,11 +5,11 @@ using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
         private readonly Compiler? parent;
         private readonly int prototypeIdx;
-        private readonly List<UpValueInfo> upValues = new List<UpValueInfo>();
+        private readonly List<UpValueInfo> upValues = new();
 
         class TUpvalue : Operand
         {
@@ -24,17 +24,17 @@ namespace TwiLua
             if (parent != null) {
                 var localIdx = parent.Local(name, markUpvalue: true);
                 if (localIdx != null) {
-                    upval = new UpValueInfo(name, inStack: true, localIdx.Value);
+                    upval = new(name, inStack: true, localIdx.Value);
                 } else {
                     var parentIdx = parent.Upvalue(name);
                     if (parentIdx != null) {
-                        upval = new UpValueInfo(name, inStack: false, parentIdx.Value);
+                        upval = new(name, inStack: false, parentIdx.Value);
                     } else {
                         return null;
                     }
                 }
             } else if (name == "_ENV") {
-                upval = new UpValueInfo(name, inStack: true, 0);
+                upval = new(name, inStack: true, 0);
             } else {
                 return null;
             }

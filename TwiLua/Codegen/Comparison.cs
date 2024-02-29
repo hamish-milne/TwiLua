@@ -3,7 +3,7 @@ using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
         class TComparison : TCondition
         {

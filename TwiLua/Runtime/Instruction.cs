@@ -3,7 +3,8 @@ using System;
 
 namespace TwiLua
 {
-    public static class Instruction {
+    public static class Instruction
+    {
         public const int KFlag = 0x100;
         const int BOffset = 0b100000000000000000 - 1;
 

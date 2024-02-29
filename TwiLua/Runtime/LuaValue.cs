@@ -112,7 +112,7 @@ namespace TwiLua
 
         public static readonly LuaValue Nil = default;
 
-        private static readonly Dictionary<Type, (Delegate asFunc, Delegate fromFunc)> BuiltInConverters = new Dictionary<Type, (Delegate, Delegate)>();
+        private static readonly Dictionary<Type, (Delegate asFunc, Delegate fromFunc)> BuiltInConverters = new();
 
         private static class Caster<T> {
             public static Func<LuaValue, LuaThread?, T>? As;

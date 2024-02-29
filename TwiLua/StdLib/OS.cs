@@ -1,11 +1,13 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace TwiLua
 {
     public static class OS
     {
-        static readonly DateTime unixEpochOffset = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        static readonly DateTime unixEpochOffset = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         static double FromTimeSpan(TimeSpan timeSpan) => (double)timeSpan.Ticks / TimeSpan.TicksPerSecond;
         static double FromDateTime(DateTime dateTime) => FromTimeSpan(dateTime - unixEpochOffset);
         static DateTime ToDateTime(double time) => unixEpochOffset + TimeSpan.FromSeconds(time);
@@ -107,13 +109,12 @@ namespace TwiLua
                 {"execute", includeUnsafe ? new LuaValue(s => {
                     var cmd = s.String(1);
                     var args = s.Count >= 2 ? s.String(2) : "";
-                    var startInfo = new System.Diagnostics.ProcessStartInfo(cmd, args) {
+                    var process = Process.Start(new ProcessStartInfo(cmd, args) {
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         CreateNoWindow = true
-                    };
-                    var process = System.Diagnostics.Process.Start(startInfo);
+                    });
                     process.WaitForExit();
                     var output = process.StandardOutput.ReadToEnd();
                     var error = process.StandardError.ReadToEnd();
@@ -134,24 +135,20 @@ namespace TwiLua
                 }},
                 {"remove", includeUnsafe ? new LuaValue(s => {
                     var path = s.String(1);
-                    System.IO.File.Delete(path);
+                    File.Delete(path);
                     return 0;
                 }) : unsafeFn},
                 {"rename", includeUnsafe ? new LuaValue(s => {
                     var oldPath = s.String(1);
                     var newPath = s.String(2);
-                    System.IO.File.Move(oldPath, newPath);
+                    File.Move(oldPath, newPath);
                     return 0;
                 }) : unsafeFn},
                 {"setlocale", s => {
-                    if (s.Count == 0) {
-                        return s.Return("C");
-                    } else {
-                        return s.Return("C");
-                    }
+                    return s.Return("C");
                 }},
                 {"tmpname", includeUnsafe ? new LuaValue(s => {
-                    return s.Return(System.IO.Path.GetTempFileName());
+                    return s.Return(Path.GetTempFileName());
                 }) : unsafeFn},
             };
         }

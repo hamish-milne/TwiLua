@@ -1,13 +1,12 @@
-using System;
 using System.Collections.Generic;
 using static TwiLua.Instruction;
 using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
-        private readonly List<LuaFunction?> closures = new List<LuaFunction?>();
+        private readonly List<LuaFunction?> closures = new();
 
         class TClosure : Operand
         {

@@ -8,13 +8,13 @@ namespace TwiLua
     public sealed class Label
     {
         internal int Location = -1;
-        internal readonly List<int> References = new List<int>();
+        internal readonly List<int> References = new();
         internal bool Used => References.Count > 0;
     }
 
-    public partial class Compiler
+    partial class Compiler
     {
-        public Label Label() => new Label();
+        public Label Label() => new();
 
         private void MarkAt(Label label, int dst) {
             if (label.Location < 0) {

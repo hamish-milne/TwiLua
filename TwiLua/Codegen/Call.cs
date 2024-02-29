@@ -1,13 +1,13 @@
 using System;
-using System.Collections.Generic;
 using static TwiLua.Instruction;
 using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
-        abstract class Varadic : Operand {
+        abstract class Varadic : Operand
+        {
             public abstract void LoadVaradic(Compiler c, int dst);
         }
 

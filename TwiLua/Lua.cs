@@ -4,8 +4,8 @@ namespace TwiLua
     {
         public const int FieldsPerFlush = 50;
 
-        private readonly LuaThread mainThread = new LuaThread(isMain: true, 1024, 256);
-        public LuaTable Globals { get; } = new LuaTable();
+        private readonly LuaThread mainThread = new(isMain: true, 1024, 256);
+        public LuaTable Globals { get; } = new();
 
         private readonly LuaUpValue[] globalsUpValue;
 

@@ -1,4 +1,3 @@
-using System;
 using static TwiLua.Instruction;
 using static TwiLua.OpCode;
 

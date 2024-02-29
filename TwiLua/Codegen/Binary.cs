@@ -1,13 +1,11 @@
 using System;
-using System.Collections.Generic;
 using static TwiLua.Instruction;
 using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
-
         class TBinary : Operand
         {
             public readonly OpCode OpCode;
@@ -22,8 +20,7 @@ namespace TwiLua
             public override void Load(Compiler c, int dst) => c.Emit(Build3(OpCode, dst, OpA, OpB));
         }
 
-        delegate double ArithmeticOp(double a, double b);
-        private void Arithmetic(OpCode opcode, ArithmeticOp operation) {
+        private void Arithmetic(OpCode opcode, Func<double, double, double> operation) {
             var opB = Pop();
             var opA = Pop();
             if (opB is TConstant cB &&

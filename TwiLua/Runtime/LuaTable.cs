@@ -10,8 +10,8 @@ namespace TwiLua
         private LuaMap? map = null;
         private List<LuaValue>? array = null;
 
-        public LuaMap Map => map ??= new LuaMap();
-        public List<LuaValue> Array => array ??= new List<LuaValue>();
+        public LuaMap Map => map ??= new();
+        public List<LuaValue> Array => array ??= new();
         public LuaTable? MetaTable { get; set; }
         public int Length => array == null ? 0 : array.Count;
 
@@ -33,7 +33,7 @@ namespace TwiLua
             return false;
         }
 
-        public Enumerator GetEnumerator() => new Enumerator(this);
+        public Enumerator GetEnumerator() => new(this);
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         IEnumerator<(LuaValue key, LuaValue value)> IEnumerable<(LuaValue key, LuaValue value)>.GetEnumerator() => GetEnumerator();
 
@@ -55,7 +55,7 @@ namespace TwiLua
                 if (IsArrayIndex(key, out var idx)) {
                     if (array == null) {
                         if (idx == 0) {
-                            array = new List<LuaValue> { value };
+                            array = new() { value };
                         } else {
                             Map[key] = value;
                         }
@@ -143,7 +143,7 @@ namespace TwiLua
 
             object IEnumerator.Current => Current;
 
-            void IDisposable.Dispose() { }
+            readonly void IDisposable.Dispose() { }
 
             public bool MoveNext()
             {

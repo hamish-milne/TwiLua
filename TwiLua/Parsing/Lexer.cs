@@ -14,9 +14,9 @@ namespace TwiLua
         int position;
         int lines;
         int lineStart;
-        string str;
+        readonly string str;
 
-        Stack<Token> tokens = new Stack<Token>();
+        readonly Stack<Token> tokens = new();
 
         public void PushBack(Token token) => tokens.Push(token);
 
@@ -41,10 +41,7 @@ namespace TwiLua
         }
 
         Token T(TokenType type, int length = 1) {
-            return new Token {
-                type = type,
-                location = new Location(lines, position - lineStart - length)
-            };
+            return new Token(type, new(lines, position - lineStart - length));
         }
 
         public Token Next() {
@@ -138,11 +135,7 @@ namespace TwiLua
                     case "repeat": return T(Repeat);
                     case "until": return T(Until);
                     case "in": return T(In);
-                    default: return new Token {
-                        type = TokenType.Identifier,
-                        text = identifier,
-                        location = new Location(lines, start - lineStart)
-                    };
+                    default: return new Token(identifier, new(lines, start - lineStart));
                 }
             }
 
@@ -155,11 +148,10 @@ namespace TwiLua
                     c = str[position++];
                 } while (char.IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
                 start += 2;
-                return new Token {
-                    type = TokenType.Number,
-                    number = long.Parse(str.Substring(start, position - start), System.Globalization.NumberStyles.HexNumber),
-                    location = new Location(lines, start - lineStart)
-                };
+                return new Token(
+                    long.Parse(str.Substring(start, position - start), System.Globalization.NumberStyles.HexNumber),
+                    new(lines, start - lineStart)
+                );
             }
 
             if (char.IsDigit(c) || (c == '.' && position < str.Length && char.IsDigit(str[position]))) {
@@ -217,11 +209,10 @@ namespace TwiLua
                             break;
                     }
                 }
-                return new Token {
-                    type = TokenType.Number,
-                    number = mantissa * Math.Pow(10, exponent),
-                    location = new Location(lines, start - lineStart)
-                };
+                return new Token(
+                    mantissa * Math.Pow(10, exponent),
+                    new(lines, start - lineStart)
+                );
             }
 
             switch (c) {

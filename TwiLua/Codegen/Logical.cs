@@ -5,7 +5,7 @@ using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
         abstract class TCondition : Operand
         {
@@ -34,11 +34,11 @@ namespace TwiLua
 
         class Logical : Operand
         {
-            public readonly Label Value = new Label();
-            public Label True = new Label();
-            public Label False = new Label();
+            public readonly Label Value = new();
+            public Label True = new();
+            public Label False = new();
             public readonly bool DoInvert;
-            public readonly List<int> Outputs = new List<int>();
+            public readonly List<int> Outputs = new();
             public Operand Last;
             public bool IsInverted;
 

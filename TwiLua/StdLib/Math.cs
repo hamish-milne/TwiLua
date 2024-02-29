@@ -54,7 +54,7 @@ namespace TwiLua.StdLib {
                             break;
                         case 1:
                         case 2:
-                            random = new Random((int)(s.Integer(1) ^ s.Integer(2)));
+                            random = new Random((int)(s.Integer(1) ^ (long)s[2].Number));
                             break;
                         default:
                             throw new WrongNumberOfArguments();

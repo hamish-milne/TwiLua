@@ -152,7 +152,7 @@ namespace TwiLua
                 return;
             }
             try {
-                SetDelegateCasterMethods = new Dictionary<Type, MethodInfo>() {
+                SetDelegateCasterMethods = new () {
                     { typeof(Func<>), ToMethod(SetCasterFunc<int>) },
                     { typeof(Func<,>), ToMethod(SetCasterFunc<int, int>) },
                     { typeof(Func<,,>), ToMethod(SetCasterFunc<int, int, int>) },
@@ -165,7 +165,7 @@ namespace TwiLua
                 };
             } catch {
                 // Reflection is disabled
-                SetDelegateCasterMethods = new Dictionary<Type, MethodInfo>();
+                SetDelegateCasterMethods = new ();
             }
         }
 

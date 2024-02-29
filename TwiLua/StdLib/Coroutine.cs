@@ -1,11 +1,7 @@
-using System;
-
 namespace TwiLua.StdLib
 {
-
     public static class Coroutine
     {
-
         public static void Load(LuaTable globals)
         {
             globals["coroutine"] = new LuaTable {

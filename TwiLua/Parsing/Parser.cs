@@ -7,7 +7,7 @@ namespace TwiLua
     {
         readonly Lexer lexer;
         readonly Compiler C;
-        readonly Stack<Label> breakLabels = new Stack<Label>();
+        readonly Stack<Label> breakLabels = new();
 
         Token Next() {
             var token = lexer.Next();
@@ -411,7 +411,7 @@ namespace TwiLua
             public bool? isLogical;
         }
 
-        readonly Stack<Operation> operations = new Stack<Operation>();
+        readonly Stack<Operation> operations = new();
         private int parens;
 
         Token? GetUOP(out int order) {
@@ -646,7 +646,7 @@ namespace TwiLua
             C.SetList(nArrayTotal, nHash, argPending);
         }
 
-        readonly List<string> tmpLocals = new List<string>();
+        readonly List<string> tmpLocals = new();
 
         void ParseLocal() {
             Next();

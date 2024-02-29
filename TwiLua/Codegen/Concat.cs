@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
 using static TwiLua.Instruction;
 using static TwiLua.OpCode;
 
 namespace TwiLua
 {
-    public partial class Compiler
+    partial class Compiler
     {
         class TConcat : Operand
         {

@@ -6,7 +6,7 @@ namespace TwiLua
     public sealed class LuaRuntimeError : Exception {
         public LuaValue Value { get; }
 
-        public LuaRuntimeError(LuaValue value) {
+        public LuaRuntimeError(in LuaValue value) {
             Value = value;
         }
 

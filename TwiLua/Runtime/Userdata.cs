@@ -32,10 +32,10 @@ namespace TwiLua
     public interface IUserdata
     {
         object? Value { get; }
-        LuaValue Index(LuaThread s, LuaValue key);
-        void NewIndex(LuaThread s, LuaValue key, LuaValue value);
-        LuaValue Arithmetic(LuaThread s, ArithmeticOp op, LuaValue value);
-        bool Compare(LuaThread s, CompareOp op, LuaValue value);
+        LuaValue Index(LuaThread s, in LuaValue key);
+        void NewIndex(LuaThread s, in LuaValue key, in LuaValue value);
+        LuaValue Arithmetic(LuaThread s, ArithmeticOp op, in LuaValue value);
+        bool Compare(LuaThread s, CompareOp op, in LuaValue value);
         LuaValue Unm(LuaThread s);
         int Call(LuaThread s);
         LuaValue Concat(LuaThread s);
@@ -44,12 +44,12 @@ namespace TwiLua
     public abstract class Userdata : IUserdata
     {
         public virtual object Value => this;
-        public virtual LuaValue Arithmetic(LuaThread s, ArithmeticOp op, LuaValue value) => throw new NotSupportedException();
+        public virtual LuaValue Arithmetic(LuaThread s, ArithmeticOp op, in LuaValue value) => throw new NotSupportedException();
         public virtual int Call(LuaThread s) => throw new NotSupportedException();
-        public virtual bool Compare(LuaThread s, CompareOp op, LuaValue value) => throw new NotSupportedException();
+        public virtual bool Compare(LuaThread s, CompareOp op, in LuaValue value) => throw new NotSupportedException();
         public virtual LuaValue Concat(LuaThread s) => throw new NotSupportedException();
-        public virtual LuaValue Index(LuaThread s, LuaValue key) => throw new NotSupportedException();
-        public virtual void NewIndex(LuaThread s, LuaValue key, LuaValue value) => throw new NotSupportedException();
+        public virtual LuaValue Index(LuaThread s, in LuaValue key) => throw new NotSupportedException();
+        public virtual void NewIndex(LuaThread s, in LuaValue key, in LuaValue value) => throw new NotSupportedException();
         public virtual LuaValue Unm(LuaThread s) => throw new NotSupportedException();
     }
 
@@ -140,10 +140,10 @@ namespace TwiLua
         protected abstract (MethodInfo[], Dictionary<string, object>) GetMembersCache();
         protected abstract object? GetSelf();
 
-        protected virtual LuaValue TryIndexerGet(LuaValue key) => LuaValue.Nil;
-        protected virtual bool TryIndexerSet(LuaValue key, LuaValue luaValue) => false;
+        protected virtual LuaValue TryIndexerGet(in LuaValue key) => LuaValue.Nil;
+        protected virtual bool TryIndexerSet(in LuaValue key, in LuaValue luaValue) => false;
 
-        public override LuaValue Index(LuaThread s, LuaValue key)
+        public override LuaValue Index(LuaThread s, in LuaValue key)
         {
             var (methods, members) = GetMembersCache();
             if (key.String == null) {
@@ -160,7 +160,7 @@ namespace TwiLua
             };
         }
 
-        public override void NewIndex(LuaThread s, LuaValue key, LuaValue value)
+        public override void NewIndex(LuaThread s, in LuaValue key, in LuaValue value)
         {
             var (methods, members) = GetMembersCache();
             var str = key.String;
@@ -199,7 +199,7 @@ namespace TwiLua
         }
 
         private static readonly Dictionary<Type, (MethodInfo[] methods, (MethodInfo, Type)[] indexGet, (MethodInfo, Type, Type)[] indexSet, Dictionary<string, object> cache)> _cache
-            = new Dictionary<Type, (MethodInfo[], (MethodInfo, Type)[], (MethodInfo, Type, Type)[], Dictionary<string, object>)>();
+            = new();
 
         const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
 
@@ -228,7 +228,7 @@ namespace TwiLua
         }
         protected override object? GetSelf() => Value;
 
-        protected override LuaValue TryIndexerGet(LuaValue key)
+        protected override LuaValue TryIndexerGet(in LuaValue key)
         {
             var indexers = _cache[Value.GetType()].indexGet;
             if (indexers.Length == 0) {
@@ -242,7 +242,7 @@ namespace TwiLua
             throw new Exception($"{Value.GetType()} has no suitable indexer for {key}");
         }
 
-        protected override bool TryIndexerSet(LuaValue key, LuaValue value)
+        protected override bool TryIndexerSet(in LuaValue key, in LuaValue value)
         {
             var indexers = _cache[Value.GetType()].indexSet;
             if (indexers.Length == 0) {
@@ -257,7 +257,7 @@ namespace TwiLua
             throw new Exception($"{Value.GetType()} has no suitable indexer for [{key}]={value}");
         }
 
-        public override LuaValue Arithmetic(LuaThread s, ArithmeticOp op, LuaValue value)
+        public override LuaValue Arithmetic(LuaThread s, ArithmeticOp op, in LuaValue value)
         {
             var type = Value.GetType();
             var operationName = op switch
@@ -370,8 +370,8 @@ namespace TwiLua
             _constructorName = $"new {type.Name}";
         }
 
-        private static readonly Dictionary<Type, TypeUserdata> _cache = new Dictionary<Type, TypeUserdata>();
-        private readonly Dictionary<string, object> _members = new Dictionary<string, object>();
+        private static readonly Dictionary<Type, TypeUserdata> _cache = new();
+        private readonly Dictionary<string, object> _members = new();
         private readonly ConstructorInfo[] _constructors;
         private readonly ParameterInfo[][] _constructorParameters;
         private readonly MethodInfo[] _methods;
