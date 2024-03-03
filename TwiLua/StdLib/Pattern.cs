@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 
-namespace YANCL
+namespace TwiLua
 {
 
-    public struct Pattern
+    struct PatternData
     {
         string pattern;
         string text;
@@ -146,18 +146,20 @@ namespace YANCL
                     i++;
                     if (pattern[i] == ')') {
                         i++;
+                        captures ??= new();
                         captures.Add((-(j + 1), 0));
                         return true;
                     }
                     return true;
                 case ')':
                     i++;
+                    capturesPending ??= new();
                     if (capturesPending.Count == 0) {
                         throw Malformed();
                     }
                     if (capturesPending.Count > 0) {
                         var n = capturesPending.Pop();
-                        captures[n] = (captures[n].Item1, j);
+                        captures![n] = (captures[n].Item1, j);
                     }
                     return true;
                 case '%':
@@ -222,5 +224,10 @@ namespace YANCL
                 }
             }
         }
+    }
+
+    public class PatternException : LuaException
+    {
+        public PatternException(string message) : base(message) { }
     }
 }
