@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace TwiLua
 {
 
-    public readonly struct UpValueInfo
+    public readonly struct UpValueInfo : IEquatable<UpValueInfo>
     {
         public readonly string Name;
         public readonly bool InStack;
@@ -19,6 +19,8 @@ namespace TwiLua
         }
 
         public override string ToString() => $"{Name} {(InStack ? "in stack" : "in upvalue")} {Index}";
+
+        public bool Equals(UpValueInfo other) => Name == other.Name && InStack == other.InStack && Index == other.Index;
     }
 
     public readonly struct LocalVarInfo

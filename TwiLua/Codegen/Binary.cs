@@ -6,70 +6,80 @@ namespace TwiLua
 {
     partial class Compiler
     {
-        class TBinary : Operand
+        class TBinary : OperandWithSlots
         {
-            public readonly OpCode OpCode;
-            public readonly int OpA, OpB;
+            public OpCode OpCode  { get; private set; }
+            public int OpA { get; private set; }
+            public int OpB { get; private set; }
 
-            public TBinary(Compiler c, OpCode opCode, Operand opA, Operand opB) {
+            public TBinary Init(Compiler c, OpCode opCode, Operand opA, Operand opB) {
+                stackSlots = 0;
                 OpCode = opCode;
                 OpA = opA.GetRK(c, ref stackSlots);
                 OpB = opB.GetRK(c, ref stackSlots);
+                return this;
             }
 
             public override void Load(Compiler c, int dst) => c.Emit(Build3(OpCode, dst, OpA, OpB));
         }
 
-        private void Arithmetic(OpCode opcode, Func<double, double, double> operation) {
+        private void Arithmetic(OpCode opcode) {
             var opB = Pop();
             var opA = Pop();
             if (opB is TConstant cB &&
                 opA is TConstant cA &&
                 cB.Value.TryGetNumber(out var b) &&
                 cA.Value.TryGetNumber(out var a)) {
-                Push(new TConstant(operation(a, b)));
+                Constant(opcode switch {
+                    ADD => a + b,
+                    SUB => a - b,
+                    MUL => a * b,
+                    DIV => a / b,
+                    MOD => a % b,
+                    POW => Math.Pow(a, b),
+                    _ => throw new InvalidOperationException()
+                });
             } else {
-                Push(new TBinary(this, opcode, opA, opB));
+                Push<TBinary>().Init(this, opcode, opA, opB);
             }
+            Release(opB);
+            Release(opA);
         }
 
+        public void Add() => Arithmetic(ADD);
+        public void Sub() => Arithmetic(SUB);
+        public void Mul() => Arithmetic(MUL);
+        public void Div() => Arithmetic(DIV);
+        public void Mod() => Arithmetic(MOD);
+        public void Pow() => Arithmetic(POW);
 
-        public void Add() => Arithmetic(ADD, (a, b) => a + b);
-        public void Sub() => Arithmetic(SUB, (a, b) => a - b);
-        public void Mul() => Arithmetic(MUL, (a, b) => a * b);
-        public void Div() => Arithmetic(DIV, (a, b) => a / b);
-        public void Mod() => Arithmetic(MOD, (a, b) => a % b);
-        public void Pow() => Arithmetic(POW, Math.Pow);
-
-        delegate long IntegerOp(long a, long b);
-        private void IArithmetic(OpCode opcode, IntegerOp operation) {
+        private void IArithmetic(OpCode opcode) {
             var opB = Pop();
             var opA = Pop();
             if (opB is TConstant cB &&
                 opA is TConstant cA &&
                 cB.Value.TryGetInteger(out var b) &&
                 cA.Value.TryGetInteger(out var a)) {
-                Push(new TConstant(operation(a, b)));
+                Constant(opcode switch {
+                    BAND => a & b,
+                    BOR => a | b,
+                    BXOR => a ^ b,
+                    SHL => b < 64 && b > -64 ? a << (int)b : 0,
+                    SHR => b < 64 && b > -64 ? a >> (int)b : 0,
+                    _ => throw new InvalidOperationException()
+                });
             } else {
-                Push(new TBinary(this, opcode, opA, opB));
+                Push<TBinary>().Init(this, opcode, opA, opB);
             }
+            Release(opB);
+            Release(opA);
         }
 
-        public void BAnd() => IArithmetic(BAND, (a, b) => a & b);
-        public void BOr() => IArithmetic(BOR, (a, b) => a | b);
-        public void BXor() => IArithmetic(BXOR, (a, b) => a ^ b);
-        public void IDiv() => Arithmetic(IDIV, (a, b) => a / b);
-        public void Shl() => IArithmetic(SHL, (a, b) => b < 64 && b > -64 ? a << (int)b : 0);
-        public void Shr() => IArithmetic(SHR, (a, b) => b < 64 && b > -64 ? a >> (int)b : 0);
-
-        // TODO: Consider fixing the unary+const case
-        public void Value() {
-            var op = Peek(0);
-            if (op is TConstant || op is TLocal) {
-                return;
-            }
-            Pop().Load(this, Top);
-            Push(new TLocal(Top, isVar: false));
-        }
+        public void BAnd() => IArithmetic(BAND);
+        public void BOr() => IArithmetic(BOR);
+        public void BXor() => IArithmetic(BXOR);
+        public void IDiv() => Arithmetic(IDIV);
+        public void Shl() => IArithmetic(SHL);
+        public void Shr() => IArithmetic(SHR);
     }
 }

@@ -30,19 +30,35 @@ namespace TwiLua
                 var testInst = c.code[Test];
                 c.code[Test] = Build3(GetOpCode(testInst), GetA(testInst), GetB(testInst), GetC(testInst) == 0 ? 1 : 0);
             }
+
+            public TTest Init(int jump, int test) {
+                Jump = jump;
+                Test = test;
+                return this;
+            }
         }
 
-        class Logical : Operand
+        class Logical : OperandWithSlots
         {
             public readonly Label Value = new();
             public Label True = new();
             public Label False = new();
-            public readonly bool DoInvert;
+            public bool DoInvert { get; private set; }
             public readonly List<int> Outputs = new();
             public Operand Last;
-            public bool IsInverted;
+            public bool IsInverted { get; private set; }
 
-            public Logical(bool doInvert) => DoInvert = doInvert;
+            public Logical Init(bool doInvert) {
+                stackSlots = 0;
+                DoInvert = doInvert;
+                Value.Init();
+                True.Init();
+                False.Init();
+                Outputs.Clear();
+                Last = null!;
+                IsInverted = false;
+                return this;
+            }
 
             public void Update() => stackSlots = Last.StackSlots;
 
@@ -85,9 +101,7 @@ namespace TwiLua
                 }
                 IsInverted = true;
                 (DoInvert ? False : True).References.AddRange(Value.References);
-                var r = True;
-                True = False;
-                False = r;
+                (False, True) = (True, False);
                 Value.References.Clear();
                 Outputs.Clear();
             }
@@ -113,16 +127,13 @@ namespace TwiLua
                 return;
             }
             var slots = 0;
-            var a = Pop().GetR(this, ref slots);
+            var a = PopAndRelease().GetR(this, ref slots);
             Top -= slots;
             var test = code.Count;
             Emit(Build3(TEST, a, 0, 1));
             var jump = code.Count;
             Emit(Build2sx(JMP, 0, 0));
-            Push(new TTest {
-                Jump = jump,
-                Test = test
-            });
+            Push<TTest>().Init(jump, test);
         }
 
         private void LogicalOp(bool doInvert)
@@ -138,7 +149,7 @@ namespace TwiLua
             }
 
             var opA = Pop();
-            var newOp = new Logical(doInvert);
+            var newOp = Acquire<Logical>().Init(doInvert);
 
             if (opA is Logical logical) {
                 if (logical.Last is TCondition lastCond) {

@@ -13,7 +13,7 @@ namespace TwiLua
                 throw new ArgumentOutOfRangeException(nameof(count));
             }
             if (arguments > 0 && Peek(0) is Varadic v) {
-                Pop();
+                PopAndRelease();
                 var limit = Math.Max(count - arguments + 1, 0);
                 v.LoadVaradic(this, limit + 1);
                 Top += limit;
@@ -39,7 +39,7 @@ namespace TwiLua
             if (arguments <= 0 || targets <= 0) {
                 throw new ArgumentOutOfRangeException();
             }
-            var lastArg = Pop();
+            var lastArg = PopAndRelease();
             if (lastArg is Varadic v) {
                 var limit = Math.Max(targets - arguments + 1, 0);
                 v.LoadVaradic(this, limit + 1);
@@ -56,7 +56,7 @@ namespace TwiLua
                     dst.Store(this, src.GetRK(this, ref tmpSlots));
                     Top -= tmpSlots;
                 }
-                Pop();
+                PopAndRelease();
                 targets--;
                 arguments--;
             } else {
@@ -73,7 +73,7 @@ namespace TwiLua
             }
             while (targets > 0) {
                 targets--;
-                Pop().Store(this, --Top);
+                PopAndRelease().Store(this, --Top);
             }
         }
 

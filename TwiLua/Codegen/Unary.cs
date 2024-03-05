@@ -7,13 +7,16 @@ namespace TwiLua
 {
     partial class Compiler
     {
-        class TUnary : Operand
+        class TUnary : OperandWithSlots
         {
-            public readonly OpCode OpCode;
-            public readonly int OpA;
-            public TUnary(Compiler c, OpCode opcode, Operand operand) {
+            public OpCode OpCode { get; private set; }
+            public int OpA { get; private set; }
+
+            public TUnary Init(Compiler c, OpCode opcode, Operand operand) {
+                stackSlots = 0;
                 OpCode = opcode;
                 OpA = operand.GetR(c, ref stackSlots);
+                return this;
             }
             public override void Load(Compiler c, int dst) => c.Emit(Build2(OpCode, dst, OpA));
         }
@@ -21,10 +24,11 @@ namespace TwiLua
         public void Unm() {
             var op = Pop();
             if (op is TConstant c && c.Value.TryGetNumber(out var n)) {
-                Push(new TConstant(-n));
+                Constant(-n);
             } else {
-                Push(new TUnary(this, UNM, op));
+                Push<TUnary>().Init(this, UNM, op);
             }
+            Release(op);
         }
 
         public void Not() {
@@ -46,21 +50,23 @@ namespace TwiLua
             }
             var op = Pop();
             if (op is TConstant c) {
-                Push(new TConstant(!c.Value.Boolean));
+                Constant(!c.Value.Boolean);
             } else {
-                Push(new TUnary(this, NOT, op));
+                Push<TUnary>().Init(this, NOT, op);
             }
+            Release(op);
         }
         
         public void BNot() {
             var op = Pop();
             if (op is TConstant c && c.Value.TryGetInteger(out var i)) {
-                Push(new TConstant(~i));
+                Constant(~i);
             } else {
-                Push(new TUnary(this, BNOT, op));
+                Push<TUnary>().Init(this, BNOT, op);
             }
+            Release(op);
         }
 
-        public void Len() => Push(new TUnary(this, LEN, Pop()));
+        public void Len() => Push(Acquire<TUnary>().Init(this, LEN, PopAndRelease()));
     }
 }

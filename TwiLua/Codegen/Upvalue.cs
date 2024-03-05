@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using static TwiLua.Instruction;
 using static TwiLua.OpCode;
@@ -13,8 +12,11 @@ namespace TwiLua
 
         class TUpvalue : Operand
         {
-            public readonly int Index;
-            public TUpvalue(int index) => Index = index;
+            public int Index { get; private set; }
+            public TUpvalue Init(int index) {
+                Index = index;
+                return this;
+            }
             public override void Load(Compiler c, int dst) => c.Emit(Build2(GETUPVAL, dst, Index));
             public override void Store(Compiler c, int src) => c.Emit(Build2(SETUPVAL, src, Index));
         }

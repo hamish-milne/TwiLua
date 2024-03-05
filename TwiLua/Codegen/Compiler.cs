@@ -8,19 +8,40 @@ namespace TwiLua
 {
     internal sealed partial class Compiler
     {
+        private readonly Dictionary<Type, List<Operand>> pools;
+
+        private T Acquire<T>() where T : Operand, new() {
+            pools.TryGetValue(typeof(T), out var pool);
+            if (pool?.Count > 0) {
+                var operand = (T)pool[pool.Count - 1];
+                pool.RemoveAt(pool.Count - 1);
+                return operand;
+            }
+            return new T();
+        }
+
+        private void Release(Operand operand) {
+            if (!pools.TryGetValue(operand.GetType(), out var pool)) {
+                pool = new List<Operand>();
+                pools[operand.GetType()] = pool;
+            }
+            pool.Add(operand);
+        }
+
         public Compiler(string chunkName) {
             this.chunkName = chunkName;
+            this.pools = new();
         }
         private Compiler(Compiler parent, int prototypeIdx) {
             this.parent = parent;
             this.prototypeIdx = prototypeIdx;
             this.chunkName = parent.chunkName;
+            this.pools = parent.pools;
         }
 
         abstract class Operand
         {
-            protected int stackSlots;
-            public int StackSlots => stackSlots;
+            public virtual int StackSlots => 0;
 
             public virtual int GetR(Compiler c, ref int tmpSlots) {
                 tmpSlots++;
@@ -33,16 +54,35 @@ namespace TwiLua
             public virtual void Store(Compiler c, int src) => throw new NotSupportedException();
         }
 
+        abstract class OperandWithSlots : Operand
+        {
+            protected int stackSlots;
+            public override int StackSlots => stackSlots;
+        }
+
         class TConstant : Operand
         {
-            public readonly LuaValue Value;
-            public TConstant(LuaValue value) => Value = value;
+            public LuaValue Value { get; private set; }
+            public TConstant Init(LuaValue value) {
+                Value = value;
+                return this;
+            }
             public override int GetRK(Compiler c, ref int tmpSlots)  => c.K(Value) | KFlag;
             public override void Load(Compiler c, int dst) => c.Emit(Value.Type switch {
                 TypeTag.Nil => Build2(LOADNIL, dst, 0),
                 TypeTag.True or TypeTag.False => Build3(LOADBOOL, dst, Value.Boolean ? 1 : 0, 0),
                 _ => Build2x(LOADK, dst, c.K(Value))
             });
+        }
+
+        private T Push<T>() where T : Operand, new() {
+            var operand = Acquire<T>();
+            Push(operand);
+            return operand;
+        }
+
+        public void Constant(LuaValue value) {
+            Push<TConstant>().Init(value);
         }
 
         private readonly string chunkName;
@@ -84,6 +124,12 @@ namespace TwiLua
             Top -= operand.StackSlots;
             return operand;
         }
+
+        private Operand PopAndRelease() {
+            var operand = Pop();
+            Release(operand);
+            return operand;
+        }
         
         int K(LuaValue value) {
             var idx = constants.IndexOf(value);
@@ -109,8 +155,6 @@ namespace TwiLua
             code.Add(instruction);
             locations.Add(Location);
         }
-
-        public void Constant(LuaValue value) => Push(new TConstant(value));
 
         public LuaFunction MakeFunction()
         {

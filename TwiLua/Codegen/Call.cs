@@ -13,14 +13,20 @@ namespace TwiLua
 
         class TCall : Varadic
         {
-            public readonly int Func, Args;
-            public readonly bool IsVaradic;
+            public int Func { get; private set; }
+            public int Args { get; private set; }
+            public bool IsVaradic { get; private set; }
             public int B => IsVaradic ? 0 : (Args+1);
-            public TCall(Compiler c, int args, bool isVaradic) {
+
+            private int stackSlots;
+            public override int StackSlots => stackSlots;
+
+            public TCall Init(Compiler c, int args, bool isVaradic) {
                 Func = c.Top - args - 1;
                 Args = args;
                 IsVaradic = isVaradic;
                 stackSlots = args + 1;
+                return this;
             }
 
             public override int GetR(Compiler c, ref int tmpSlots) {
@@ -44,15 +50,17 @@ namespace TwiLua
 
         class Varargs : Varadic
         {
+            public static Varargs Instance = new();
+            private Varargs() { }
             public override void Load(Compiler c, int dst) => c.Emit(Build2(VARARG, dst, 2));
             public override void LoadVaradic(Compiler c, int limit) => c.Emit(Build2(VARARG, c.Top, limit)); 
         }
 
         
-        public void Vararg() => Push(new Varargs());
+        public void Vararg() => Push(Varargs.Instance);
 
         public void Argument() {
-            Pop().Load(this, Top);
+            PopAndRelease().Load(this, Top);
             PushS();
         }
 
@@ -62,7 +70,7 @@ namespace TwiLua
             bool hasDispatch = false;
             if (arguments > 0) {
                 if (Peek(0) is Varadic v) {
-                    Pop();
+                    PopAndRelease();
                     v.LoadVaradic(this, limit);
                     PushS();
                     hasDispatch = true;
@@ -74,11 +82,12 @@ namespace TwiLua
         }
 
         public void Call(int prefix, int argCount) {
-            Push(new TCall(this, prefix + argCount, isVaradic: Dispatch(argCount, 0) == 0));
+            var operand = Acquire<TCall>().Init(this, prefix + argCount, isVaradic: Dispatch(argCount, 0) == 0);
+            Push(operand);
         }
 
         public void Discard() {
-            var callOp = Pop();
+            var callOp = PopAndRelease();
             if (callOp is TCall call) {
                 Emit(Build3(CALL, call.Func, call.B, 1));
             } else {
@@ -89,11 +98,11 @@ namespace TwiLua
         public void Return(int argCount) {
             if (argCount == 1 && Peek(0) is TLocal local) {
                 Emit(Build2(RETURN, local.Index, 2));
-                Pop();
+                PopAndRelease();
             } else if (argCount == 1 && Peek(0) is TCall call) {
                 Emit(Build3(TAILCALL, call.Func, call.B, 0));
                 Emit(Build2(RETURN, call.Func, 0));
-                Pop();
+                PopAndRelease();
             } else {
                 var b = Dispatch(argCount, 0);
                 Emit(Build2(RETURN, argCount == 0 ? 0 : (Top-argCount), b));
@@ -102,8 +111,8 @@ namespace TwiLua
         }
 
         public void Self() {
-            var indexer = Pop();
-            var table = Pop();
+            var indexer = PopAndRelease();
+            var table = PopAndRelease();
             var slots = 0;
             var b = table.GetR(this, ref slots);
             var c = indexer.GetRK(this, ref slots);

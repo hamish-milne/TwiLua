@@ -8,12 +8,13 @@ namespace TwiLua
 {
     partial class Compiler
     {
-        class TLocal : Operand
+        class TLocal : OperandWithSlots
         {
-            public readonly int Index;
-            public TLocal(int index, bool isVar) {
+            public int Index { get; private set; }
+            public TLocal Init(int index, bool isVar) {
                 Index = index;
                 stackSlots = isVar ? 0 : 1;
+                return this;
             }
             public override int GetR(Compiler c, ref int tmpSlots) {
                 // tmpSlots += stackSlots;
@@ -84,8 +85,10 @@ namespace TwiLua
             if (currentScope == null) {
                 throw new InvalidOperationException();
             }
-            if (currentScope.Locals.Any(x => x.name == name)) {
-                throw new Exception($"local '{name}' already defined");
+            foreach (var l in currentScope.Locals) {
+                if (l.name == name) {
+                    throw new Exception($"local '{name}' already defined");
+                }
             }
             currentScope.Locals.Add((name, code.Count, locals.Count));
             locals.Add(new LocalVarInfo(name, code.Count, -1));
@@ -101,14 +104,14 @@ namespace TwiLua
         public void Identifier(string name) {
             var localIdx = Local(name, markUpvalue: false);
             if (localIdx != null) {
-                Push(new TLocal(localIdx.Value, isVar: true));
+                Push<TLocal>().Init(localIdx.Value, isVar: true);
             } else {
                 var upval = Upvalue(name);
                 if (upval != null) {
-                    Push(new TUpvalue(upval.Value));
+                    Push<TUpvalue>().Init(upval.Value);
                 } else {
-                    Push(new TUpvalue(Upvalue("_ENV")!.Value));
-                    Push(new TConstant(name));
+                    Push<TUpvalue>().Init(Upvalue("_ENV")!.Value);
+                    Constant(name);
                     Index();
                 }
             }

@@ -8,33 +8,41 @@ namespace TwiLua
     {
         class TNewTable : Operand
         {
-            public readonly int Index, Instruction;
-            public TNewTable(int index, int instruction) {
+            public int Index { get; private set; }
+            public int Instruction { get; private set; }
+            public TNewTable Init(int index, int instruction) {
                 Index = index;
                 Instruction = instruction;
+                return this;
             }
             public override void Load(Compiler c, int dst) => throw new InvalidOperationException();
             public override int GetR(Compiler c, ref int tmpSlots) => Index;
         }
 
-        class TableIndex : Operand
+        class TableIndex : OperandWithSlots
         {
-            public readonly int Table, Indexer;
-            public TableIndex(Compiler c, Operand table, Operand indexer) {
+            public int Table { get; private set; }
+            public int Indexer { get; private set; }
+            public TableIndex Init(Compiler c, Operand table, Operand indexer) {
+                stackSlots = 0;
                 Table = table.GetR(c, ref stackSlots);
                 Indexer = indexer.GetRK(c, ref stackSlots);
+                return this;
             }
 
             public override void Load(Compiler c, int dst) => c.Emit(Build3(GETTABLE, dst, Table, Indexer));
             public override void Store(Compiler c, int src) => c.Emit(Build3(SETTABLE, Table, Indexer, src));
         }
 
-        class UpvalIndex : Operand
+        class UpvalIndex : OperandWithSlots
         {
-            public readonly int Upval, Indexer;
-            public UpvalIndex(Compiler c, int upval, Operand indexer) {
+            public int Upval { get; private set; }
+            public int Indexer { get; private set; }
+            public UpvalIndex Init(Compiler c, int upval, Operand indexer) {
+                stackSlots = 0;
                 Upval = upval;
                 Indexer = indexer.GetRK(c, ref stackSlots);
+                return this;
             }
 
             public override void Load(Compiler c, int dst) => c.Emit(Build3(GETTABUP, dst, Upval, Indexer));
@@ -42,29 +50,28 @@ namespace TwiLua
         }
 
         public void Indexee() {
-            // var op = Peek(0);
-            // if (op is TLocal || op is TUpvalue) {
-            //     return;
-            // }
-            // Pop().Load(this, Top);
-            // Push(new TLocal(PushS(), isVar: false));
+            // Empty
         }
 
         public void Index() {
             var indexer = Pop();
             var table = Pop();
             if (table is TUpvalue upvalue) {
-                Push(new UpvalIndex(this, upvalue.Index, indexer));
+                Release(table);
+                Push<UpvalIndex>().Init(this, upvalue.Index, indexer);
             } else {
                 if (table is TNewTable) {
                     Push(table);
+                } else {
+                    Release(table);
                 }
-                Push(new TableIndex(this, table, indexer));
+                Push<TableIndex>().Init(this, table, indexer);
             }
+            Release(indexer);
         }
 
         public void NewTable() {
-            Push(new TNewTable(PushS(), code.Count));
+            Push<TNewTable>().Init(PushS(), code.Count);
             Emit(0);
         }
 
@@ -75,13 +82,13 @@ namespace TwiLua
                 hasDispatch = Dispatch(array, 0) == 0;
             }
             var nArray = hasDispatch ? array-1 : array;
-            if (Pop() is TNewTable op) {
+            if (PopAndRelease() is TNewTable op) {
                 if (array > 0) {
                     code.Add(Build3(SETLIST, op.Index, nArray % Lua.FieldsPerFlush, (array / Lua.FieldsPerFlush) + 1));
                     Top -= array % Lua.FieldsPerFlush;
                 }
                 code[op.Instruction] = Build3(NEWTABLE, op.Index, ToFPByte(nArray), ToFPByte(hash));
-                Push(new TLocal(op.Index, isVar: false));
+                Push<TLocal>().Init(op.Index, isVar: false);
             } else {
                 throw new InvalidOperationException();
             }

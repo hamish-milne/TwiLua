@@ -10,15 +10,18 @@ namespace TwiLua
 
         class TClosure : Operand
         {
-            public readonly int Index;
-            public TClosure(int index) => Index = index;
+            public int Index { get; private set; }
+            public TClosure Init(int index) {
+                Index = index;
+                return this;
+            }
             public override void Load(Compiler c, int dst) => c.Emit(Build2x(CLOSURE, dst, Index));
         }
 
         public Compiler Closure() {
             var idx = closures.Count;
             closures.Add(null);
-            Push(new TClosure(idx));
+            Push<TClosure>().Init(idx);
             return new Compiler(this, idx);
         }
 

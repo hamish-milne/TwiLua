@@ -147,15 +147,22 @@ namespace TwiLua
 
             if (c == '0' && position < str.Length - 1 && (str[position] == 'x' || str[position] == 'X')) {
                 position++;
-                do {
-                    if (position >= str.Length) {
+                long value = 0;
+                while (position < str.Length) {
+                    c = str[position++];
+                    if (c >= '0' && c <= '9') {
+                        value = value * 16 + (c - '0');
+                    } else if (c >= 'a' && c <= 'f') {
+                        value = value * 16 + (c - 'a' + 10);
+                    } else if (c >= 'A' && c <= 'F') {
+                        value = value * 16 + (c - 'A' + 10);
+                    } else {
+                        position--;
                         break;
                     }
-                    c = str[position++];
-                } while (char.IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
-                start += 2;
+                }
                 return new Token(
-                    long.Parse(str.Substring(start, position - start), System.Globalization.NumberStyles.HexNumber),
+                    value,
                     new(lines, start - lineStart)
                 );
             }

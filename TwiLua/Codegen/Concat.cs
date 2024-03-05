@@ -5,12 +5,13 @@ namespace TwiLua
 {
     partial class Compiler
     {
-        class TConcat : Operand
+        class TConcat : OperandWithSlots
         {
-            public readonly int Start;
-            public TConcat(int start) {
+            public int Start { get; private set; }
+            public TConcat Init(int start) {
                 Start = start;
                 stackSlots = 1;
+                return this;
             }
             public void Add() => stackSlots++;
 
@@ -25,7 +26,7 @@ namespace TwiLua
             if (operands.Count > 0 && Peek(0) is TConcat concat && Top - 1 == concat.Start + concat.StackSlots) {
                 concat.Add();
             } else {
-                Push(new TConcat(Top - 1));
+                Push<TConcat>().Init(Top - 1);
             }
         }
 

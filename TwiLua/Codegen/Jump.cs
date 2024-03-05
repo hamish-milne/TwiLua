@@ -10,6 +10,11 @@ namespace TwiLua
         internal int Location = -1;
         internal readonly List<int> References = new();
         internal bool Used => References.Count > 0;
+
+        internal void Init() {
+            Location = -1;
+            References.Clear();
+        }
     }
 
     partial class Compiler
@@ -57,11 +62,11 @@ namespace TwiLua
 
         public void JumpIf(Label label, bool value) {
             if (IsConstantTrue(Peek(0))) {
-                Pop();
+                PopAndRelease();
                 return;
             }
             Test();
-            var op = Pop();
+            var op = PopAndRelease();
             if (op is Logical logical) {
                 Mark(logical.True);
                 label.References.AddRange(logical.False.References);

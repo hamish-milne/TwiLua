@@ -8,13 +8,19 @@ namespace TwiLua
         class TComparison : TCondition
         {
             public override bool ForceBool => true;
-            public TComparison(Compiler c, OpCode opCode, bool invert, bool swap, Operand opA, Operand opB) {
+
+            private int stackSlots;
+            public override int StackSlots => stackSlots;
+
+            public TComparison Init(Compiler c, OpCode opCode, bool invert, bool swap, Operand opA, Operand opB) {
+                stackSlots = 0;
                 var a = opA.GetRK(c, ref stackSlots);
                 var b = opB.GetRK(c, ref stackSlots);
                 Test = c.code.Count;
                 c.Emit(Build3(opCode, invert ? 0 : 1, swap ? b : a, swap ? a : b));
                 Jump = c.code.Count;
                 c.Emit(Build2sx(JMP, 0, 0));
+                return this;
             }
 
             public override void Invert(Compiler c)
@@ -27,7 +33,9 @@ namespace TwiLua
         private void Compare(OpCode opCode, bool invert, bool swap) {
             var opB = Pop();
             var opA = Pop();
-            Push(new TComparison(this, opCode, invert, swap, opA, opB));
+            Push<TComparison>().Init(this, opCode, invert, swap, opA, opB);
+            Release(opB);
+            Release(opA);
         }
 
         public void Eq() => Compare(EQ, invert: false, swap: false);
