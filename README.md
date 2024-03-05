@@ -42,7 +42,8 @@ https://github.com/hamish-milne/TwiLua.git?path=/TwiLua
 Otherwise, simply run:
 
 ```
-dotnet add package TwiLua
+# doesn't work yet
+# dotnet add package TwiLua
 ```
 
 
