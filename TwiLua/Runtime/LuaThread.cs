@@ -80,7 +80,8 @@ namespace TwiLua
         }
     }
 
-    struct CallInfo {
+    struct CallInfo
+    {
         public int resultsIdx;
         public int func;
         public int pc;

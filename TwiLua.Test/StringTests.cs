@@ -1,4 +1,4 @@
-using System;
+using TwiLua.StdLib;
 using Xunit;
 
 namespace TwiLua.Test
@@ -8,8 +8,7 @@ namespace TwiLua.Test
         void AssertEqual(string str, params LuaValue[] expected) {
             var f = Lua.Compile("return " + str);
             var s = new LuaThread(isMain: true, 16, 2);
-            var g = new LuaTable();
-            StdLib.String.Load(g);
+            var g = new Lua().LoadString().Globals;
             var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});
             Assert.Equal(expected, s.Execute(closure));
         }

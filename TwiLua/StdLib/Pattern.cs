@@ -6,13 +6,24 @@ namespace TwiLua
 
     struct PatternData
     {
-        string pattern;
-        string text;
+        readonly string pattern;
+        readonly string text;
         int i;
         int j;
         Stack<(int i, int j, int nCapture, int nCapturePending)>? backtrack;
         Stack<int>? capturesPending;
         List<(int, int)>? captures;
+
+        private PatternData(string pattern, string text)
+        {
+            this.pattern = pattern;
+            this.text = text;
+            i = 0;
+            j = 0;
+            backtrack = null;
+            capturesPending = null;
+            captures = null;
+        }
 
         bool MatchClassSingle(char c, bool allowRanges)
         {

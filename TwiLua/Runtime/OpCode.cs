@@ -1,6 +1,7 @@
 namespace TwiLua
 {
-    public enum OpCode {
+    public enum OpCode
+    {
         MOVE,
         LOADK,
         LOADKX,

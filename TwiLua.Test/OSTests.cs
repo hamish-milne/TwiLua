@@ -1,5 +1,4 @@
-using System;
-using System.IO;
+using TwiLua.StdLib;
 using Xunit;
 
 namespace TwiLua.Test
@@ -9,8 +8,7 @@ namespace TwiLua.Test
         [Fact]
         public void Clock()
         {
-            var l = new Lua();
-            OS.Load(l.Globals);
+            var l = new Lua().LoadOS();
             var result = l.DoString(@"
                 return os.clock()
             ")[0];
@@ -20,8 +18,7 @@ namespace TwiLua.Test
         [Fact]
         public void Date()
         {
-            var l = new Lua();
-            OS.Load(l.Globals);
+            var l = new Lua().LoadOS();
             var ts = 3600 + 60 + 1;
             Assert.Equal(
                 new LuaValue[] { "1970-01-01 01:01:01" },
@@ -32,8 +29,7 @@ namespace TwiLua.Test
         [Fact]
         public void DateDefault()
         {
-            var l = new Lua();
-            OS.Load(l.Globals);
+            var l = new Lua().LoadOS();
             var result = l.DoString(@"
                 return os.date()
             ")[0];
@@ -43,8 +39,7 @@ namespace TwiLua.Test
         [Fact]
         public void Difftime()
         {
-            var l = new Lua();
-            OS.Load(l.Globals);
+            var l = new Lua().LoadOS();
             var result = l.DoString(@"
                 return os.difftime(1, 2)
             ")[0];
@@ -54,8 +49,7 @@ namespace TwiLua.Test
         [Fact]
         public void Time()
         {
-            var l = new Lua();
-            OS.Load(l.Globals);
+            var l = new Lua().LoadOS();
             Assert.Equal(
                 new LuaValue[] { 3600 },
                 l.DoString("return os.time({year=1970, month=1, day=1, hour=1, min=0, sec=0})")

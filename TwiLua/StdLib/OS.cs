@@ -3,9 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace TwiLua
+namespace TwiLua.StdLib
 {
-    public static class OS
+    public static class LibOS
     {
         static readonly DateTime unixEpochOffset = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         static double FromTimeSpan(TimeSpan timeSpan) => (double)timeSpan.Ticks / TimeSpan.TicksPerSecond;
@@ -72,14 +72,14 @@ namespace TwiLua
             return output.ToString();
         }
 
-        public static void Load(LuaTable globals, bool includeUnsafe = false)
+        public static Lua LoadOS(this Lua lua, bool includeUnsafe = false)
         {
             var unsafeFn = new LuaValue(s => {
                 throw new LuaRuntimeError("Unsafe functions are not available");
             });
             var startTime = DateTime.Now;
 
-            globals["os"] = new LuaTable
+            lua.Globals["os"] = new LuaTable
             {
                 {"clock", s => s.Return(FromTimeSpan(DateTime.Now - startTime))},
                 {"date", s => {
@@ -151,6 +151,7 @@ namespace TwiLua
                     return s.Return(Path.GetTempFileName());
                 }) : unsafeFn},
             };
+            return lua;
         }
     }
 }

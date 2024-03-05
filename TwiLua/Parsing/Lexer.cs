@@ -113,30 +113,36 @@ namespace TwiLua
                     position++;
                 }
                 var identifier = str.Substring(start, position - start);
-                switch (identifier) {
-                    case "and": return T(And);
-                    case "or": return T(Or);
-                    case "not": return T(Not);
-                    case "if": return T(If);
-                    case "then": return T(Then);
-                    case "else": return T(Else);
-                    case "elseif": return T(ElseIf);
-                    case "for": return T(For);
-                    case "do": return T(Do);
-                    case "while": return T(While);
-                    case "end": return T(End);
-                    case "return": return T(Return);
-                    case "local": return T(Local);
-                    case "function": return T(Function);
-                    case "true": return T(True);
-                    case "false": return T(False);
-                    case "nil": return T(Nil);
-                    case "break": return T(Break);
-                    case "repeat": return T(Repeat);
-                    case "until": return T(Until);
-                    case "in": return T(In);
-                    default: return new Token(identifier, new(lines, start - lineStart));
-                }
+                var simpleToken = identifier switch {
+                    "and" => And,
+                    "or" => Or,
+                    "not" => Not,
+                    "if" => If,
+                    "then" => Then,
+                    "else" => Else,
+                    "elseif" => ElseIf,
+                    "for" => For,
+                    "do" => Do,
+                    "while" => While,
+                    "end" => End,
+                    "return" => Return,
+                    "local" => Local,
+                    "function" => Function,
+                    "true" => True,
+                    "false" => False,
+                    "nil" => Nil,
+                    "break" => Break,
+                    "repeat" => Repeat,
+                    "until" => Until,
+                    "in" => In,
+                    _ => Identifier
+                };
+                return simpleToken switch
+                {
+                    Identifier => new Token(identifier, new(lines, start - lineStart)),
+                    _ => T(simpleToken),
+                };
+
             }
 
             if (c == '0' && position < str.Length - 1 && (str[position] == 'x' || str[position] == 'X')) {
@@ -240,13 +246,13 @@ namespace TwiLua
                 case '+': return T(Plus);
                 case '-': return T(Minus);
                 case '*': return T(Star);
-                case '/': return TwoCharToken(TokenType.Slash, '/', TokenType.DoubleSlash);
+                case '/': return TwoCharToken(Slash, '/', DoubleSlash);
                 case '%': return T(Percent);
                 case '^': return T(Caret);
-                case '~': return TwoCharToken(TokenType.Tilde, '=', TokenType.NotEqual);
-                case '=': return TwoCharToken(TokenType.Equal, '=', TokenType.DoubleEqual);
-                case '<': return TwoCharToken2(TokenType.LessThan, '=', TokenType.LessThanEqual, '<', TokenType.ShiftLeft);
-                case '>': return TwoCharToken2(TokenType.GreaterThan, '=', TokenType.GreaterThanEqual, '>', TokenType.ShiftRight);
+                case '~': return TwoCharToken(Tilde, '=', NotEqual);
+                case '=': return TwoCharToken(Equal, '=', DoubleEqual);
+                case '<': return TwoCharToken2(LessThan, '=', LessThanEqual, '<', ShiftLeft);
+                case '>': return TwoCharToken2(GreaterThan, '=', GreaterThanEqual, '>', ShiftRight);
                 case '#': return T(Hash);
                 case '&': return T(Ampersand);
                 case '|': return T(Pipe);

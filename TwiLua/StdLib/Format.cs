@@ -1,0 +1,7 @@
+namespace TwiLua
+{
+    struct FormatData
+    {
+        
+    }
+}

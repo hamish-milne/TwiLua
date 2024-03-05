@@ -7,6 +7,9 @@ namespace TwiLua
     public readonly partial struct LuaValue
     {
         public static void SetCasterFunc<T>() {
+            if (Caster<Func<T>>.Exists) {
+                return;
+            }
             Caster<Func<T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T>>(s, () => {
                     s!.Push(v);
@@ -20,6 +23,9 @@ namespace TwiLua
         }
 
         public static void SetCasterFunc<T1, T>() {
+            if (Caster<Func<T1, T>>.Exists) {
+                return;
+            }
             Caster<Func<T1, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T>>(s, (a1) => {
                     s!.Push(v);
@@ -34,6 +40,9 @@ namespace TwiLua
         }
 
         public static void SetCasterFunc<T1, T2, T>() {
+            if (Caster<Func<T1, T2, T>>.Exists) {
+                return;
+            }
             Caster<Func<T1, T2, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T2, T>>(s, (a1, a2) => {
                     s!.Push(v);
@@ -49,6 +58,9 @@ namespace TwiLua
         }
 
         public static void SetCasterFunc<T1, T2, T3, T>() {
+            if (Caster<Func<T1, T2, T3, T>>.Exists) {
+                return;
+            }
             Caster<Func<T1, T2, T3, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T2, T3, T>>(s, (a1, a2, a3) => {
                     s!.Push(v);
@@ -65,6 +77,9 @@ namespace TwiLua
         }
 
         public static void SetCasterFunc<T1, T2, T3, T4, T>() {
+            if (Caster<Func<T1, T2, T3, T4, T>>.Exists) {
+                return;
+            }
             Caster<Func<T1, T2, T3, T4, T>>.Set(
                 (v, s) => v.AssertDelegate<Func<T1, T2, T3, T4, T>>(s, (a1, a2, a3, a4) => {
                     s!.Push(v);
@@ -80,8 +95,11 @@ namespace TwiLua
                 })
             );
         }
-        
+
         public static void SetCasterAction<T1>() {
+            if (Caster<Action<T1>>.Exists) {
+                return;
+            }
             Caster<Action<T1>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1>>(s, (a1) => {
                     s!.Push(v);
@@ -96,6 +114,9 @@ namespace TwiLua
         }
 
         public static void SetCasterAction<T1, T2>() {
+            if (Caster<Action<T1, T2>>.Exists) {
+                return;
+            }
             Caster<Action<T1, T2>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1, T2>>(s, (a1, a2) => {
                     s!.Push(v);
@@ -111,6 +132,9 @@ namespace TwiLua
         }
 
         public static void SetCasterAction<T1, T2, T3>() {
+            if (Caster<Action<T1, T2, T3>>.Exists) {
+                return;
+            }
             Caster<Action<T1, T2, T3>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1, T2, T3>>(s, (a1, a2, a3) => {
                     s!.Push(v);
@@ -127,6 +151,9 @@ namespace TwiLua
         }
 
         public static void SetCasterAction<T1, T2, T3, T4>() {
+            if (Caster<Action<T1, T2, T3, T4>>.Exists) {
+                return;
+            }
             Caster<Action<T1, T2, T3, T4>>.Set(
                 (v, s) => v.AssertDelegate<Action<T1, T2, T3, T4>>(s, (a1, a2, a3, a4) => {
                     s!.Push(v);
@@ -152,7 +179,7 @@ namespace TwiLua
                 return;
             }
             try {
-                SetDelegateCasterMethods = new () {
+                SetDelegateCasterMethods = new() {
                     { typeof(Func<>), ToMethod(SetCasterFunc<int>) },
                     { typeof(Func<,>), ToMethod(SetCasterFunc<int, int>) },
                     { typeof(Func<,,>), ToMethod(SetCasterFunc<int, int, int>) },
@@ -165,7 +192,7 @@ namespace TwiLua
                 };
             } catch {
                 // Reflection is disabled
-                SetDelegateCasterMethods = new ();
+                SetDelegateCasterMethods = new();
             }
         }
 

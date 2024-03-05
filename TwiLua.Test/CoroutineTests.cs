@@ -1,16 +1,14 @@
-using System;
-using System.IO;
+using TwiLua.StdLib;
 using Xunit;
 
 namespace TwiLua.Test
 {
     public class CoroutineTests
     {
-        void AssertEqual(string str, params LuaValue[] expected) {
+        static void AssertEqual(string str, params LuaValue[] expected) {
             var f = Lua.Compile(str);
             var s = new LuaThread(isMain: true, 16, 4);
-            var g = new LuaTable();
-            StdLib.Coroutine.Load(g);
+            var g = new Lua().LoadCoroutine().Globals;
             var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});
             Assert.Equal(expected, s.Execute(closure));
         }

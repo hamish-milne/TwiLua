@@ -1,6 +1,7 @@
 namespace TwiLua
 {
-    public readonly struct Location {
+    public readonly struct Location
+    {
         public int Line { get; }
         public int Column { get; }
         public Location(int line, int column) {

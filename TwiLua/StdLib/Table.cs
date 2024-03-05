@@ -3,12 +3,13 @@ using System.Text;
 
 namespace TwiLua.StdLib
 {
-    public static class Table
+    public static class LibTable
     {
-        public static void Load(LuaTable globals) {
+        public static Lua LoadTable(this Lua lua)
+        {
             LuaValue.SetCasterFunc<LuaValue, LuaValue, LuaValue>();
 
-            globals["table"] = new LuaTable {
+            lua.Globals["table"] = new LuaTable {
                 {"concat", s => {
                     var sb = new StringBuilder();
                     var list = s.Table(1);
@@ -87,6 +88,7 @@ namespace TwiLua.StdLib
                     return 0;
                 }}
             };
+            return lua;
         }
     }
 }

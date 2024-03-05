@@ -2,10 +2,11 @@ using System.Text;
 
 namespace TwiLua.StdLib
 {
-    public static class String
+    public static class LibString
     {
-        public static void Load(LuaTable globals) {
-            globals["string"] = new LuaTable {
+        public static Lua LoadString(this Lua lua)
+        {
+            lua.Globals["string"] = new LuaTable {
                 {"byte", s => {
                     var t = s.String(1);
                     var i = 1;
@@ -53,6 +54,7 @@ namespace TwiLua.StdLib
                 {"lower", s => s.Return(s.String().ToLowerInvariant())},
                 {"upper", s => s.Return(s.String().ToUpperInvariant())},
             };
+            return lua;
         }
     }
 

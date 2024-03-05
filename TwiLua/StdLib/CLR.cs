@@ -1,13 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Reflection;
 
-namespace TwiLua
+namespace TwiLua.StdLib
 {
-    public static class CLR
+    public static class LibCLR
     {
-        public static void Load(LuaTable globals)
+        public static Lua LoadCLR(this Lua lua)
         {
+            var globals = lua.Globals;
             globals["typeof"] = new LuaCFunction(s => {
                 if (s.Count != 1) throw new WrongNumberOfArguments();
                 var ud = s[1].ExpectUserdata("object");
@@ -28,7 +27,7 @@ namespace TwiLua
             globals["toClr"] = new LuaCFunction(s => {
                 if (s.Count != 2) throw new WrongNumberOfArguments();
                 var obj = s[1];
-                var type = s[2].ExpectUserdata("type").Value as Type ?? throw new Exception($"Expected CLR type, got `{s[2]}`");
+                var type = (s[2].ExpectUserdata("type").Value as Type) ?? throw new Exception($"Expected CLR type, got `{s[2]}`");
                 return s.Return(new ObjectUserdata(obj.ConvertTo(type)));
             });
             globals["fromClr"] = new LuaCFunction(s => {
@@ -36,6 +35,7 @@ namespace TwiLua
                 var obj = s[1].ExpectUserdata("object");
                 return s.Return(LuaValue.ConvertFrom(obj.Value));
             });
+            return lua;
         }
     }
 }

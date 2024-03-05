@@ -1,10 +1,10 @@
 namespace TwiLua.StdLib
 {
-    public static class Coroutine
+    public static class LibCoroutine
     {
-        public static void Load(LuaTable globals)
+        public static Lua LoadCoroutine(this Lua lua)
         {
-            globals["coroutine"] = new LuaTable {
+            lua.Globals["coroutine"] = new LuaTable {
                 {"create", s => {
                     if (s.Count < 1) {
                         throw new WrongNumberOfArguments();
@@ -79,6 +79,7 @@ namespace TwiLua.StdLib
                     return s.Return(co.IsYieldable);
                 }}
             };
+            return lua;
         }
     }
 }

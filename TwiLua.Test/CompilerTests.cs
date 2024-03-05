@@ -8,7 +8,7 @@ namespace TwiLua.Test
 {
     public class CompilerTests
     {
-        void DoCompilerTest(
+        static void DoCompilerTest(
             string source,
             LuaValue[] expectedConstants,
             int[] expectedInstructions,

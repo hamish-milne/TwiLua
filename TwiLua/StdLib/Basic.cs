@@ -4,7 +4,8 @@ namespace TwiLua.StdLib
 {
     public static class Basic
     {
-        public static void Load(LuaTable globals) {
+        public static Lua LoadBase(this Lua lua) {
+            var globals = lua.Globals;
             globals["collectgarbage"] = new LuaCFunction(s => {
                 switch (s.Count >= 1 ? s.String(1) : "collect") {
                 case "collect": GC.Collect(); break;
@@ -161,6 +162,7 @@ namespace TwiLua.StdLib
                 table[s[2]] = s[3];
                 return s.Return(table);
             });
+            return lua;
         }
     }
 }

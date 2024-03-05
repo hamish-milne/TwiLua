@@ -1,15 +1,16 @@
 using System;
 using static System.Math;
 
-namespace TwiLua.StdLib {
-
-    public static class Math {
-
-        public static void Load(LuaTable globals) {
+namespace TwiLua.StdLib
+{
+    public static class LibMath
+    {
+        public static Lua LoadMath(this Lua lua)
+        {
             var random = new Random();
             var rndBuf = new byte[sizeof(double)];
 
-            globals["math"] = new LuaTable {
+            lua.Globals["math"] = new LuaTable {
                 {"abs", s => s.Return(Abs(s.Number()))},
                 {"acos", s => s.Return(Acos(s.Number()))},
                 {"asin", s => s.Return(Asin(s.Number()))},
@@ -48,24 +49,18 @@ namespace TwiLua.StdLib {
                     }
                 }},
                 {"randomseed", s => {
-                    switch (s.Count) {
-                        case 0:
-                            random = new Random();
-                            break;
-                        case 1:
-                        case 2:
-                            random = new Random((int)(s.Integer(1) ^ (long)s[2].Number));
-                            break;
-                        default:
-                            throw new WrongNumberOfArguments();
-                    }
+                    random = s.Count switch {
+                        0 => new Random(),
+                        1 or 2 => new Random((int)(s.Integer(1) ^ (long)s[2].Number)),
+                        _ => throw new WrongNumberOfArguments()
+                    };
                     return 0;
                 }},
                 {"tointeger", s => {
-                    try {
-                        return s.Return(s.Integer());
-                    } catch (NoIntegerRepresentation) {
-                        return s.Return(LuaValue.Nil);
+                    if (s[1].TryGetInteger(out var i)) {
+                        return s.Return(i);
+                    } else {
+                        return s.Return(LuaValue.Fail);
                     }
                 }},
                 {"type", s => {
@@ -74,7 +69,7 @@ namespace TwiLua.StdLib {
                     } else if (s[1].IsNumber) {
                         return s.Return("float");
                     } else {
-                        return s.Return(LuaValue.Nil);
+                        return s.Return(LuaValue.Fail);
                     }
                 }},
                 {"max", s => {
@@ -92,6 +87,7 @@ namespace TwiLua.StdLib {
                     return s.Return(a);
                 }}
             };
+            return lua;
         }
     }
 }

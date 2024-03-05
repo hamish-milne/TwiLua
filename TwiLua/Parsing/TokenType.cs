@@ -2,7 +2,8 @@ using System;
 
 namespace TwiLua
 {
-    enum TokenType {
+    enum TokenType
+    {
         Eof,
         Identifier,
         Number,

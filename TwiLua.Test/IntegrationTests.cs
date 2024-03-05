@@ -1,16 +1,16 @@
 using System;
 using System.IO;
+using TwiLua.StdLib;
 using Xunit;
 
 namespace TwiLua.Test
 {
     public class IntegrationTests
     {
-        void AssertEqual(string str, LuaValue expected) {
+        static void AssertEqual(string str, LuaValue expected) {
             var f = Lua.Compile(str);
             var s = new LuaThread(isMain: true, 16, 2);
-            var g = new LuaTable();
-            StdLib.Math.Load(g);
+            var g = new Lua().LoadMath().Globals;
             var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});
             Assert.Equal(expected, s.Execute(closure)[0]);
         }
@@ -104,8 +104,7 @@ namespace TwiLua.Test
 
         [Fact]
         public void BigFile() {
-            var lua = new Lua();
-            StdLib.Basic.Load(lua.Globals);
+            var lua = new Lua().LoadBase();
             lua.DoString(File.ReadAllText("../../../../TwiLua.Benchmark/lua/loadBigFile.lua"));
         }
 

@@ -1,12 +1,12 @@
 using System.IO;
 
-namespace TwiLua
+namespace TwiLua.StdLib
 {
-    public static class Modules
+    public static class LibModules
     {
-        public static void Load(LuaTable globals)
+        public static Lua LoadModules(this Lua lua)
         {
-            globals["package"] = new LuaTable {
+            lua.Globals["package"] = new LuaTable {
                 {"config", $"{Path.DirectorySeparatorChar}\n;\n?\n!\n-"},
                 {"cpath", ""},
                 {"loaded", new LuaTable()},
@@ -22,6 +22,7 @@ namespace TwiLua
                 }},
                 {"seeall", new LuaCFunction(s => throw new System.NotImplementedException())}
             };
+            return lua;
         }
     }
 }

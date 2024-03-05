@@ -1,4 +1,5 @@
 using System;
+using TwiLua.StdLib;
 using Xunit;
 
 namespace TwiLua.Test
@@ -8,8 +9,7 @@ namespace TwiLua.Test
         void AssertEqual(string str, double expected) {
             var f = Lua.Compile("return " + str);
             var s = new LuaThread(isMain: true, 16, 2);
-            var g = new LuaTable();
-            StdLib.Math.Load(g);
+            var g = new Lua().LoadMath().Globals;
             var closure = new LuaClosure(f, new []{new LuaUpValue { Value = g }});
             Assert.True(Math.Abs(s.Execute(closure)[0].Number - expected) < 1e-10);
         }

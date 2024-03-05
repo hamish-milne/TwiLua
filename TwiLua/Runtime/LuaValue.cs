@@ -112,6 +112,8 @@ namespace TwiLua
 
         public static readonly LuaValue Nil = default;
 
+        public static readonly LuaValue Fail = default;
+
         private static readonly Dictionary<Type, (Delegate asFunc, Delegate fromFunc)> BuiltInConverters = new();
 
         private static class Caster<T> {
@@ -121,9 +123,11 @@ namespace TwiLua
             public static bool Exists => As != null && From != null;
 
             public static void Set(Func<LuaValue, LuaThread?, T> asFunc, Func<T, LuaValue> fromFunc) {
-                As = asFunc;
-                From = fromFunc;
-                BuiltInConverters[typeof(T)] = (asFunc, fromFunc);
+                lock (BuiltInConverters) {
+                    As = asFunc;
+                    From = fromFunc;
+                    BuiltInConverters[typeof(T)] = (asFunc, fromFunc);
+                }
             }
         }
 
@@ -271,18 +275,15 @@ namespace TwiLua
 
         public T As<T>(LuaThread? thread = null) {
             SetDelegateCaster<T>();
-            if (Caster<T>.As == null) {
-                throw new Exception("Invalid type: " + typeof(T));
-            }
-            return Caster<T>.As(this, thread);
+            var func = Caster<T>.As ?? throw new Exception("Invalid type: " + typeof(T));
+            return func(this, thread);
         }
+
 
         public static LuaValue From<T>(T value) {
             SetDelegateCaster<T>();
-            if (Caster<T>.From == null) {
-                throw new Exception("Invalid type" + typeof(T));
-            }
-            return Caster<T>.From(value);
+            var func = Caster<T>.From ?? throw new Exception("Invalid type: " + typeof(T));
+            return func(value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

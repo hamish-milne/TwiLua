@@ -6,11 +6,7 @@ namespace TwiLua
     {
         static void Main(string[] args)
         {
-            var lua = new Lua();
-            StdLib.Basic.Load(lua.Globals);
-            StdLib.Math.Load(lua.Globals);
-            StdLib.String.Load(lua.Globals);
-            StdLib.Table.Load(lua.Globals);
+            var lua = new Lua().LoadLibs();
             while (true) {
                 Console.Write("> ");
                 var line = Console.ReadLine();
