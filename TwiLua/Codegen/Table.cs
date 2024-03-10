@@ -50,20 +50,23 @@ namespace TwiLua
         }
 
         public void Indexee() {
-            // Empty
+            // var op = Peek(0);
+            // if (op is TLocal || op is TUpvalue) {
+            //     return;
+            // }
+            // PopAndRelease().Load(this, Top);
+            // Push<TLocal>().Init(PushS(), isVar: false);
         }
 
         public void Index() {
             var indexer = Pop();
-            var table = Pop();
-            if (table is TUpvalue upvalue) {
-                Release(table);
+            if (Peek(0) is TUpvalue upvalue) {
+                PopAndRelease();
                 Push<UpvalIndex>().Init(this, upvalue.Index, indexer);
             } else {
-                if (table is TNewTable) {
-                    Push(table);
-                } else {
-                    Release(table);
+                var table = Peek(0);
+                if (table is not TNewTable) {
+                    PopAndRelease();
                 }
                 Push<TableIndex>().Init(this, table, indexer);
             }

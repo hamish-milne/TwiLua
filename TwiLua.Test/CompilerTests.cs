@@ -279,6 +279,32 @@ namespace TwiLua.Test
         }
 
         [Fact]
+        public void GlobalCallIndex()
+        {
+            DoCompilerTest(
+                "local x, y; local z = a[x(y)]",
+                new LuaValue[] {
+                    "a",
+                },
+                new [] {
+                    Build2(LOADNIL, 0, 1),
+                    Build3(GETTABUP, 2, 0, 0 | KFlag),
+                    Build2(MOVE, 3, 0),
+                    Build2(MOVE, 4, 1),
+                    Build3(CALL, 3, 2, 2),
+                    Build3(GETTABLE, 2, 2, 3),
+                    Build2(RETURN, 0, 1),
+                },
+                new [] {
+                    new LocalVarInfo("x", 1, 7),
+                    new LocalVarInfo("y", 1, 7),
+                    new LocalVarInfo("z", 6, 7),
+                },
+                5
+            );
+        }
+
+        [Fact]
         public void LocalMemberRead()
         {
             DoCompilerTest(
