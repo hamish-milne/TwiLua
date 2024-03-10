@@ -7,5 +7,5 @@
     "coverage-gutters.showGutterCoverage": false,
     "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
     "omnisharp.enableRoslynAnalyzers": true,
-    "dotnet.backgroundAnalysis.analyzerDiagnosticsScope": "fullSolution"
+    "dotnet.backgroundAnalysis.analyzerDiagnosticsScope": "openFiles"
 }

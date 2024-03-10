@@ -8,6 +8,7 @@ using BenchmarkDotNet.Diagnostics.dotTrace;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using MoonSharp.Interpreter;
+using TwiLua.StdLib;
 using _KopiLua = KopiLua.Lua;
 
 namespace TwiLua.Benchmark
@@ -15,7 +16,7 @@ namespace TwiLua.Benchmark
     [MemoryDiagnoser]
     [WarmupCount(3)]
     [IterationCount(3)]
-    // [EventPipeProfiler(EventPipeProfile.CpuSampling)]
+    // [EventPipeProfiler(EventPipeProfile.GcVerbose)]
     // [DotTraceDiagnoser]
     // [SimpleJob(RuntimeMoniker.NativeAot80)]
     [InProcess]
@@ -32,31 +33,31 @@ namespace TwiLua.Benchmark
 
         public IEnumerable<BenchmarkData> GetCode()
         {
+            const string prefix = "./lua/";
             yield return new BenchmarkData {
                 Name = "Hot loop",
-                Code = File.ReadAllText("./lua/loopAdd.lua")
+                Code = File.ReadAllText(prefix + "loopAdd.lua")
             };
             yield return new BenchmarkData {
                 Name = "Large file",
-                Code = File.ReadAllText("./lua/loadBigFile.lua")
+                Code = File.ReadAllText(prefix + "loadBigFile.lua")
             };
             yield return new BenchmarkData {
                 Name = "CLR interop",
                 Type = 1,
-                Code = File.ReadAllText("./lua/call.lua")
+                Code = File.ReadAllText(prefix + "call.lua")
             };
             yield return new BenchmarkData {
                 Name = "Delegate interop",
                 Type = 2,
-                Code = File.ReadAllText("./lua/call.lua")
+                Code = File.ReadAllText(prefix + "call.lua")
             };
         }
 
         [Benchmark]
         [ArgumentsSource(nameof(GetCode))]
         public void TwiLua(BenchmarkData Benchmark) {
-            var c = new Lua();
-            StdLib.Basic.Load(c.Globals);
+            var c = new Lua().LoadBase();
             switch (Benchmark.Type) {
                 case 1:
                     c.Globals["globalFn"] = (LuaCFunction)((LuaThread s) => {
@@ -70,7 +71,7 @@ namespace TwiLua.Benchmark
             c.DoString(Benchmark.Code);
         }
 
-        [Benchmark]
+        // [Benchmark]
         [ArgumentsSource(nameof(GetCode))]
         public void MoonSharp(BenchmarkData Benchmark) {
             var c = new Script();
@@ -87,7 +88,7 @@ namespace TwiLua.Benchmark
             c.DoString(Benchmark.Code);
         }
 
-        [Benchmark]
+        // [Benchmark]
         [ArgumentsSource(nameof(GetCode))]
         public void KeraLua(BenchmarkData Benchmark) {
             var c = new KeraLua.Lua();
@@ -105,7 +106,7 @@ namespace TwiLua.Benchmark
             c.DoString(Benchmark.Code);
         }
 
-        [Benchmark]
+        // [Benchmark]
         [ArgumentsSource(nameof(GetCode))]
         public void KopiLua(BenchmarkData Benchmark) {
             var L = _KopiLua.lua_open();

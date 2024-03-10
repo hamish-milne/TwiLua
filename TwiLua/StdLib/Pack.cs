@@ -181,11 +181,11 @@ namespace TwiLua
                     case PackType.Float:
                         switch (nextSize) {
                             case 8:
-                                WriteInt((ulong)BitConverter.DoubleToInt64Bits(GetArg().ExpectNumber()), 8, bytes, ref k);
+                                WriteInt((ulong)BitConverter.DoubleToInt64Bits(GetArg().ExpectNumber()), sizeof(double), bytes, ref k);
                                 break;
                             case 4:
                                 BitConverter.GetBytes((float)GetArg().ExpectNumber()).CopyTo(bytes, k);
-                                k += 4;
+                                k += sizeof(float);
                                 break;
                             default:
                                 throw new Exception();
@@ -259,12 +259,12 @@ namespace TwiLua
                     case PackType.Float:
                         switch (nextSize) {
                             case 8:
-                                GetArg() = BitConverter.Int64BitsToDouble(BitConverter.ToInt64(bytes, k));
-                                k += 8;
+                                GetArg() = BitConverter.ToDouble(bytes, k);
+                                k += sizeof(double);
                                 break;
                             case 4:
                                 GetArg() = BitConverter.ToSingle(bytes, k);
-                                k += 4;
+                                k += sizeof(float);
                                 break;
                             default:
                                 throw new Exception();

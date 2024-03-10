@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 
 namespace TwiLua.StdLib
@@ -53,6 +54,12 @@ namespace TwiLua.StdLib
                 }},
                 {"lower", s => s.Return(s.String().ToLowerInvariant())},
                 {"upper", s => s.Return(s.String().ToUpperInvariant())},
+                {"dump", s => {
+                    var func = s[1].As<LuaClosure>().Function;
+                    var stream = new MemoryStream(1024);
+                    func.Dump(stream);
+                    return s.Return(Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length));
+                }},
             };
             return lua;
         }

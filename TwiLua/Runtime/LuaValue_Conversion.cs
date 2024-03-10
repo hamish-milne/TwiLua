@@ -84,8 +84,8 @@ namespace TwiLua
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IUserdata ExpectUserdata(string? parameterName = null) {
-            if (Object is IUserdata Userdata) {
+        public T ExpectUserdata<T>(string? parameterName = null) where T : IUserdata {
+            if (Object is T Userdata) {
                 return Userdata;
             }
             throw TypeError(parameterName, "userdata");

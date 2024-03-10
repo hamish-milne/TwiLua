@@ -44,6 +44,30 @@ namespace TwiLua
             return new Token(type, new(lines, position - lineStart - length));
         }
 
+        private static readonly Dictionary<StringSegment, TokenType> keywords = new() {
+            { "and", And },
+            { "or", Or },
+            { "not", Not },
+            { "if", If },
+            { "then", Then },
+            { "else", Else },
+            { "elseif", ElseIf },
+            { "for", For },
+            { "do", Do },
+            { "while", While },
+            { "end", End },
+            { "return", Return },
+            { "local", Local },
+            { "function", Function },
+            { "true", True },
+            { "false", False },
+            { "nil", Nil },
+            { "break", Break },
+            { "repeat", Repeat },
+            { "until", Until },
+            { "in", In },
+        };
+
         public Token Next() {
             if (tokens.Count > 0) {
                 return tokens.Pop();
@@ -112,37 +136,11 @@ namespace TwiLua
                 while (position < str.Length && (char.IsLetter(str[position]) || char.IsDigit(str[position]) || str[position] == '_')) {
                     position++;
                 }
-                var identifier = str.Substring(start, position - start);
-                var simpleToken = identifier switch {
-                    "and" => And,
-                    "or" => Or,
-                    "not" => Not,
-                    "if" => If,
-                    "then" => Then,
-                    "else" => Else,
-                    "elseif" => ElseIf,
-                    "for" => For,
-                    "do" => Do,
-                    "while" => While,
-                    "end" => End,
-                    "return" => Return,
-                    "local" => Local,
-                    "function" => Function,
-                    "true" => True,
-                    "false" => False,
-                    "nil" => Nil,
-                    "break" => Break,
-                    "repeat" => Repeat,
-                    "until" => Until,
-                    "in" => In,
-                    _ => Identifier
-                };
-                return simpleToken switch
-                {
-                    Identifier => new Token(identifier, new(lines, start - lineStart)),
-                    _ => T(simpleToken),
-                };
-
+                var identifier = new StringSegment(str, start, position - start);
+                if (keywords.TryGetValue(identifier, out var simpleToken)) {
+                    return T(simpleToken);
+                }
+                return new Token(identifier.ToString(), new(lines, start - lineStart));
             }
 
             if (c == '0' && position < str.Length - 1 && (str[position] == 'x' || str[position] == 'X')) {
@@ -316,5 +314,44 @@ namespace TwiLua
             }
             return token.text;
         }
+    }
+
+    readonly struct StringSegment : IEquatable<StringSegment>
+    {
+        private readonly string Source;
+        private readonly int Start;
+        private readonly int Length;
+
+        public StringSegment(string source, int start, int length) {
+            Source = source;
+            Start = start;
+            Length = length;
+        }
+
+        public bool Equals(StringSegment other) {
+            if (Length != other.Length) {
+                return false;
+            }
+            for (int i = 0; i < Length; i++) {
+                if (Source[Start + i] != other.Source[other.Start + i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public override bool Equals(object? obj) => obj is StringSegment other && Equals(other);
+
+        public override string ToString() => Source.Substring(Start, Length);
+
+        public override int GetHashCode() {
+            var hash = 0;
+            for (int i = 0; i < Length; i++) {
+                hash = (hash * 31) + Source[Start + i];
+            }
+            return hash;
+        }
+
+        public static implicit operator StringSegment(string str) => new(str, 0, str.Length);
     }
 }

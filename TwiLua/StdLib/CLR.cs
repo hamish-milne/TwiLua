@@ -9,7 +9,7 @@ namespace TwiLua.StdLib
             var globals = lua.Globals;
             globals["typeof"] = new LuaCFunction(s => {
                 if (s.Count != 1) throw new WrongNumberOfArguments();
-                var ud = s[1].ExpectUserdata("object");
+                var ud = s[1].ExpectUserdata<IUserdata>("object");
                 if (ud is TypeUserdata t) {
                     return s.Return(new ObjectUserdata(t.Type));
                 } else if (ud is ObjectUserdata) {
@@ -27,12 +27,12 @@ namespace TwiLua.StdLib
             globals["toClr"] = new LuaCFunction(s => {
                 if (s.Count != 2) throw new WrongNumberOfArguments();
                 var obj = s[1];
-                var type = (s[2].ExpectUserdata("type").Value as Type) ?? throw new Exception($"Expected CLR type, got `{s[2]}`");
+                var type = (s[2].ExpectUserdata<IUserdata>("type").Value as Type) ?? throw new Exception($"Expected CLR type, got `{s[2]}`");
                 return s.Return(new ObjectUserdata(obj.ConvertTo(type)));
             });
             globals["fromClr"] = new LuaCFunction(s => {
                 if (s.Count != 1) throw new WrongNumberOfArguments();
-                var obj = s[1].ExpectUserdata("object");
+                var obj = s[1].ExpectUserdata<IUserdata>("object");
                 return s.Return(LuaValue.ConvertFrom(obj.Value));
             });
             return lua;

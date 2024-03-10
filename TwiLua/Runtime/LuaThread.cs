@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 
 namespace TwiLua
 {
-
     public readonly struct UpValueInfo : IEquatable<UpValueInfo>
     {
         public readonly string Name;
@@ -20,10 +19,23 @@ namespace TwiLua
 
         public override string ToString() => $"{Name} {(InStack ? "in stack" : "in upvalue")} {Index}";
 
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            hash.Add(Name);
+            hash.Add(InStack);
+            hash.Add(Index);
+            return hash.ToHashCode();
+        }
+
         public bool Equals(UpValueInfo other) => Name == other.Name && InStack == other.InStack && Index == other.Index;
+        public override bool Equals(object? obj) => obj is UpValueInfo info && Equals(info);
+        public static bool operator ==(UpValueInfo left, UpValueInfo right) => left.Equals(right);
+        public static bool operator !=(UpValueInfo left, UpValueInfo right) => !(left == right);
+
     }
 
-    public readonly struct LocalVarInfo
+    public readonly struct LocalVarInfo : IEquatable<LocalVarInfo>
     {
         public readonly string Name;
         public readonly int Start;
@@ -37,6 +49,20 @@ namespace TwiLua
         }
 
         public override string ToString() => $"{Name} {Start} {End}";
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            hash.Add(Name);
+            hash.Add(Start);
+            hash.Add(End);
+            return hash.ToHashCode();
+        }
+
+        public bool Equals(LocalVarInfo other) => Name == other.Name && Start == other.Start && End == other.End;
+        public override bool Equals(object? obj) => obj is LocalVarInfo info && Equals(info);
+        public static bool operator ==(LocalVarInfo left, LocalVarInfo right) => left.Equals(right);
+        public static bool operator !=(LocalVarInfo left, LocalVarInfo right) => !(left == right);
     }
 
     public sealed class LuaFunction
@@ -206,6 +232,8 @@ namespace TwiLua
         public string String(int idx = 1) => this[idx].ExpectString();
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LuaTable Table(int idx = 1) => this[idx].ExpectTable();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T Userdata<T>(int idx = 1) where T : IUserdata => this[idx].ExpectUserdata<T>();
         public int Return(in LuaValue v) {
             this[0] = v;
             return 1;
